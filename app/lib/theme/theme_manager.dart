@@ -13,8 +13,12 @@ class ThemeManager extends ChangeNotifier {
   String get currentTheme => _currentTheme;
   bool get isLiquidGlass => _currentTheme == 'Proton UI (Liquid Glass)';
 
+  void init() {
+    _currentTheme = AppPreferences.selectedTheme;
+    notifyListeners();
+  }
+
   Future<void> setTheme(String theme) async {
-    if (_currentTheme == theme) return;
     _currentTheme = theme;
     await AppPreferences.setSelectedTheme(theme);
     notifyListeners();

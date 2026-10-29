@@ -107,7 +107,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
           body: SafeArea(
             bottom: false,
             child: SingleChildScrollView(

@@ -54,13 +54,13 @@ class WorldMapAtmosphere extends StatelessWidget {
                     stops: const [0.0, 0.45, 1.0],
                   ),
           ),
-          child: CustomPaint(
-            painter: _DottedMapPainter(
-              dotColor: isLiquid
-                  ? Colors.white.withValues(alpha: 0.06)
-                  : Colors.white.withValues(alpha: 0.04),
-            ),
-          ),
+          child: isLiquid
+              ? const SizedBox.shrink()
+              : CustomPaint(
+                  painter: _DottedMapPainter(
+                    dotColor: Colors.white.withValues(alpha: 0.04),
+                  ),
+                ),
         ),
       ),
     );

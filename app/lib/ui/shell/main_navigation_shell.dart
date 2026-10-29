@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../home/home_screen.dart';
 import '../countries/countries_screen.dart';
@@ -47,48 +48,55 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: ProtonColors.background,
-      body: Stack(
-        children: [
-          // Smooth Sliding Screen PageView
-          PageView(
-            controller: _pageController,
-            physics: const BouncingScrollPhysics(),
-            onPageChanged: (index) {
-              setState(() => _currentIndex = index);
-            },
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) {
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
+
+        return Scaffold(
+          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          body: Stack(
             children: [
-              HomeScreen(
-                controller: widget.controller,
-                onNavigateToCountries: () => _onTabSelected(1),
+              // Smooth Sliding Screen PageView
+              PageView(
+                controller: _pageController,
+                physics: const BouncingScrollPhysics(),
+                onPageChanged: (index) {
+                  setState(() => _currentIndex = index);
+                },
+                children: [
+                  HomeScreen(
+                    controller: widget.controller,
+                    onNavigateToCountries: () => _onTabSelected(1),
+                  ),
+                  CountriesScreen(
+                    controller: widget.controller,
+                    onCountrySelected: (_) => _onTabSelected(0),
+                  ),
+                  ProfilesScreen(
+                    controller: widget.controller,
+                    onProfileSelected: (_) => _onTabSelected(0),
+                  ),
+                  SettingsScreen(
+                    controller: widget.controller,
+                  ),
+                ],
               ),
-              CountriesScreen(
-                controller: widget.controller,
-                onCountrySelected: (_) => _onTabSelected(0),
-              ),
-              ProfilesScreen(
-                controller: widget.controller,
-                onProfileSelected: (_) => _onTabSelected(0),
-              ),
-              SettingsScreen(
-                controller: widget.controller,
+
+              // Floating Bottom Proton Dock
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).padding.bottom + 14,
+                child: ProtonDock(
+                  currentIndex: _currentIndex,
+                  onTabSelected: _onTabSelected,
+                ),
               ),
             ],
           ),
-
-          // Floating Bottom Proton Dock
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: MediaQuery.of(context).padding.bottom + 14,
-            child: ProtonDock(
-              currentIndex: _currentIndex,
-              onTabSelected: _onTabSelected,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

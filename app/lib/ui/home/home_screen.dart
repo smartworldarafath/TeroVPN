@@ -27,7 +27,7 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: controller,
+      listenable: Listenable.merge([controller, ThemeManager.instance]),
       builder: (context, _) {
         final status = controller.status;
         final phase = status?.state.phase ?? Phase.off;
@@ -67,7 +67,7 @@ class HomeScreen extends StatelessWidget {
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
           body: Stack(
             children: [
               WorldMapAtmosphere(

@@ -81,7 +81,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
     final activeCode = widget.controller.status?.proxy?.countryCode.toUpperCase() ?? '';
 
     return ListenableBuilder(
-      listenable: CountryManager.instance,
+      listenable: Listenable.merge([CountryManager.instance, ThemeManager.instance]),
       builder: (context, _) {
         final allCountries = CountryManager.instance.countries;
         final filteredCountries = _getFilteredCountries(allCountries);

@@ -65,34 +65,37 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
+    return ListenableBuilder(
+      listenable: Listenable.merge([widget.controller, ThemeManager.instance]),
+      builder: (context, _) {
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
 
-    return Scaffold(
-      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.only(
-            left: 20,
-            right: 20,
-            top: 12,
-            bottom: 120,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Profiles',
-                style: isLiquid
-                    ? const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
-                        letterSpacing: -0.5,
-                      )
-                    : ProtonTypography.titleLarge,
+        return Scaffold(
+          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          body: SafeArea(
+            bottom: false,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: 120,
               ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Profiles',
+                    style: isLiquid
+                        ? const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          )
+                        : ProtonTypography.titleLarge,
+                  ),
               const SizedBox(height: 8),
               Text(
                 'Pre-configured setups optimized for streaming, gaming, and privacy.',
@@ -184,6 +187,8 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
           ),
         ),
       ),
+    );
+      },
     );
   }
 }

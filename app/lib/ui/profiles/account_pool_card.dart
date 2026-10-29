@@ -4,8 +4,6 @@ import '../../theme/theme_manager.dart';
 import '../../core/models.dart';
 import '../../core/format.dart';
 import '../../core/core_controller.dart';
-import '../settings/account_management_screen.dart';
-import '../components/signin_dialog.dart';
 
 class AccountPoolCard extends StatelessWidget {
   final AccountList? accounts;
@@ -137,61 +135,26 @@ class AccountPoolCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
 
-          // Action Buttons: Refresh Now + Add Token side by side
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: OutlinedButton.icon(
-                    onPressed: onRefresh,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('Refresh Now'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF8B6CFF),
-                      side: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.12),
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                    ),
-                  ),
+          // Action Button: Refresh Now (Full Width matching photo_5)
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Refresh Now'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF8B6CFF),
+                side: BorderSide(
+                  color: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.12),
+                  width: 1.2,
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: SizedBox(
-                  height: 46,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      if (controller != null) {
-                        if (!controller!.hasAccount) {
-                          SignInDialog.show(context, controller!);
-                        } else {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => AccountManagementScreen(controller: controller!),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                    icon: const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Add Token'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6B42FF),
-                      foregroundColor: Colors.white,
-                      elevation: 4,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
+                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
-            ],
+            ),
           ),
         ],
       ),

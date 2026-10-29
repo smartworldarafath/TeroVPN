@@ -12,6 +12,7 @@ import 'ui/shell/main_navigation_shell.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppPreferences.init();
+  ThemeManager.instance.init();
 
   // Edge-to-edge layout with transparent status and navigation bars
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
