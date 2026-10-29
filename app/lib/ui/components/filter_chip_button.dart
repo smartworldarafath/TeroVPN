@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 
 class FilterChipButton extends StatelessWidget {
   final String label;
@@ -18,25 +19,42 @@ class FilterChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(isLiquid ? 20 : 12),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOutCubic,
           height: 42,
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: isSelected ? ProtonColors.chipActive : ProtonColors.chipBackground,
-            borderRadius: BorderRadius.circular(12),
+            color: isSelected
+                ? const Color(0xFF6D4AFF)
+                : (isLiquid
+                    ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                    : ProtonColors.chipBackground),
+            borderRadius: BorderRadius.circular(isLiquid ? 20 : 12),
             border: Border.all(
               color: isSelected
-                  ? ProtonColors.primary.withOpacity(0.8)
-                  : ProtonColors.cardBorder.withOpacity(0.6),
+                  ? const Color(0xFF6D4AFF)
+                  : (isLiquid
+                      ? Colors.white.withValues(alpha: 0.10)
+                      : ProtonColors.cardBorder.withValues(alpha: 0.6)),
               width: 1,
             ),
+            boxShadow: (isSelected && isLiquid)
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF6D4AFF).withValues(alpha: 0.45),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,

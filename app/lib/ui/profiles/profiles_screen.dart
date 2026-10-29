@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../countries/country_manager.dart';
@@ -64,8 +65,10 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Scaffold(
-      backgroundColor: ProtonColors.background,
+      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(

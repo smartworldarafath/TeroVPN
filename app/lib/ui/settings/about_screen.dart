@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import 'settings_row.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -8,8 +9,10 @@ class AboutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Scaffold(
-      backgroundColor: ProtonColors.background,
+      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
       appBar: AppBar(
         title: Text(
           'About TeroVPN',
@@ -69,7 +72,7 @@ class AboutScreen extends StatelessWidget {
 
               // Version & Copyright
               Text(
-                'Version 1.0.6',
+                'Version 1.0.7',
                 style: ProtonTypography.bodySmall.copyWith(
                   color: ProtonColors.textSecondary,
                   fontSize: 13,

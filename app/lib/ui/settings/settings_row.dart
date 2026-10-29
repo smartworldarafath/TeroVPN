@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 
 class SettingsRow extends StatelessWidget {
   final IconData icon;
@@ -53,7 +54,7 @@ class SettingsRow extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null) trailing!,
+              if (trailing case final Widget t) t,
             ],
           ),
         ),
@@ -74,6 +75,8 @@ class SettingsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -90,17 +93,31 @@ class SettingsSectionCard extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: ProtonColors.surface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: ProtonColors.cardBorder, width: 1),
+            color: isLiquid
+                ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                : ProtonColors.surface,
+            borderRadius: BorderRadius.circular(isLiquid ? 20 : 16),
+            border: Border.all(
+              color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+              width: 1,
+            ),
+            boxShadow: isLiquid
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.35),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: children.length,
-            separatorBuilder: (_, __) => const Divider(
+            separatorBuilder: (_, _) => Divider(
               height: 1,
-              color: ProtonColors.cardBorder,
+              color: isLiquid ? Colors.white.withValues(alpha: 0.07) : ProtonColors.cardBorder,
               indent: 56,
             ),
             itemBuilder: (_, index) => children[index],

@@ -1,6 +1,12 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/app_preferences.dart';
 import '../../core/android_core.dart';
 import 'settings_row.dart';
@@ -13,10 +19,34 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
+  static const String currentVersion = '1.0.7';
+
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
   late bool _notifyUpdates;
+
+  bool _isChecking = true;
+  bool _updateAvailable = false;
+  String? _errorMessage;
+
+  String _latestVersionTag = 'v1.0.7';
+  String _latestReleaseName = 'TeroVPN v1.0.7';
+  String _releaseDate = 'October 2026';
+  List<String> _changelogPoints = [];
+  String? _downloadUrl;
+  int _apkSizeBytes = 0;
+
+  // Download state
   bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  double _downloadSpeedMbps = 0.0;
+  int _receivedBytes = 0;
+  int _totalBytes = 0;
+  String? _downloadedFilePath;
+  bool _isInstallReady = false;
+
+  StreamSubscription? _downloadSub;
+  http.Client? _httpClient;
 
   @override
   void initState() {
@@ -24,6 +54,235 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     _autoUpdateWifi = AppPreferences.autoUpdateWifi;
     _allowUpdateMobile = AppPreferences.allowUpdateMobile;
     _notifyUpdates = AppPreferences.notifyUpdates;
+    _fetchLatestRelease();
+  }
+
+  @override
+  void dispose() {
+    _downloadSub?.cancel();
+    _httpClient?.close();
+    super.dispose();
+  }
+
+  /// Version comparison: returns true if latest is strictly newer than current
+  bool _isNewerVersion(String latestTag, String current) {
+    try {
+      final cleanLatest = latestTag.replaceAll(RegExp(r'^[vV]'), '').trim();
+      final cleanCurrent = current.replaceAll(RegExp(r'^[vV]'), '').trim();
+      final lParts = cleanLatest.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      final cParts = cleanCurrent.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+      for (int i = 0; i < 3; i++) {
+        final l = i < lParts.length ? lParts[i] : 0;
+        final c = i < cParts.length ? cParts[i] : 0;
+        if (l > c) return true;
+        if (l < c) return false;
+      }
+      return false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _fetchLatestRelease() async {
+    setState(() {
+      _isChecking = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://api.github.com/repos/smartworldarafath/TeroVPN/releases/latest'),
+        headers: {
+          'Accept': 'application/vnd.github.v3+json',
+          'User-Agent': 'TeroVPN-App',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        final tagName = (data['tag_name'] as String?) ?? 'v1.0.7';
+        final releaseName = (data['name'] as String?) ?? 'TeroVPN $tagName';
+        final publishedAt = (data['published_at'] as String?) ?? '';
+        final body = (data['body'] as String?) ?? '';
+
+        // Parse assets for APK
+        String? apkUrl;
+        int apkSize = 0;
+        final assets = (data['assets'] as List<dynamic>?) ?? [];
+        for (final asset in assets) {
+          final aName = (asset['name'] as String? ?? '').toLowerCase();
+          if (aName.endsWith('.apk')) {
+            apkUrl = asset['browser_download_url'] as String?;
+            apkSize = (asset['size'] as int?) ?? 0;
+            break;
+          }
+        }
+
+        // Parse body into bullet points
+        final lines = body
+            .split('\n')
+            .map((l) => l.trim())
+            .where((l) => l.isNotEmpty && (l.startsWith('-') || l.startsWith('*') || l.startsWith('•')))
+            .map((l) => l.replaceFirst(RegExp(r'^[-*•]\s*'), ''))
+            .toList();
+
+        final isNewer = _isNewerVersion(tagName, currentVersion);
+
+        if (mounted) {
+          setState(() {
+            _latestVersionTag = tagName;
+            _latestReleaseName = releaseName;
+            _downloadUrl = apkUrl;
+            _apkSizeBytes = apkSize;
+            _changelogPoints = lines.isNotEmpty
+                ? lines
+                : [
+                    'MASQUE HTTP/3 & HTTP/2 Dual-Engine Stability Upgrades',
+                    'Proton UI & Liquid Glass Next-Gen Design System',
+                    'Realtime Download Speed Monitor & Native Package Installer',
+                    'Multi-Account Firefox Token Pool Optimization',
+                    'Low Latency Gaming & Secure Streaming Routing Improvements',
+                  ];
+            if (publishedAt.isNotEmpty) {
+              try {
+                final date = DateTime.parse(publishedAt);
+                _releaseDate = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+              } catch (_) {
+                _releaseDate = 'October 2026';
+              }
+            }
+            _updateAvailable = isNewer;
+            _isChecking = false;
+          });
+        }
+      } else {
+        // Fallback or rate limited
+        if (mounted) {
+          setState(() {
+            _isChecking = false;
+            _updateAvailable = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isChecking = false;
+          _errorMessage = 'Could not check for updates. Please verify your connection.';
+        });
+      }
+    }
+  }
+
+  Future<void> _startDownload() async {
+    final url = _downloadUrl ?? 'https://github.com/smartworldarafath/TeroVPN/releases/download/$_latestVersionTag/TeroVPN-Android-$_latestVersionTag.apk';
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+      _downloadSpeedMbps = 0.0;
+      _receivedBytes = 0;
+      _totalBytes = _apkSizeBytes;
+      _isInstallReady = false;
+    });
+
+    try {
+      _httpClient = http.Client();
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers['User-Agent'] = 'TeroVPN-App';
+
+      final response = await _httpClient!.send(request);
+      if (response.statusCode >= 400) {
+        throw Exception('Download failed with status ${response.statusCode}');
+      }
+
+      final contentLength = response.contentLength ?? _apkSizeBytes;
+      setState(() => _totalBytes = contentLength > 0 ? contentLength : 48 * 1024 * 1024);
+
+      final tempDir = await getTemporaryDirectory();
+      final saveFile = File('${tempDir.path}/TeroVPN_$_latestVersionTag.apk');
+      if (await saveFile.exists()) {
+        await saveFile.delete();
+      }
+      final sink = saveFile.openWrite();
+
+      int lastTime = DateTime.now().millisecondsSinceEpoch;
+      int lastBytes = 0;
+
+      await for (final chunk in response.stream) {
+        if (!mounted || !_isDownloading) break;
+        sink.add(chunk);
+        _receivedBytes += chunk.length;
+
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final elapsedMs = now - lastTime;
+
+        if (elapsedMs >= 350) {
+          final deltaBytes = _receivedBytes - lastBytes;
+          final dtSec = elapsedMs / 1000.0;
+          final bits = deltaBytes * 8.0;
+          final currentMbps = (bits / (1000.0 * 1000.0)) / dtSec;
+
+          setState(() {
+            _downloadProgress = _totalBytes > 0 ? (_receivedBytes / _totalBytes).clamp(0.0, 1.0) : 0.0;
+            _downloadSpeedMbps = _downloadSpeedMbps == 0 ? currentMbps : (_downloadSpeedMbps * 0.35 + currentMbps * 0.65);
+          });
+          lastTime = now;
+          lastBytes = _receivedBytes;
+        }
+      }
+
+      await sink.flush();
+      await sink.close();
+
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+          _downloadProgress = 1.0;
+          _isInstallReady = true;
+          _downloadedFilePath = saveFile.path;
+        });
+
+        // Trigger installation directly upon download complete
+        await _triggerInstall();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Download failed: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _triggerInstall() async {
+    if (_downloadedFilePath == null) return;
+    try {
+      final success = await AndroidCore.installApk(_downloadedFilePath!);
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Installation intent launched. Please confirm on Android.'),
+            backgroundColor: ProtonColors.surfaceDark,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to launch installer: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    }
   }
 
   void _showBetaDialog() {
@@ -57,7 +316,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
           ],
         ),
         content: Text(
-          'This feature is currently under development and will be available very soon.',
+          'This feature is currently under active development and will be available very soon.',
           style: ProtonTypography.bodyMedium.copyWith(
             color: ProtonColors.textSecondary,
             height: 1.4,
@@ -80,10 +339,17 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     );
   }
 
+  String _formatMB(int bytes) {
+    final mb = bytes / (1024 * 1024);
+    return '${mb.toStringAsFixed(1)} MB';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Scaffold(
-      backgroundColor: ProtonColors.background,
+      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
       appBar: AppBar(
         title: Text(
           'App Update',
@@ -93,6 +359,20 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
           icon: const Icon(Icons.arrow_back_rounded, color: ProtonColors.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: _isChecking
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: ProtonColors.primary),
+                  )
+                : const Icon(Icons.refresh_rounded, color: ProtonColors.textSecondary),
+            tooltip: 'Check for Updates',
+            onPressed: _isChecking || _isDownloading ? null : _fetchLatestRelease,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Stack(
         children: [
@@ -101,16 +381,20 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
             top: -40,
             left: 0,
             right: 0,
-            height: 280,
+            height: 300,
             child: IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: const Alignment(0, -0.4),
-                    radius: 1.0,
+                    radius: 1.1,
                     colors: [
-                      const Color(0xFFDC3251).withValues(alpha: 0.15),
-                      const Color(0xFF6D4AFF).withValues(alpha: 0.08),
+                      isLiquid
+                          ? const Color(0xFF7E1C33).withValues(alpha: 0.32)
+                          : const Color(0xFFDC3251).withValues(alpha: 0.15),
+                      isLiquid
+                          ? const Color(0xFF4B237C).withValues(alpha: 0.25)
+                          : const Color(0xFF6D4AFF).withValues(alpha: 0.08),
                       Colors.transparent,
                     ],
                   ),
@@ -126,145 +410,46 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Update Available Card
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    child: Row(
-                      children: [
-                        // Shield with diagonal arrow
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF573BC7),
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF6D4AFF).withValues(alpha: 0.5),
-                                    blurRadius: 20,
-                                    spreadRadius: 2,
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.shield_rounded,
-                                  color: Colors.white,
-                                  size: 34,
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              right: -4,
-                              bottom: -4,
-                              child: Container(
-                                width: 22,
-                                height: 22,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF6D4AFF),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Center(
-                                  child: Icon(
-                                    Icons.arrow_outward_rounded,
-                                    color: Colors.white,
-                                    size: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 18),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Update Available!',
-                                style: ProtonTypography.titleMedium.copyWith(
-                                  fontSize: 19,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Version 1.0.6 (99.2 MB)',
-                                style: ProtonTypography.bodySmall.copyWith(
-                                  color: ProtonColors.textLight,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Your current version: 1.0.5',
-                                style: ProtonTypography.bodySmall.copyWith(
-                                  color: ProtonColors.textMuted,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Download & Install Button
-                  SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _isDownloading
-                          ? null
-                          : () async {
-                              setState(() => _isDownloading = true);
-                              await Future.delayed(const Duration(seconds: 2));
-                              if (context.mounted) {
-                                setState(() => _isDownloading = false);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Downloading TeroVPN v1.0.5 APK...'),
-                                    backgroundColor: ProtonColors.surfaceDark,
-                                  ),
-                                );
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6D4AFF),
-                        foregroundColor: Colors.white,
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
+                  if (_errorMessage != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
                       ),
-                      child: _isDownloading
-                          ? const SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Text(
-                              'Download & Install',
-                              style: ProtonTypography.labelLarge.copyWith(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                              ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.white, fontSize: 13),
                             ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
+
+                  // State 1: Checking
+                  if (_isChecking)
+                    _buildCheckingCard(isLiquid)
+                  // State 2: Update Available
+                  else if (_updateAvailable)
+                    _buildUpdateAvailableCard(isLiquid)
+                  // State 3: Up To Date
+                  else
+                    _buildUpToDateCard(isLiquid),
+
+                  const SizedBox(height: 24),
 
                   // WHAT'S NEW Section
                   Padding(
                     padding: const EdgeInsets.only(left: 4, bottom: 8),
                     child: Text(
-                      "WHAT'S NEW",
+                      "WHAT'S NEW IN $_latestVersionTag",
                       style: ProtonTypography.labelSmall.copyWith(
                         color: ProtonColors.textSecondary,
                         letterSpacing: 0.8,
@@ -275,19 +460,19 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: ProtonColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ProtonColors.cardBorder),
+                      color: isLiquid
+                          ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                          : ProtonColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isLiquid
+                            ? Colors.white.withValues(alpha: 0.10)
+                            : ProtonColors.cardBorder,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildBulletPoint('Added WireGuard MASQUE (HTTP/3) support'),
-                        _buildBulletPoint('NetShield engine upgrades for better ad-blocking'),
-                        _buildBulletPoint('Improved reconnection speed after connection drops'),
-                        _buildBulletPoint('Fixed crash issues on older Android versions'),
-                        _buildBulletPoint('Performance improvements & bug fixes'),
-                      ],
+                      children: _changelogPoints.map((point) => _buildBulletPoint(point)).toList(),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -392,22 +577,35 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                   Container(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: ProtonColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ProtonColors.cardBorder),
+                      color: isLiquid
+                          ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                          : ProtonColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: isLiquid
+                            ? Colors.white.withValues(alpha: 0.10)
+                            : ProtonColors.cardBorder,
+                      ),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Last checked: Just now',
+                          'Release channel: Official GitHub Releases',
                           style: ProtonTypography.bodyMedium.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Release date: October 2026',
+                          'Release date: $_releaseDate',
+                          style: ProtonTypography.bodySmall.copyWith(
+                            color: ProtonColors.textMuted,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Repository: smartworldarafath/TeroVPN',
                           style: ProtonTypography.bodySmall.copyWith(
                             color: ProtonColors.textMuted,
                           ),
@@ -420,6 +618,288 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckingCard(bool isLiquid) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.65) : ProtonColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: ProtonColors.cardBorder),
+      ),
+      child: const Row(
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6D4AFF)),
+          ),
+          SizedBox(width: 16),
+          Text(
+            'Checking GitHub for newer releases...',
+            style: TextStyle(color: ProtonColors.textLight, fontSize: 14, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpToDateCard(bool isLiquid) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.65) : ProtonColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isLiquid ? Colors.white.withValues(alpha: 0.12) : ProtonColors.cardBorder,
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF00C853).withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
+                ),
+                child: const Center(
+                  child: Icon(Icons.verified_rounded, color: Color(0xFF00E676), size: 32),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'You are up to date!',
+                      style: ProtonTypography.titleMedium.copyWith(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Version $currentVersion (Latest build)',
+                      style: ProtonTypography.bodySmall.copyWith(
+                        color: const Color(0xFF00E676),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'All security protocols and features are current',
+                      style: ProtonTypography.bodySmall.copyWith(
+                        color: ProtonColors.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Test download or check update button
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton.icon(
+              onPressed: _isChecking ? null : _fetchLatestRelease,
+              icon: const Icon(Icons.sync_rounded, size: 18),
+              label: const Text('Check Again'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF6D4AFF),
+                side: const BorderSide(color: Color(0xFF6D4AFF), width: 1.2),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUpdateAvailableCard(bool isLiquid) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.75) : ProtonColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF6D4AFF).withValues(alpha: 0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6D4AFF).withValues(alpha: 0.2),
+            blurRadius: 20,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: 60,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF573BC7),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6D4AFF).withValues(alpha: 0.5),
+                          blurRadius: 18,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.shield_rounded, color: Colors.white, size: 34),
+                    ),
+                  ),
+                  Positioned(
+                    right: -4,
+                    bottom: -4,
+                    child: Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF6D4AFF),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.arrow_outward_rounded, color: Colors.white, size: 14),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Update Available!',
+                      style: ProtonTypography.titleMedium.copyWith(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$_latestReleaseName${_apkSizeBytes > 0 ? " (${_formatMB(_apkSizeBytes)})" : ""}',
+                      style: ProtonTypography.bodySmall.copyWith(
+                        color: ProtonColors.textLight,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Your current version: $currentVersion',
+                      style: ProtonTypography.bodySmall.copyWith(
+                        color: ProtonColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+
+          // Download progress or action button
+          if (_isDownloading) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: _downloadProgress > 0 ? _downloadProgress : null,
+                minHeight: 8,
+                backgroundColor: ProtonColors.surfaceDark,
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6D4AFF)),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${_formatMB(_receivedBytes)} / ${_formatMB(_totalBytes)} (${(_downloadProgress * 100).toStringAsFixed(0)}%)',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: ProtonColors.textLight,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6D4AFF).withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${_downloadSpeedMbps.toStringAsFixed(1)} Mbps',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF00E676),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (_isInstallReady) ...[
+            SizedBox(
+              height: 52,
+              child: ElevatedButton.icon(
+                onPressed: _triggerInstall,
+                icon: const Icon(Icons.install_mobile_rounded),
+                label: const Text('Install Update'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF00C853),
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ),
+          ] else ...[
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                onPressed: _startDownload,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6D4AFF),
+                  foregroundColor: Colors.white,
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(
+                  'Download & Install',
+                  style: ProtonTypography.labelLarge.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

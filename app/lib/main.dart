@@ -6,6 +6,7 @@ import 'core/app_preferences.dart';
 import 'core/core_api.dart';
 import 'core/core_controller.dart';
 import 'theme/proton_theme.dart';
+import 'theme/theme_manager.dart';
 import 'ui/shell/main_navigation_shell.dart';
 
 void main() async {
@@ -65,11 +66,16 @@ class TeroVpnApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TeroVPN',
-      debugShowCheckedModeBanner: false,
-      theme: ProtonTheme.darkTheme,
-      home: MainNavigationShell(controller: controller),
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'TeroVPN',
+          debugShowCheckedModeBanner: false,
+          theme: ProtonTheme.darkTheme,
+          home: MainNavigationShell(controller: controller),
+        );
+      },
     );
   }
 }

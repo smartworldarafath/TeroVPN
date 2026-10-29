@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
 
 class VpnConnectionCard extends StatelessWidget {
@@ -27,22 +28,42 @@ class VpnConnectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Container(
       decoration: BoxDecoration(
-        color: ProtonColors.surface,
-        borderRadius: BorderRadius.circular(20),
+        color: isLiquid
+            ? const Color(0xFF1B182B).withValues(alpha: 0.70)
+            : ProtonColors.surface,
+        borderRadius: BorderRadius.circular(isLiquid ? 22 : 20),
         border: Border.all(
           color: isConnected
-              ? ProtonColors.connected.withOpacity(0.3)
-              : ProtonColors.cardBorder,
-          width: 1.2,
+              ? ProtonColors.connected.withValues(alpha: 0.45)
+              : (isLiquid
+                  ? Colors.white.withValues(alpha: 0.10)
+                  : ProtonColors.cardBorder),
+          width: isLiquid ? 1.2 : 1.0,
         ),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.35),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
+          if (isLiquid) ...[
+            BoxShadow(
+              color: const Color(0xFF6D4AFF).withValues(alpha: 0.16),
+              blurRadius: 24,
+              spreadRadius: 1,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.5),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ] else ...[
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ],
       ),
       child: Column(
@@ -51,7 +72,7 @@ class VpnConnectionCard extends StatelessWidget {
           // Server Selection Header Row
           InkWell(
             onTap: onChangeServer,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(isLiquid ? 22 : 20)),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
@@ -86,10 +107,14 @@ class VpnConnectionCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: ProtonColors.surfaceDark,
+                      color: isLiquid
+                          ? const Color(0xFF6D4AFF).withValues(alpha: 0.15)
+                          : ProtonColors.surfaceDark,
                       borderRadius: BorderRadius.circular(6),
                       border: Border.all(
-                        color: ProtonColors.cardBorder,
+                        color: isLiquid
+                            ? const Color(0xFF6D4AFF).withValues(alpha: 0.35)
+                            : ProtonColors.cardBorder,
                         width: 0.8,
                       ),
                     ),
@@ -113,7 +138,12 @@ class VpnConnectionCard extends StatelessWidget {
             ),
           ),
 
-          const Divider(height: 1, color: ProtonColors.cardBorder),
+          Divider(
+            height: 1,
+            color: isLiquid
+                ? Colors.white.withValues(alpha: 0.08)
+                : ProtonColors.cardBorder,
+          ),
 
           // Main Action Button Row
           Padding(
@@ -139,14 +169,14 @@ class VpnConnectionCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (isConnected || isVpnOn)
                         ? ProtonColors.cancelBtn
-                        : (isConnecting ? ProtonColors.cancelBtn : ProtonColors.primary),
+                        : (isConnecting ? ProtonColors.cancelBtn : const Color(0xFF6D4AFF)),
                     foregroundColor: Colors.white,
-                    elevation: (isConnected || isVpnOn) ? 0 : 4,
+                    elevation: (isConnected || isVpnOn) ? 0 : 5,
                     shadowColor: (isConnected || isVpnOn)
                         ? Colors.transparent
-                        : ProtonColors.primary.withValues(alpha: 0.5),
+                        : const Color(0xFF6D4AFF).withValues(alpha: 0.55),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(isLiquid ? 16 : 14),
                       side: (isConnected || isVpnOn)
                           ? BorderSide(
                               color: ProtonColors.disconnected.withValues(alpha: 0.4),

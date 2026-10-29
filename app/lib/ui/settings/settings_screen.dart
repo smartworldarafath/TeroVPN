@@ -10,6 +10,9 @@ import 'split_tunneling_screen.dart';
 import 'about_screen.dart';
 import 'app_update_screen.dart';
 import 'account_management_screen.dart';
+import '../../theme/theme_manager.dart';
+import 'theme_settings_screen.dart';
+import 'extra_functions_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final CoreController controller;
@@ -94,13 +97,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.controller,
+      listenable: ThemeManager.instance,
       builder: (context, _) {
+        return ListenableBuilder(
+          listenable: widget.controller,
+          builder: (context, _) {
         final hasAccount = widget.controller.hasAccount;
         final activeAccount = widget.controller.activeAccount;
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
           body: SafeArea(
             bottom: false,
             child: SingleChildScrollView(
@@ -312,7 +319,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SettingsRow(
                         icon: Icons.info_outline_rounded,
                         title: 'About TeroVPN',
-                        subtitle: 'Version 1.0.6 · Legal, Support & Acknowledgements',
+                        subtitle: 'Version 1.0.7 · Legal, Support & Acknowledgements',
                         trailing: const Icon(Icons.chevron_right_rounded, color: ProtonColors.textMuted),
                         onTap: () {
                           Navigator.of(context).push(
@@ -333,6 +340,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                     ],
                   ),
+
+                  // Advanced Category
+                  SettingsSectionCard(
+                    title: 'Advanced',
+                    children: [
+                      SettingsRow(
+                        icon: Icons.palette_outlined,
+                        title: 'Theme',
+                        subtitle: ThemeManager.instance.currentTheme,
+                        trailing: const Icon(Icons.chevron_right_rounded, color: ProtonColors.textMuted),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ThemeSettingsScreen()),
+                          );
+                        },
+                      ),
+                      SettingsRow(
+                        icon: Icons.tune_rounded,
+                        title: 'Extra Functions',
+                        subtitle: 'IPv6 Leak, DNS Fallback, LAN Bypass & Hardware Acceleration',
+                        trailing: const Icon(Icons.chevron_right_rounded, color: ProtonColors.textMuted),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
@@ -340,6 +376,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       },
     );
+  },
+);
   }
 
   void _showProtocolPicker(BuildContext context) {

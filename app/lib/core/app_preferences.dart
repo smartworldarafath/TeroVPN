@@ -15,6 +15,11 @@ class AppPreferences {
   static const _keyAllowUpdateMobile = 'allow_update_mobile';
   static const _keyNotifyUpdates = 'notify_updates';
   static const _keyJoinBeta = 'join_beta';
+  static const _keySelectedTheme = 'selected_theme';
+  static const _keyIpv6LeakProtection = 'ipv6_leak_protection';
+  static const _keyDnsFallback = 'dns_fallback';
+  static const _keyLanBypass = 'lan_bypass';
+  static const _keyHardwareAcceleration = 'hardware_acceleration';
 
   static SharedPreferences? _prefs;
 
@@ -113,4 +118,27 @@ class AppPreferences {
   static bool get joinBeta => _prefs?.getBool(_keyJoinBeta) ?? false;
   static Future<void> setJoinBeta(bool val) async =>
       await _prefs?.setBool(_keyJoinBeta, val);
+
+  // Theme: 'Proton UI' (default) or 'Proton UI (Liquid Glass)'
+  static String get selectedTheme =>
+      _prefs?.getString(_keySelectedTheme) ?? 'Proton UI';
+  static Future<void> setSelectedTheme(String theme) async =>
+      await _prefs?.setString(_keySelectedTheme, theme);
+
+  // Extra Functions
+  static bool get ipv6LeakProtection => _prefs?.getBool(_keyIpv6LeakProtection) ?? true;
+  static Future<void> setIpv6LeakProtection(bool val) async =>
+      await _prefs?.setBool(_keyIpv6LeakProtection, val);
+
+  static bool get dnsFallback => _prefs?.getBool(_keyDnsFallback) ?? true;
+  static Future<void> setDnsFallback(bool val) async =>
+      await _prefs?.setBool(_keyDnsFallback, val);
+
+  static bool get lanBypass => _prefs?.getBool(_keyLanBypass) ?? true;
+  static Future<void> setLanBypass(bool val) async =>
+      await _prefs?.setBool(_keyLanBypass, val);
+
+  static bool get hardwareAcceleration => _prefs?.getBool(_keyHardwareAcceleration) ?? true;
+  static Future<void> setHardwareAcceleration(bool val) async =>
+      await _prefs?.setBool(_keyHardwareAcceleration, val);
 }

@@ -145,6 +145,16 @@ class AndroidCore {
     } catch (_) {}
   }
 
+  /// Triggers native Android PackageInstaller to install an APK file.
+  static Future<bool> installApk(String filePath) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('installApk', {'filePath': filePath});
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> setOn(bool on) async {
     try {
       await _channel.invokeMethod<void>('setOn', {'on': on});

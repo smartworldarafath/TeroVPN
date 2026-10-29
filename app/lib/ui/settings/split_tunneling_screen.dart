@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/android_core.dart';
 import '../../core/app_preferences.dart';
 
@@ -76,8 +77,10 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Scaffold(
-      backgroundColor: ProtonColors.background,
+      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
       appBar: AppBar(
         title: Text('Split Tunneling', style: ProtonTypography.titleMedium),
         leading: IconButton(
@@ -219,7 +222,7 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: _filteredApps.length,
-                        separatorBuilder: (_, __) => const Divider(
+                        separatorBuilder: (_, _) => const Divider(
                           height: 1,
                           color: ProtonColors.cardBorder,
                           indent: 68,

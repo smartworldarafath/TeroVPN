@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../components/filter_chip_button.dart';
@@ -84,9 +85,10 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
       builder: (context, _) {
         final allCountries = CountryManager.instance.countries;
         final filteredCountries = _getFilteredCountries(allCountries);
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -152,20 +154,26 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                         hintText: 'Search countries or cities...',
                         hintStyle: ProtonTypography.bodyMedium.copyWith(color: ProtonColors.textMuted),
                         filled: true,
-                        fillColor: ProtonColors.surface,
+                        fillColor: isLiquid
+                            ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                            : ProtonColors.surface,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         prefixIcon: const Icon(Icons.search_rounded, color: ProtonColors.textSecondary, size: 20),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
+                          borderSide: BorderSide(
+                            color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
+                          borderSide: BorderSide(
+                            color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: ProtonColors.primary, width: 1.5),
+                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
+                          borderSide: const BorderSide(color: Color(0xFF6D4AFF), width: 1.5),
                         ),
                       ),
                       onChanged: (val) {
@@ -253,11 +261,13 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 120),
                         itemCount: filteredCountries.length + 1,
-                        separatorBuilder: (_, __) => const Divider(
-                          height: 1,
-                          color: ProtonColors.cardBorder,
-                          indent: 68,
-                        ),
+                        separatorBuilder: (_, _) => isLiquid
+                            ? const SizedBox(height: 2)
+                            : const Divider(
+                                height: 1,
+                                color: ProtonColors.cardBorder,
+                                indent: 68,
+                              ),
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';

@@ -31,7 +31,7 @@ class ServerLoadBar extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: _tierColor.withOpacity(0.5),
+                color: _tierColor.withValues(alpha: 0.5),
                 blurRadius: 4,
               ),
             ],

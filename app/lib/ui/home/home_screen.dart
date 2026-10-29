@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/app_preferences.dart';
@@ -63,8 +64,10 @@ class HomeScreen extends StatelessWidget {
           );
         }).toList();
 
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
+
         return Scaffold(
-          backgroundColor: ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
           body: Stack(
             children: [
               WorldMapAtmosphere(
@@ -92,7 +95,7 @@ class HomeScreen extends StatelessWidget {
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: ProtonColors.primary.withOpacity(0.4),
+                                      color: const Color(0xFF6D4AFF).withValues(alpha: 0.4),
                                       blurRadius: 8,
                                     ),
                                   ],

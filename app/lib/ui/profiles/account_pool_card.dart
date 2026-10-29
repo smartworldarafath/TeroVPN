@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/models.dart';
 import '../../core/format.dart';
 
@@ -16,6 +17,7 @@ class AccountPoolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
     final list = accounts?.accounts ?? [];
     final active = list.where((a) => a.active).firstOrNull ?? list.firstOrNull;
     final totalAccounts = list.length;
@@ -28,9 +30,23 @@ class AccountPoolCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: ProtonColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: ProtonColors.cardBorder, width: 1),
+        color: isLiquid
+            ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+            : ProtonColors.surface,
+        borderRadius: BorderRadius.circular(isLiquid ? 20 : 18),
+        border: Border.all(
+          color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+          width: 1,
+        ),
+        boxShadow: isLiquid
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.35),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -42,7 +58,7 @@ class AccountPoolCard extends StatelessWidget {
                 children: [
                   const Icon(
                     Icons.layers_rounded,
-                    color: ProtonColors.activeLabel,
+                    color: Color(0xFF6D4AFF),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -57,7 +73,7 @@ class AccountPoolCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: ProtonColors.primary.withValues(alpha: 0.18),
+                  color: const Color(0xFF6D4AFF).withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -65,7 +81,7 @@ class AccountPoolCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: ProtonColors.activeLabel,
+                    color: Color(0xFFB19BFF),
                   ),
                 ),
               ),
@@ -105,9 +121,9 @@ class AccountPoolCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 6,
-              backgroundColor: ProtonColors.surfaceDark,
+              backgroundColor: isLiquid ? const Color(0xFF141222) : ProtonColors.surfaceDark,
               valueColor: AlwaysStoppedAnimation<Color>(
-                ratio > 0.85 ? ProtonColors.disconnected : ProtonColors.primary,
+                ratio > 0.85 ? ProtonColors.disconnected : const Color(0xFF6D4AFF),
               ),
             ),
           ),
@@ -122,8 +138,10 @@ class AccountPoolCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Refresh Now'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: ProtonColors.activeLabel,
-                side: const BorderSide(color: ProtonColors.cardBorder),
+                foregroundColor: isLiquid ? const Color(0xFFB19BFF) : ProtonColors.activeLabel,
+                side: BorderSide(
+                  color: isLiquid ? const Color(0xFF6D4AFF).withValues(alpha: 0.5) : ProtonColors.cardBorder,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

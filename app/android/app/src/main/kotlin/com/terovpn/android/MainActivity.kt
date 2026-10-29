@@ -85,6 +85,29 @@ class MainActivity : FlutterActivity() {
                 "isRunning" -> result.success(mobile.Mobile.running())
                 "isOn" -> result.success(CoreService.on)
                 "isConnected" -> result.success(CoreService.connected)
+                "installApk" -> {
+                    val filePath = call.argument<String>("filePath") ?: ""
+                    val file = java.io.File(filePath)
+                    if (!file.exists()) {
+                        result.error("not_found", "APK file does not exist", null)
+                    } else {
+                        try {
+                            val uri = androidx.core.content.FileProvider.getUriForFile(
+                                this,
+                                "$packageName.fileprovider",
+                                file
+                            )
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+                                setDataAndType(uri, "application/vnd.android.package-archive")
+                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            }
+                            startActivity(intent)
+                            result.success(true)
+                        } catch (e: Exception) {
+                            result.error("install_error", e.message, null)
+                        }
+                    }
+                }
                 "askNotifications" -> {
                     askForNotifications()
                     result.success(null)

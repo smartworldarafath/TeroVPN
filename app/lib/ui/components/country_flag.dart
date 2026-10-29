@@ -25,10 +25,10 @@ class CountryFlag extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: ProtonColors.fastestBolt.withOpacity(0.18),
+          color: ProtonColors.fastestBolt.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(borderRadius),
           border: Border.all(
-            color: ProtonColors.fastestBolt.withOpacity(0.4),
+            color: ProtonColors.fastestBolt.withValues(alpha: 0.4),
             width: 1,
           ),
         ),
@@ -48,12 +48,12 @@ class CountryFlag extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(borderRadius),
         border: Border.all(
-          color: Colors.white.withOpacity(0.12),
+          color: Colors.white.withValues(alpha: 0.12),
           width: 0.8,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withValues(alpha: 0.25),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
