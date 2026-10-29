@@ -1,0 +1,36 @@
+# Build outputs & caches
+out/
+build/
+app/build/
+.dart_tool/
+app/.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Android build & caches
+app/android/.gradle/
+app/android/build/
+app/android/app/build/
+app/android/local.properties
+app/android/captures/
+app/android/.cxx/
+GeneratedPluginRegistrant.java
+
+# Secret keys & certificates
+*.keystore
+*.jks
+*.key
+key.properties
+*.env
+*.env.*
+local.properties
+
+# Logs and IDE
+*.log
+.idea/
+.vscode/
+*.iml
+.DS_Store
+.superpowers/
