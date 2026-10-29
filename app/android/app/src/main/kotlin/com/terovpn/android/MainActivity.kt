@@ -83,6 +83,8 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "isRunning" -> result.success(mobile.Mobile.running())
+                "isOn" -> result.success(CoreService.on)
+                "isConnected" -> result.success(CoreService.connected)
                 "connectionMode" -> result.success(CoreService.connectionMode(this))
                 "showSpeed" -> result.success(CoreService.showSpeed(this))
                 "setShowSpeed" -> {

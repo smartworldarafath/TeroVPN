@@ -40,8 +40,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     setState(() => _currentIndex = index);
     _pageController.animateToPage(
       index,
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeInOutCubic,
     );
   }
 

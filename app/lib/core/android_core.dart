@@ -118,6 +118,26 @@ class AndroidCore {
 
   /// Turns the VPN on (asking the user for the VPN permission the first
   /// time) or off. It throws [VpnNotAllowed] when the user refuses.
+  /// Whether the VPN service is turned on in Android.
+  static Future<bool> isOn() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('isOn');
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Whether the VPN service has an active established connection.
+  static Future<bool> isConnected() async {
+    try {
+      final res = await _channel.invokeMethod<bool>('isConnected');
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
   static Future<void> setOn(bool on) async {
     try {
       await _channel.invokeMethod<void>('setOn', {'on': on});

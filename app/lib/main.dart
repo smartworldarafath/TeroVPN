@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'core/android_core.dart';
+import 'core/app_preferences.dart';
 import 'core/core_api.dart';
 import 'core/core_controller.dart';
 import 'theme/proton_theme.dart';
@@ -9,6 +10,7 @@ import 'ui/shell/main_navigation_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppPreferences.init();
 
   // Edge-to-edge layout with transparent status and navigation bars
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
@@ -46,6 +48,12 @@ void main() async {
   );
 
   controller.start();
+
+  // Restore saved location
+  final savedLoc = AppPreferences.selectedLocation;
+  if (savedLoc.isNotEmpty && savedLoc.toLowerCase() != 'nl') {
+    controller.setLocation(savedLoc);
+  }
 
   runApp(TeroVpnApp(controller: controller));
 }

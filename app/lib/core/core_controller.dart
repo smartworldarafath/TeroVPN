@@ -7,6 +7,7 @@ import 'remote_flags.dart';
 import 'models.dart';
 import 'ports.dart';
 import 'tun_service.dart';
+import 'app_preferences.dart';
 
 /// Connects to the core, polls its status and accounts, and runs the
 /// user's actions. It holds no VPN logic: every decision is the core's.
@@ -60,6 +61,31 @@ class CoreController extends ChangeNotifier {
 
   CoreStatus? status;
   AccountList? accounts;
+  bool _localVpnOn = false;
+
+  /// Whether the VPN tunnel is running or requested on.
+  bool get isVpnOn {
+    if (_localVpnOn) return true;
+    final phase = status?.state.phase;
+    return phase != null && phase != Phase.off && phase != Phase.unknown;
+  }
+
+  /// Whether the VPN is fully running and connected to an exit node.
+  bool get isConnected => status?.state.phase == Phase.running;
+
+  /// Whether the VPN is actively establishing a connection.
+  bool get isConnecting =>
+      status?.state.phase == Phase.starting ||
+      status?.state.phase == Phase.waiting ||
+      switchingProxy;
+
+  /// Whether at least one user account exists.
+  bool get hasAccount => (accounts?.accounts.isNotEmpty == true);
+
+  /// Currently active account.
+  Account? get activeAccount =>
+      accounts?.accounts.where((a) => a.active).firstOrNull ??
+      accounts?.accounts.firstOrNull;
 
   /// Why the core cannot be reached; null while it answers.
   CoreUnavailable? unavailable;
@@ -238,6 +264,7 @@ class CoreController extends ChangeNotifier {
   /// Turns the proxy on or off ([turnOn] on the phone, the core's API on the
   /// computer) and waits, briefly, until the core reports it.
   Future<void> setOn(bool on) => _act(() async {
+    _localVpnOn = on;
     switchingProxy = true;
     notifyListeners();
     try {
@@ -295,6 +322,21 @@ class CoreController extends ChangeNotifier {
         await api.saveSettings(config);
       });
 
+  Future<SignInState> startSignIn(String email, String password) =>
+      _require().startSignIn(email, password);
+
+  Future<SignInState> startSignInAgain(String accountId) =>
+      _require().startSignInAgain(accountId);
+
+  Future<SignInState> signInState(String id) =>
+      _require().signInState(id);
+
+  Future<SignInState> answerSignIn(String id, String value) =>
+      _require().answerSignIn(id, value);
+
+  Future<void> cancelSignIn(String id) =>
+      _require().cancelSignIn(id);
+
   Future<void> openFolder() => _act(() => _require().openFolder());
 
   /// A fresh sign-in link to the web dashboard.
@@ -348,8 +390,10 @@ class CoreController extends ChangeNotifier {
 
   /// Chooses the location (a country code, `fastest`, or empty for the
   /// recommended one); the proxy restarts on it.
-  Future<void> setLocation(String country) =>
-      _act(() => _require().setLocation(country));
+  Future<void> setLocation(String country) async {
+    await AppPreferences.setSelectedLocation(country);
+    return _act(() => _require().setLocation(country));
+  }
 
   /// Stops polling, before the app quits.
   void stopPolling() {

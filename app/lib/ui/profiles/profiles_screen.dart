@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/core_controller.dart';
+import '../../core/app_preferences.dart';
 import 'profile_card.dart';
 import 'account_pool_card.dart';
 
@@ -20,7 +21,31 @@ class ProfilesScreen extends StatefulWidget {
 }
 
 class _ProfilesScreenState extends State<ProfilesScreen> {
-  String _activeProfileTitle = 'Streaming US';
+  late String _activeProfileTitle;
+
+  @override
+  void initState() {
+    super.initState();
+    _activeProfileTitle = AppPreferences.selectedProfile;
+  }
+
+  Future<void> _selectProfile(String title, String countryCode) async {
+    setState(() => _activeProfileTitle = title);
+    await AppPreferences.setSelectedProfile(title);
+    await AppPreferences.setSelectedLocation(countryCode);
+    await widget.controller.setLocation(countryCode.toLowerCase());
+    widget.onProfileSelected(countryCode);
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to profile: $title ($countryCode)'),
+          backgroundColor: ProtonColors.surfaceDark,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,11 +94,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 countryName: 'United States',
                 icon: Icons.play_circle_outline_rounded,
                 isActive: _activeProfileTitle == 'Streaming US',
-                onTap: () {
-                  setState(() => _activeProfileTitle = 'Streaming US');
-                  widget.controller.setLocation('us');
-                  widget.onProfileSelected('US');
-                },
+                onTap: () => _selectProfile('Streaming US', 'US'),
               ),
 
               ProfileCard(
@@ -83,11 +104,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 countryName: 'Netherlands',
                 icon: Icons.sports_esports_outlined,
                 isActive: _activeProfileTitle == 'Low Latency Gaming',
-                onTap: () {
-                  setState(() => _activeProfileTitle = 'Low Latency Gaming');
-                  widget.controller.setLocation('nl');
-                  widget.onProfileSelected('NL');
-                },
+                onTap: () => _selectProfile('Low Latency Gaming', 'NL'),
               ),
 
               ProfileCard(
@@ -97,11 +114,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 countryName: 'Germany',
                 icon: Icons.download_rounded,
                 isActive: _activeProfileTitle == 'Secure P2P Germany',
-                onTap: () {
-                  setState(() => _activeProfileTitle = 'Secure P2P Germany');
-                  widget.controller.setLocation('de');
-                  widget.onProfileSelected('DE');
-                },
+                onTap: () => _selectProfile('Secure P2P Germany', 'DE'),
               ),
 
               const SizedBox(height: 28),

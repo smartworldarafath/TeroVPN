@@ -9,6 +9,7 @@ class VpnConnectionCard extends StatelessWidget {
   final String cityName;
   final bool isConnected;
   final bool isConnecting;
+  final bool isVpnOn;
   final VoidCallback onToggle;
   final VoidCallback onChangeServer;
 
@@ -19,6 +20,7 @@ class VpnConnectionCard extends StatelessWidget {
     required this.cityName,
     required this.isConnected,
     this.isConnecting = false,
+    this.isVpnOn = false,
     required this.onToggle,
     required this.onChangeServer,
   });
@@ -121,17 +123,17 @@ class VpnConnectionCard extends StatelessWidget {
               child: ElevatedButton(
                 onPressed: onToggle,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: isConnected
+                  backgroundColor: (isConnected || isVpnOn)
                       ? ProtonColors.cancelBtn
                       : (isConnecting ? ProtonColors.cancelBtn : ProtonColors.primary),
                   foregroundColor: Colors.white,
-                  elevation: isConnected ? 0 : 4,
-                  shadowColor: isConnected
+                  elevation: (isConnected || isVpnOn) ? 0 : 4,
+                  shadowColor: (isConnected || isVpnOn)
                       ? Colors.transparent
                       : ProtonColors.primary.withOpacity(0.5),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
-                    side: isConnected
+                    side: (isConnected || isVpnOn)
                         ? BorderSide(
                             color: ProtonColors.disconnected.withOpacity(0.4),
                             width: 1,
@@ -153,17 +155,17 @@ class VpnConnectionCard extends StatelessWidget {
                       )
                     else
                       Icon(
-                        isConnected ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
+                        (isConnected || isVpnOn) ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
                         size: 20,
-                        color: isConnected ? ProtonColors.disconnected : Colors.white,
+                        color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
                       ),
                     const SizedBox(width: 10),
                     Text(
-                      isConnected
+                      (isConnected || isVpnOn)
                           ? 'Disconnect'
                           : (isConnecting ? 'Cancel' : 'Quick Connect'),
                       style: ProtonTypography.labelLarge.copyWith(
-                        color: isConnected ? ProtonColors.disconnected : Colors.white,
+                        color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
                       ),
                     ),
                   ],

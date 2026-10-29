@@ -3,6 +3,9 @@ import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
+import '../../core/app_preferences.dart';
+import '../components/signin_dialog.dart';
+import '../countries/country_data.dart';
 import '../components/details_sheet.dart';
 import 'world_map_atmosphere.dart';
 import 'vpn_status_view.dart';
@@ -29,14 +32,35 @@ class HomeScreen extends StatelessWidget {
         final isConnected = phase == Phase.running;
         final isConnecting = phase == Phase.starting || controller.switchingProxy;
 
+        final isVpnOn = controller.isVpnOn || isConnected;
+        final savedCode = AppPreferences.selectedLocation;
         final proxy = status?.proxy;
-        final countryCode = proxy?.countryCode ?? 'NL';
+        final countryCode = proxy?.countryCode.isNotEmpty == true ? proxy!.countryCode : savedCode;
+        final matchedCountry = kFastlyCountries.firstWhere(
+          (c) => c.code.toUpperCase() == countryCode.toUpperCase(),
+          orElse: () => const CountryItem(code: 'NL', name: 'Netherlands', cities: 'Amsterdam', load: 32, pingMs: 18),
+        );
         final countryName = proxy?.countryName.isNotEmpty == true
             ? proxy!.countryName
-            : 'Netherlands';
+            : (countryCode.toLowerCase() == 'fastest' ? 'Fastest country' : matchedCountry.name);
         final cityName = proxy?.cityName.isNotEmpty == true
             ? proxy!.cityName
-            : 'Amsterdam #12';
+            : (countryCode.toLowerCase() == 'fastest' ? 'Auto Anycast Routing' : '${matchedCountry.cities.split(',').first} #1');
+
+        final recentCodes = AppPreferences.recentLocations;
+        final recentItems = recentCodes.map((code) {
+          final item = kFastlyCountries.firstWhere(
+            (c) => c.code.toUpperCase() == code.toUpperCase(),
+            orElse: () => CountryItem(code: code, name: code, cities: 'Edge', load: 30, pingMs: 25),
+          );
+          return RecentServerItem(
+            code: item.code,
+            name: item.name,
+            city: item.cities.split(',').first,
+            latencyMs: item.pingMs,
+            load: item.load,
+          );
+        }).toList();
 
         return Scaffold(
           backgroundColor: ProtonColors.background,
@@ -128,10 +152,15 @@ class HomeScreen extends StatelessWidget {
                               cityName: cityName,
                               isConnected: isConnected,
                               isConnecting: isConnecting,
+                              isVpnOn: isVpnOn,
                               onToggle: () {
-                                if (isConnected || isConnecting) {
+                                if (isVpnOn || isConnected || isConnecting) {
                                   controller.setOn(false);
                                 } else {
+                                  if (!controller.hasAccount) {
+                                    SignInDialog.show(context, controller);
+                                    return;
+                                  }
                                   controller.setOn(true);
                                 }
                               },
@@ -139,32 +168,14 @@ class HomeScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 28),
                             RecentsList(
-                              items: const [
-                                RecentServerItem(
-                                  code: 'NL',
-                                  name: 'Netherlands',
-                                  city: 'Amsterdam #12',
-                                  latencyMs: 18,
-                                  load: 32,
-                                ),
-                                RecentServerItem(
-                                  code: 'DE',
-                                  name: 'Germany',
-                                  city: 'Frankfurt #8',
-                                  latencyMs: 24,
-                                  load: 54,
-                                ),
-                                RecentServerItem(
-                                  code: 'US',
-                                  name: 'United States',
-                                  city: 'New York #102',
-                                  latencyMs: 82,
-                                  load: 68,
-                                ),
-                              ],
+                              items: recentItems,
                               onSelect: (item) {
                                 controller.setLocation(item.code);
-                                if (!isConnected) {
+                                if (!isVpnOn) {
+                                  if (!controller.hasAccount) {
+                                    SignInDialog.show(context, controller);
+                                    return;
+                                  }
                                   controller.setOn(true);
                                 }
                               },

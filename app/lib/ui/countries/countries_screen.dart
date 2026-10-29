@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/core_controller.dart';
+import '../../core/app_preferences.dart';
 import '../components/filter_chip_button.dart';
 import 'country_data.dart';
 import 'country_item_row.dart';
@@ -181,47 +182,69 @@ class _CountriesScreenState extends State<CountriesScreen> {
 
             // Countries List
             Expanded(
-              child: ListView.separated(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 120),
-                itemCount: _filteredCountries.length + 1,
-                separatorBuilder: (_, __) => const Divider(
-                  height: 1,
-                  color: ProtonColors.cardBorder,
-                  indent: 68,
-                ),
-                itemBuilder: (context, index) {
-                  if (index == 0) {
-                    final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';
-                    return CountryItemRow(
-                      code: 'fastest',
-                      name: 'Fastest country',
-                      subtitle: 'Connects to closest edge server',
-                      load: 25,
-                      isFastest: true,
-                      isSelected: isFastestSelected,
-                      onTap: () {
-                        widget.controller.setLocation('fastest');
-                        widget.onCountrySelected('fastest');
-                      },
-                    );
-                  }
-
-                  final country = _filteredCountries[index - 1];
-                  final isSelected = activeCode == country.code;
-
-                  return CountryItemRow(
-                    code: country.code,
-                    name: country.name,
-                    subtitle: country.cities,
-                    load: country.load,
-                    isSelected: isSelected,
-                    onTap: () {
-                      widget.controller.setLocation(country.code.toLowerCase());
-                      widget.onCountrySelected(country.code);
-                    },
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 280),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.04, 0),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
                   );
                 },
+                child: KeyedSubtree(
+                  key: ValueKey<String>('$_selectedFilter-$_searchQuery'),
+                  child: ListView.separated(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.only(bottom: 120),
+                    itemCount: _filteredCountries.length + 1,
+                    separatorBuilder: (_, __) => const Divider(
+                      height: 1,
+                      color: ProtonColors.cardBorder,
+                      indent: 68,
+                    ),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';
+                        return CountryItemRow(
+                          code: 'fastest',
+                          name: 'Fastest country',
+                          subtitle: 'Connects to closest edge server',
+                          load: 25,
+                          isFastest: true,
+                          isSelected: isFastestSelected,
+                          onTap: () async {
+                            await AppPreferences.setSelectedLocation('fastest');
+                            await widget.controller.setLocation('fastest');
+                            widget.onCountrySelected('fastest');
+                          },
+                        );
+                      }
+
+                      final country = _filteredCountries[index - 1];
+                      final isSelected = activeCode == country.code;
+
+                      return CountryItemRow(
+                        code: country.code,
+                        name: country.name,
+                        subtitle: country.cities,
+                        load: country.load,
+                        isSelected: isSelected,
+                        onTap: () async {
+                          await AppPreferences.setSelectedLocation(country.code);
+                          await widget.controller.setLocation(country.code.toLowerCase());
+                          widget.onCountrySelected(country.code);
+                        },
+                      );
+                    },
+                  ),
+                ),
               ),
             ),
           ],
