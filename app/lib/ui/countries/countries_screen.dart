@@ -88,7 +88,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
+          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -102,7 +102,14 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                     children: [
                       Text(
                         'Countries',
-                        style: ProtonTypography.titleLarge,
+                        style: isLiquid
+                            ? const TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.5,
+                              )
+                            : ProtonTypography.titleLarge,
                       ),
                       Row(
                         children: [
@@ -112,8 +119,8 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                               turns: _spinController,
                               child: const Icon(
                                 Icons.refresh_rounded,
-                                color: ProtonColors.textSecondary,
-                                size: 24,
+                                color: Color(0xFF8F8C9E),
+                                size: 22,
                               ),
                             ),
                             tooltip: 'Refresh Latencies & Load in Real-Time',
@@ -123,8 +130,8 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                           IconButton(
                             icon: Icon(
                               _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
-                              color: ProtonColors.textSecondary,
-                              size: 26,
+                              color: const Color(0xFF8F8C9E),
+                              size: 24,
                             ),
                             onPressed: () {
                               setState(() {
@@ -152,28 +159,33 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                       style: ProtonTypography.bodyLarge,
                       decoration: InputDecoration(
                         hintText: 'Search countries or cities...',
-                        hintStyle: ProtonTypography.bodyMedium.copyWith(color: ProtonColors.textMuted),
+                        hintStyle: TextStyle(
+                          color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textMuted,
+                          fontSize: 14,
+                        ),
                         filled: true,
                         fillColor: isLiquid
-                            ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
                             : ProtonColors.surface,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        prefixIcon: const Icon(Icons.search_rounded, color: ProtonColors.textSecondary, size: 20),
+                        prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8F8C9E), size: 20),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
+                          borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+                            color: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : ProtonColors.cardBorder,
+                            width: 1.2,
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
+                          borderRadius: BorderRadius.circular(16),
                           borderSide: BorderSide(
-                            color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+                            color: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : ProtonColors.cardBorder,
+                            width: 1.2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 12),
-                          borderSide: const BorderSide(color: Color(0xFF6D4AFF), width: 1.5),
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: const BorderSide(color: Color(0xFF6B42FF), width: 1.5),
                         ),
                       ),
                       onChanged: (val) {
@@ -186,7 +198,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
 
                 // Filter Chips Row
                 SizedBox(
-                  height: 44,
+                  height: 42,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -221,21 +233,22 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
 
                 // Section Count Subtitle
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                   child: Text(
-                    'All countries (${filteredCountries.length}) · Auto-refreshes hourly',
-                    style: ProtonTypography.bodySmall.copyWith(
-                      color: ProtonColors.textMuted,
+                    'All countries (${filteredCountries.length})',
+                    style: const TextStyle(
+                      color: Color(0xFF8F8C9E),
                       fontWeight: FontWeight.w600,
+                      fontSize: 13,
                     ),
                   ),
                 ),
 
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
 
                 // Countries List
                 Expanded(
@@ -261,13 +274,17 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 120),
                         itemCount: filteredCountries.length + 1,
-                        separatorBuilder: (_, _) => isLiquid
-                            ? const SizedBox(height: 2)
-                            : const Divider(
-                                height: 1,
-                                color: ProtonColors.cardBorder,
-                                indent: 68,
-                              ),
+                        separatorBuilder: (context, index) {
+                          if (index == 0) {
+                            return const SizedBox(height: 6);
+                          }
+                          return Divider(
+                            height: 1,
+                            color: isLiquid ? Colors.white.withValues(alpha: 0.05) : ProtonColors.cardBorder,
+                            indent: isLiquid ? 68 : 68,
+                            endIndent: isLiquid ? 20 : 0,
+                          );
+                        },
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';
@@ -275,7 +292,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                               code: 'fastest',
                               name: 'Fastest country',
                               subtitle: 'Connects to closest edge server',
-                              load: 22,
+                              load: 25,
                               isFastest: true,
                               isSelected: isFastestSelected,
                               onTap: () async {
@@ -286,8 +303,11 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                             );
                           }
 
-                          final country = filteredCountries[index - 1];
+                          final countryIndex = index - 1;
+                          final country = filteredCountries[countryIndex];
                           final isSelected = activeCode == country.code;
+                          final isFirst = countryIndex == 0;
+                          final isLast = countryIndex == filteredCountries.length - 1;
 
                           return CountryItemRow(
                             code: country.code,
@@ -295,6 +315,8 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                             subtitle: country.cities,
                             load: country.load,
                             isSelected: isSelected,
+                            isFirstInGroup: isFirst,
+                            isLastInGroup: isLast,
                             onTap: () async {
                               await AppPreferences.setSelectedLocation(country.code);
                               await widget.controller.setLocation(country.code.toLowerCase());

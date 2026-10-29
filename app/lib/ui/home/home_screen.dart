@@ -120,59 +120,61 @@ class HomeScreen extends StatelessWidget {
                           ),
                           Row(
                             children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: isConnected
-                                      ? ProtonColors.connected.withValues(alpha: 0.15)
-                                      : (isConnecting
-                                          ? ProtonColors.connecting.withValues(alpha: 0.15)
-                                          : ProtonColors.surfaceDark),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
+                              if (!isLiquid) ...[
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  decoration: BoxDecoration(
                                     color: isConnected
-                                        ? ProtonColors.connected.withValues(alpha: 0.4)
+                                        ? ProtonColors.connected.withValues(alpha: 0.15)
                                         : (isConnecting
-                                            ? ProtonColors.connecting.withValues(alpha: 0.4)
-                                            : ProtonColors.cardBorder),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      isConnected
-                                          ? Icons.lock_rounded
-                                          : (isConnecting ? Icons.sync_rounded : Icons.lock_open_rounded),
+                                            ? ProtonColors.connecting.withValues(alpha: 0.15)
+                                            : ProtonColors.surfaceDark),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
                                       color: isConnected
-                                          ? ProtonColors.connected
-                                          : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
-                                      size: 15,
+                                          ? ProtonColors.connected.withValues(alpha: 0.4)
+                                          : (isConnecting
+                                              ? ProtonColors.connecting.withValues(alpha: 0.4)
+                                              : ProtonColors.cardBorder),
+                                      width: 1,
                                     ),
-                                    const SizedBox(width: 5),
-                                    Text(
-                                      isConnected
-                                          ? 'LOCKED'
-                                          : (isConnecting ? 'TUNNELING' : 'UNLOCKED'),
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        letterSpacing: 0.5,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        isConnected
+                                            ? Icons.lock_rounded
+                                            : (isConnecting ? Icons.sync_rounded : Icons.lock_open_rounded),
                                         color: isConnected
                                             ? ProtonColors.connected
                                             : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
+                                        size: 15,
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(width: 5),
+                                      Text(
+                                        isConnected
+                                            ? 'LOCKED'
+                                            : (isConnecting ? 'TUNNELING' : 'UNLOCKED'),
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: 0.5,
+                                          color: isConnected
+                                              ? ProtonColors.connected
+                                              : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
+                                const SizedBox(width: 6),
+                              ],
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.info_outline_rounded,
-                                  color: ProtonColors.textSecondary,
+                                  color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
                                   size: 24,
                                 ),
                                 tooltip: 'Connection Details',

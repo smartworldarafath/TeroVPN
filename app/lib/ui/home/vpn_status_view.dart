@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 
 class VpnStatusView extends StatelessWidget {
   final bool isConnected;
@@ -16,9 +17,11 @@ class VpnStatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     final statusColor = isConnected
-        ? ProtonColors.connected
-        : (isConnecting ? ProtonColors.connecting : ProtonColors.disconnected);
+        ? (isLiquid ? const Color(0xFF00E676) : ProtonColors.connected)
+        : (isConnecting ? ProtonColors.connecting : const Color(0xFFDC3251));
 
     final statusText = isConnected
         ? 'CONNECTED'
@@ -27,7 +30,7 @@ class VpnStatusView extends StatelessWidget {
     final subtitleText = isConnected
         ? (exitCountry != null && exitCountry!.isNotEmpty
             ? 'Traffic routed via $exitCountry'
-            : 'Fastly MASQUE HTTP/3 Encrypted')
+            : 'Your network traffic is encrypted')
         : (isConnecting
             ? 'Establishing secure HTTP/3 tunnel'
             : 'Your network traffic is unencrypted');
@@ -35,22 +38,26 @@ class VpnStatusView extends StatelessWidget {
     return Column(
       children: [
         AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
+          duration: const Duration(milliseconds: 350),
           curve: Curves.easeOutCubic,
-          width: 80,
-          height: 80,
+          width: isLiquid ? 88 : 80,
+          height: isLiquid ? 88 : 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: ProtonColors.surface,
+            color: isLiquid
+                ? (isConnected
+                    ? const Color(0xFF13231B)
+                    : (isConnecting ? const Color(0xFF281F15) : const Color(0xFF20131B)))
+                : ProtonColors.surface,
             border: Border.all(
-              color: statusColor.withValues(alpha: 0.4),
-              width: 2,
+              color: isLiquid ? statusColor.withValues(alpha: 0.8) : statusColor.withValues(alpha: 0.4),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: statusColor.withValues(alpha: isConnected ? 0.35 : 0.15),
-                blurRadius: 24,
-                spreadRadius: 2,
+                color: statusColor.withValues(alpha: isLiquid ? 0.35 : 0.2),
+                blurRadius: isLiquid ? 36 : 24,
+                spreadRadius: isLiquid ? 4 : 2,
               ),
             ],
           ),
@@ -67,7 +74,7 @@ class VpnStatusView extends StatelessWidget {
                 : Icon(
                     isConnected ? Icons.lock_rounded : Icons.lock_open_rounded,
                     color: statusColor,
-                    size: 36,
+                    size: isLiquid ? 38 : 36,
                   ),
           ),
         ),
@@ -77,7 +84,7 @@ class VpnStatusView extends StatelessWidget {
           style: ProtonTypography.titleMedium.copyWith(
             color: statusColor,
             fontWeight: FontWeight.w800,
-            letterSpacing: 1.5,
+            letterSpacing: 1.2,
             fontSize: 16,
           ),
         ),
@@ -85,7 +92,8 @@ class VpnStatusView extends StatelessWidget {
         Text(
           subtitleText,
           style: ProtonTypography.bodySmall.copyWith(
-            color: ProtonColors.textSecondary,
+            color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+            fontSize: 13,
           ),
         ),
       ],

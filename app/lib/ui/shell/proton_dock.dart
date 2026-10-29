@@ -57,7 +57,7 @@ class ProtonDock extends StatelessWidget {
       builder: (context, constraints) {
         final totalWidth = constraints.maxWidth;
         final itemWidth = totalWidth / items.length;
-        const pillWidth = 64.0;
+        const pillWidth = 58.0;
         const pillHeight = 32.0;
 
         // Exact horizontal centering of the active pill over the icon of the current tab
@@ -66,20 +66,20 @@ class ProtonDock extends StatelessWidget {
         final dockRadius = BorderRadius.circular(isLiquid ? 36 : 22);
 
         return Container(
-          height: isLiquid ? 70 : 68,
+          height: isLiquid ? 72 : 68,
           decoration: BoxDecoration(
             borderRadius: dockRadius,
             boxShadow: [
               if (isLiquid) ...[
                 BoxShadow(
-                  color: const Color(0xFF6D4AFF).withValues(alpha: 0.38),
-                  blurRadius: 28,
-                  spreadRadius: 1,
+                  color: const Color(0xFF6B42FF).withValues(alpha: 0.42),
+                  blurRadius: 36,
+                  spreadRadius: 3,
                   offset: const Offset(0, 6),
                 ),
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.55),
-                  blurRadius: 20,
+                  color: Colors.black.withValues(alpha: 0.65),
+                  blurRadius: 22,
                   offset: const Offset(0, 4),
                 ),
               ] else ...[
@@ -95,20 +95,20 @@ class ProtonDock extends StatelessWidget {
             borderRadius: dockRadius,
             child: BackdropFilter(
               filter: ImageFilter.blur(
-                sigmaX: isLiquid ? 22 : 0,
-                sigmaY: isLiquid ? 22 : 0,
+                sigmaX: isLiquid ? 20 : 0,
+                sigmaY: isLiquid ? 20 : 0,
               ),
               child: Container(
                 decoration: BoxDecoration(
                   color: isLiquid
-                      ? const Color(0xFF141222).withValues(alpha: 0.75)
+                      ? const Color(0xFF131122).withValues(alpha: 0.85)
                       : ProtonColors.surface,
                   borderRadius: dockRadius,
                   border: Border.all(
                     color: isLiquid
-                        ? Colors.white.withValues(alpha: 0.13)
+                        ? Colors.white.withValues(alpha: 0.10)
                         : ProtonColors.cardBorder.withValues(alpha: 0.8),
-                    width: isLiquid ? 1.2 : 1.0,
+                    width: 1.0,
                   ),
                 ),
                 child: Stack(
@@ -118,22 +118,13 @@ class ProtonDock extends StatelessWidget {
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOutCubic,
                       left: pillLeft,
-                      top: isLiquid ? 9 : 8,
+                      top: isLiquid ? 10 : 8,
                       width: pillWidth,
                       height: pillHeight,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isLiquid ? const Color(0xFF6D4AFF) : ProtonColors.activePill,
-                          borderRadius: BorderRadius.circular(isLiquid ? 18 : 16),
-                          boxShadow: isLiquid
-                              ? [
-                                  BoxShadow(
-                                    color: const Color(0xFF6D4AFF).withValues(alpha: 0.6),
-                                    blurRadius: 14,
-                                    spreadRadius: 1,
-                                  ),
-                                ]
-                              : null,
+                          color: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.activePill,
+                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 16),
                         ),
                       ),
                     ),
@@ -158,20 +149,26 @@ class ProtonDock extends StatelessWidget {
                                   child: Center(
                                     child: Icon(
                                       isSelected ? item.activeIcon : item.inactiveIcon,
-                                      color: isSelected ? Colors.white : ProtonColors.textSecondary,
-                                      size: 22,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isLiquid
+                                              ? const Color(0xFF757288)
+                                              : ProtonColors.textSecondary),
+                                      size: 21,
                                     ),
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: 3),
                                 Text(
                                   item.label,
                                   style: ProtonTypography.labelSmall.copyWith(
                                     fontSize: 10,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                     color: isSelected
-                                        ? (isLiquid ? const Color(0xFFB19BFF) : ProtonColors.activeLabel)
-                                        : ProtonColors.textSecondary,
+                                        ? (isLiquid ? const Color(0xFF8B6CFF) : ProtonColors.activeLabel)
+                                        : (isLiquid
+                                            ? const Color(0xFF757288)
+                                            : ProtonColors.textSecondary),
                                   ),
                                 ),
                               ],

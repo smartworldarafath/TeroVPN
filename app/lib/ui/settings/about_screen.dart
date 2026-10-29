@@ -72,7 +72,7 @@ class AboutScreen extends StatelessWidget {
 
               // Version & Copyright
               Text(
-                'Version 1.0.7',
+                'Version 1.0.8',
                 style: ProtonTypography.bodySmall.copyWith(
                   color: ProtonColors.textSecondary,
                   fontSize: 13,

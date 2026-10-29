@@ -56,7 +56,8 @@ class _ExtraFunctionsScreenState extends State<ExtraFunctionsScreen> {
                   subtitle: 'Completely drop untunneled IPv6 packets to prevent IP leakage',
                   trailing: Switch(
                     value: _ipv6Leak,
-                    activeThumbColor: const Color(0xFF6D4AFF),
+                    activeThumbColor: const Color(0xFF6B42FF),
+                    activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
                     onChanged: (val) {
                       setState(() => _ipv6Leak = val);
                       AppPreferences.setIpv6LeakProtection(val);
@@ -69,7 +70,8 @@ class _ExtraFunctionsScreenState extends State<ExtraFunctionsScreen> {
                   subtitle: 'Automatic failover to Cloudflare DNS (1.1.1.1) if MASQUE resolver stalls',
                   trailing: Switch(
                     value: _dnsFallback,
-                    activeThumbColor: const Color(0xFF6D4AFF),
+                    activeThumbColor: const Color(0xFF6B42FF),
+                    activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
                     onChanged: (val) {
                       setState(() => _dnsFallback = val);
                       AppPreferences.setDnsFallback(val);
@@ -82,7 +84,8 @@ class _ExtraFunctionsScreenState extends State<ExtraFunctionsScreen> {
                   subtitle: 'Allow direct connection to printers, smart TVs, and NAS on local network',
                   trailing: Switch(
                     value: _lanBypass,
-                    activeThumbColor: const Color(0xFF6D4AFF),
+                    activeThumbColor: const Color(0xFF6B42FF),
+                    activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
                     onChanged: (val) {
                       setState(() => _lanBypass = val);
                       AppPreferences.setLanBypass(val);
@@ -100,7 +103,8 @@ class _ExtraFunctionsScreenState extends State<ExtraFunctionsScreen> {
                   subtitle: 'Use GPU Vulkan/OpenGL shaders for real-time liquid glass blurring and 120Hz physics',
                   trailing: Switch(
                     value: _hardwareAccel,
-                    activeThumbColor: const Color(0xFF6D4AFF),
+                    activeThumbColor: const Color(0xFF6B42FF),
+                    activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
                     onChanged: (val) {
                       setState(() => _hardwareAccel = val);
                       AppPreferences.setHardwareAcceleration(val);

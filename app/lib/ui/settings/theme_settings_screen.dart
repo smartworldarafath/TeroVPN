@@ -95,20 +95,20 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: ThemeManager.instance.isLiquidGlass
-                ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                ? const Color(0xFF1A1728).withValues(alpha: 0.72)
                 : ProtonColors.surface,
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: isSelected
-                  ? const Color(0xFF6D4AFF)
-                  : (ThemeManager.instance.isLiquidGlass ? Colors.white.withValues(alpha: 0.09) : ProtonColors.cardBorder),
+                  ? const Color(0xFF6B42FF)
+                  : (ThemeManager.instance.isLiquidGlass ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder),
               width: isSelected ? 1.5 : 1.0,
             ),
             boxShadow: [
               if (isSelected)
                 BoxShadow(
-                  color: const Color(0xFF6D4AFF).withValues(alpha: 0.25),
-                  blurRadius: 16,
+                  color: const Color(0xFF6B42FF).withValues(alpha: 0.30),
+                  blurRadius: 18,
                   spreadRadius: 1,
                 ),
             ],

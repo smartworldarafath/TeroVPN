@@ -84,7 +84,14 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
             children: [
               Text(
                 'Profiles',
-                style: ProtonTypography.titleLarge,
+                style: isLiquid
+                    ? const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: -0.5,
+                      )
+                    : ProtonTypography.titleLarge,
               ),
               const SizedBox(height: 8),
               Text(
@@ -155,6 +162,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 listenable: widget.controller,
                 builder: (context, _) => AccountPoolCard(
                   accounts: widget.controller.accounts,
+                  controller: widget.controller,
                   onRefresh: () async {
                     final active = widget.controller.activeAccount;
                     if (active != null) {

@@ -123,7 +123,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   Text(
                     'Settings',
-                    style: ProtonTypography.titleLarge,
+                    style: isLiquid
+                        ? const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
+                          )
+                        : ProtonTypography.titleLarge,
                   ),
                   const SizedBox(height: 20),
 
@@ -205,7 +212,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'Block malware, tracking, and intrusive ads',
                         trailing: Switch(
                           value: hasAccount && _netShieldEnabled,
-                          activeThumbColor: ProtonColors.primary,
+                          activeThumbColor: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.primary,
+                          activeTrackColor: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : null,
                           onChanged: (val) {
                             if (!hasAccount) {
                               _promptLoginRequired('NetShield Ad-blocker');
@@ -223,7 +231,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'Disable internet traffic if VPN connection drops',
                         trailing: Switch(
                           value: hasAccount && _killSwitchEnabled,
-                          activeThumbColor: ProtonColors.primary,
+                          activeThumbColor: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.primary,
+                          activeTrackColor: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : null,
                           onChanged: (val) {
                             if (!hasAccount) {
                               _promptLoginRequired('Kill Switch');
@@ -284,7 +293,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'Multipath UDP & QUIC routing optimization',
                         trailing: Switch(
                           value: hasAccount && _vpnAccelerator,
-                          activeThumbColor: ProtonColors.primary,
+                          activeThumbColor: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.primary,
+                          activeTrackColor: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : null,
                           onChanged: (val) {
                             if (!hasAccount) {
                               _promptLoginRequired('VPN Accelerator');
@@ -302,7 +312,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         subtitle: 'Live transfer speeds in Android status bar',
                         trailing: Switch(
                           value: _showSpeedInNotification,
-                          activeThumbColor: ProtonColors.primary,
+                          activeThumbColor: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.primary,
+                          activeTrackColor: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : null,
                           onChanged: (val) {
                             setState(() => _showSpeedInNotification = val);
                             AppPreferences.setShowSpeedNotification(val);
@@ -319,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SettingsRow(
                         icon: Icons.info_outline_rounded,
                         title: 'About TeroVPN',
-                        subtitle: 'Version 1.0.7 · Legal, Support & Acknowledgements',
+                        subtitle: 'Version 1.0.8 · Legal, Support & Acknowledgements',
                         trailing: const Icon(Icons.chevron_right_rounded, color: ProtonColors.textMuted),
                         onTap: () {
                           Navigator.of(context).push(

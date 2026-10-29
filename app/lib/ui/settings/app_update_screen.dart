@@ -19,7 +19,7 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
-  static const String currentVersion = '1.0.7';
+  static const String currentVersion = '1.0.8';
 
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
@@ -29,8 +29,8 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
   bool _updateAvailable = false;
   String? _errorMessage;
 
-  String _latestVersionTag = 'v1.0.7';
-  String _latestReleaseName = 'TeroVPN v1.0.7';
+  String _latestVersionTag = 'v1.0.8';
+  String _latestReleaseName = 'TeroVPN v1.0.8';
   String _releaseDate = 'October 2026';
   List<String> _changelogPoints = [];
   String? _downloadUrl;

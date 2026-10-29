@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
 
@@ -32,21 +31,21 @@ class ProfileCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: isLiquid
-            ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
             : ProtonColors.surface,
-        borderRadius: BorderRadius.circular(isLiquid ? 20 : 16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isActive
-              ? const Color(0xFF6D4AFF)
+              ? const Color(0xFF6B42FF)
               : (isLiquid
-                  ? Colors.white.withValues(alpha: 0.09)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : ProtonColors.cardBorder),
-          width: isActive ? 1.6 : 1.0,
+          width: isActive ? 1.5 : 1.0,
         ),
         boxShadow: [
           if (isLiquid && isActive) ...[
             BoxShadow(
-              color: const Color(0xFF6D4AFF).withValues(alpha: 0.35),
+              color: const Color(0xFF6B42FF).withValues(alpha: 0.30),
               blurRadius: 18,
               spreadRadius: 1,
               offset: const Offset(0, 4),
@@ -64,9 +63,9 @@ class ProfileCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(isLiquid ? 20 : 16),
+          borderRadius: BorderRadius.circular(20),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             child: Row(
               children: [
                 Container(
@@ -74,26 +73,26 @@ class ProfileCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF6D4AFF).withValues(alpha: 0.22)
+                        ? const Color(0xFF281E48)
                         : (isLiquid
-                            ? const Color(0xFF141222).withValues(alpha: 0.6)
+                            ? const Color(0xFF201D30)
                             : ProtonColors.surfaceDark),
-                    borderRadius: BorderRadius.circular(isLiquid ? 14 : 12),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isActive
-                          ? const Color(0xFF6D4AFF).withValues(alpha: 0.6)
-                          : (isLiquid
-                              ? Colors.white.withValues(alpha: 0.08)
-                              : ProtonColors.cardBorder),
+                          ? const Color(0xFF6B42FF).withValues(alpha: 0.4)
+                          : Colors.white.withValues(alpha: 0.06),
                       width: 1,
                     ),
                   ),
-                  child: Icon(
-                    icon,
-                    color: isActive
-                        ? (isLiquid ? const Color(0xFFB19BFF) : ProtonColors.activeLabel)
-                        : ProtonColors.textLight,
-                    size: 22,
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      color: isActive
+                          ? const Color(0xFF8B6CFF)
+                          : const Color(0xFF8F8C9E),
+                      size: 22,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 14),
@@ -105,8 +104,10 @@ class ProfileCard extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: ProtonTypography.bodyLarge.copyWith(
+                            style: const TextStyle(
+                              fontSize: 16,
                               fontWeight: FontWeight.w700,
+                              color: Colors.white,
                             ),
                           ),
                           if (isActive) ...[
@@ -114,7 +115,7 @@ class ProfileCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF00C853).withValues(alpha: 0.18),
+                                color: const Color(0xFF0F2B26),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
@@ -122,7 +123,8 @@ class ProfileCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF00E676),
+                                  color: Color(0xFF1FE5BD),
+                                  letterSpacing: 0.5,
                                 ),
                               ),
                             ),
@@ -132,38 +134,22 @@ class ProfileCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         description,
-                        style: ProtonTypography.bodySmall.copyWith(
-                          color: ProtonColors.textMuted,
+                        style: const TextStyle(
+                          color: Color(0xFF8F8C9E),
+                          fontSize: 12,
                           height: 1.3,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          CountryFlag(
-                            countryCode: countryCode,
-                            width: 20,
-                            height: 14,
-                            borderRadius: 3,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            countryName,
-                            style: ProtonTypography.bodySmall.copyWith(
-                              color: ProtonColors.textSecondary,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
-                Icon(
-                  isActive ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-                  color: isActive ? const Color(0xFF6D4AFF) : ProtonColors.textMuted,
-                  size: 22,
+                const SizedBox(width: 10),
+                // Country flag on the right, matching photo_4 exactly
+                CountryFlag(
+                  countryCode: countryCode,
+                  width: 28,
+                  height: 18,
+                  borderRadius: 3,
                 ),
               ],
             ),

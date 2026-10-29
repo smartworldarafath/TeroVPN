@@ -33,27 +33,21 @@ class VpnConnectionCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isLiquid
-            ? const Color(0xFF1B182B).withValues(alpha: 0.70)
+            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
             : ProtonColors.surface,
-        borderRadius: BorderRadius.circular(isLiquid ? 22 : 20),
+        borderRadius: BorderRadius.circular(isLiquid ? 24 : 20),
         border: Border.all(
           color: isConnected
-              ? ProtonColors.connected.withValues(alpha: 0.45)
+              ? (isLiquid ? const Color(0xFF00E676).withValues(alpha: 0.4) : ProtonColors.connected.withValues(alpha: 0.45))
               : (isLiquid
-                  ? Colors.white.withValues(alpha: 0.10)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : ProtonColors.cardBorder),
-          width: isLiquid ? 1.2 : 1.0,
+          width: 1.0,
         ),
         boxShadow: [
           if (isLiquid) ...[
             BoxShadow(
-              color: const Color(0xFF6D4AFF).withValues(alpha: 0.16),
-              blurRadius: 24,
-              spreadRadius: 1,
-              offset: const Offset(0, 6),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.5),
+              color: Colors.black.withValues(alpha: 0.45),
               blurRadius: 20,
               offset: const Offset(0, 4),
             ),
@@ -66,90 +60,86 @@ class VpnConnectionCard extends StatelessWidget {
           ],
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Server Selection Header Row
-          InkWell(
-            onTap: onChangeServer,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(isLiquid ? 22 : 20)),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Row(
-                children: [
-                  CountryFlag(
-                    countryCode: countryCode,
-                    width: 36,
-                    height: 25,
-                    borderRadius: 6,
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          countryName.isEmpty ? 'Fastest country' : countryName,
-                          style: ProtonTypography.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          cityName.isEmpty ? 'Auto Anycast Routing' : cityName,
-                          style: ProtonTypography.bodySmall.copyWith(
-                            color: ProtonColors.textMuted,
-                          ),
-                        ),
-                      ],
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Server Selection Header Row
+            InkWell(
+              onTap: onChangeServer,
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    CountryFlag(
+                      countryCode: countryCode,
+                      width: 36,
+                      height: 26,
+                      borderRadius: 4,
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: isLiquid
-                          ? const Color(0xFF6D4AFF).withValues(alpha: 0.15)
-                          : ProtonColors.surfaceDark,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isLiquid
-                            ? const Color(0xFF6D4AFF).withValues(alpha: 0.35)
-                            : ProtonColors.cardBorder,
-                        width: 0.8,
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            countryName.isEmpty ? 'Netherlands' : countryName,
+                            style: ProtonTypography.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 17,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            cityName.isEmpty ? 'Amsterdam #12' : cityName,
+                            style: ProtonTypography.bodySmall.copyWith(
+                              color: const Color(0xFF8F8C9E),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: const Text(
-                      'HTTP/3',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        color: ProtonColors.activeLabel,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF231E38),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'HTTP/3',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF8B6CFF),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: ProtonColors.textSecondary,
-                    size: 22,
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    const Icon(
+                      Icons.chevron_right_rounded,
+                      color: Color(0xFF8F8C9E),
+                      size: 22,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          Divider(
-            height: 1,
-            color: isLiquid
-                ? Colors.white.withValues(alpha: 0.08)
-                : ProtonColors.cardBorder,
-          ),
+            if (!isLiquid) ...[
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: ProtonColors.cardBorder),
+              const SizedBox(height: 12),
+            ] else ...[
+              const SizedBox(height: 18),
+            ],
 
-          // Main Action Button Row
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              height: 52,
+            // Main Action Button Row
+            SizedBox(
+              height: 54,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 switchInCurve: Curves.easeOutCubic,
@@ -168,18 +158,18 @@ class VpnConnectionCard extends StatelessWidget {
                   onPressed: onToggle,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (isConnected || isVpnOn)
-                        ? ProtonColors.cancelBtn
-                        : (isConnecting ? ProtonColors.cancelBtn : const Color(0xFF6D4AFF)),
+                        ? const Color(0xFF231D28)
+                        : (isConnecting ? const Color(0xFF231D28) : const Color(0xFF6B42FF)),
                     foregroundColor: Colors.white,
-                    elevation: (isConnected || isVpnOn) ? 0 : 5,
+                    elevation: (isConnected || isVpnOn) ? 0 : 6,
                     shadowColor: (isConnected || isVpnOn)
                         ? Colors.transparent
-                        : const Color(0xFF6D4AFF).withValues(alpha: 0.55),
+                        : const Color(0xFF6B42FF).withValues(alpha: 0.45),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(isLiquid ? 16 : 14),
+                      borderRadius: BorderRadius.circular(16),
                       side: (isConnected || isVpnOn)
                           ? BorderSide(
-                              color: ProtonColors.disconnected.withValues(alpha: 0.4),
+                              color: const Color(0xFFDC3251).withValues(alpha: 0.4),
                               width: 1,
                             )
                           : BorderSide.none,
@@ -203,20 +193,22 @@ class VpnConnectionCard extends StatelessWidget {
                           style: ProtonTypography.labelLarge.copyWith(
                             color: ProtonColors.connecting,
                             fontWeight: FontWeight.w700,
+                            fontSize: 16,
                           ),
                         ),
                       ] else ...[
                         Icon(
                           (isConnected || isVpnOn) ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
-                          size: 20,
-                          color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
+                          size: 22,
+                          color: (isConnected || isVpnOn) ? const Color(0xFFDC3251) : Colors.white,
                         ),
                         const SizedBox(width: 10),
                         Text(
                           (isConnected || isVpnOn) ? 'Disconnect' : 'Quick Connect',
                           style: ProtonTypography.labelLarge.copyWith(
-                            color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
+                            color: (isConnected || isVpnOn) ? const Color(0xFFDC3251) : Colors.white,
                             fontWeight: FontWeight.w700,
+                            fontSize: 16,
                           ),
                         ),
                       ],
@@ -225,8 +217,8 @@ class VpnConnectionCard extends StatelessWidget {
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

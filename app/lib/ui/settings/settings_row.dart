@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 
 class SettingsRow extends StatelessWidget {
@@ -21,15 +20,21 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
           child: Row(
             children: [
-              Icon(icon, size: 22, color: ProtonColors.textSecondary),
+              Icon(
+                icon,
+                size: 22,
+                color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+              ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -37,17 +42,19 @@ class SettingsRow extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: ProtonTypography.bodyLarge.copyWith(
+                      style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
+                        color: Colors.white,
                       ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(
                         subtitle!,
-                        style: ProtonTypography.bodySmall.copyWith(
-                          color: ProtonColors.textMuted,
+                        style: TextStyle(
+                          color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textMuted,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -84,21 +91,22 @@ class SettingsSectionCard extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 8),
           child: Text(
             title.toUpperCase(),
-            style: ProtonTypography.labelSmall.copyWith(
-              color: ProtonColors.textSecondary,
+            style: TextStyle(
+              color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
               letterSpacing: 0.8,
               fontWeight: FontWeight.w700,
+              fontSize: 12,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
             color: isLiquid
-                ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+                ? const Color(0xFF1A1728).withValues(alpha: 0.72)
                 : ProtonColors.surface,
-            borderRadius: BorderRadius.circular(isLiquid ? 20 : 16),
+            borderRadius: BorderRadius.circular(isLiquid ? 24 : 16),
             border: Border.all(
-              color: isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder,
+              color: isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder,
               width: 1,
             ),
             boxShadow: isLiquid
@@ -117,7 +125,7 @@ class SettingsSectionCard extends StatelessWidget {
             itemCount: children.length,
             separatorBuilder: (_, _) => Divider(
               height: 1,
-              color: isLiquid ? Colors.white.withValues(alpha: 0.07) : ProtonColors.cardBorder,
+              color: isLiquid ? Colors.white.withValues(alpha: 0.05) : ProtonColors.cardBorder,
               indent: 56,
             ),
             itemBuilder: (_, index) => children[index],
