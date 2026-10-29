@@ -4,6 +4,7 @@ import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
+import '../../core/android_core.dart';
 
 class SignInDialog extends StatefulWidget {
   final CoreController controller;
@@ -33,6 +34,7 @@ class _SignInDialogState extends State<SignInDialog> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isSuccess = false;
   String? _errorMessage;
 
   SignInState? _state;
@@ -61,6 +63,7 @@ class _SignInDialogState extends State<SignInDialog> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _isSuccess = false;
     });
 
     try {
@@ -100,22 +103,57 @@ class _SignInDialogState extends State<SignInDialog> {
   }
 
   void _handleState(SignInState state) {
-    setState(() {
-      _state = state;
-      _isLoading = false;
-    });
+    _state = state;
+
+    if (state.step == SignInStep.working) {
+      _pollSignInState(state.id);
+      return;
+    }
 
     if (state.step == SignInStep.done) {
+      setState(() {
+        _isLoading = false;
+        _isSuccess = true;
+      });
       widget.controller.refresh(accountsToo: true);
-      Navigator.of(context).pop(true);
+      Future.delayed(const Duration(milliseconds: 900), () {
+        if (mounted) Navigator.of(context).pop(true);
+      });
     } else if (state.step == SignInStep.failed) {
       setState(() {
+        _isLoading = false;
         _errorMessage = state.message.isNotEmpty
             ? state.message
             : _friendlyError(state.errorCode);
       });
     } else if (state.needsAnswer) {
+      setState(() {
+        _isLoading = false;
+      });
       _codeController.clear();
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pollSignInState(String id) async {
+    while (mounted && _isLoading) {
+      await Future.delayed(const Duration(milliseconds: 600));
+      try {
+        final state = await widget.controller.signInState(id);
+        if (state.step != SignInStep.working) {
+          _handleState(state);
+          break;
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = e.toString().replaceFirst('Exception: ', '');
+          });
+        }
+        break;
+      }
     }
   }
 
@@ -131,7 +169,7 @@ class _SignInDialogState extends State<SignInDialog> {
       case SignInError.tooManyAttempts:
         return 'Too many attempts. Please try again later.';
       case SignInError.network:
-        return 'Network error connecting to auth server.';
+        return 'Network connection error to auth server.';
       default:
         return 'Sign-in failed. Please verify your credentials.';
     }
@@ -170,17 +208,17 @@ class _SignInDialogState extends State<SignInDialog> {
           Row(
             children: [
               Container(
-                width: 40,
-                height: 40,
+                width: 42,
+                height: 42,
                 decoration: BoxDecoration(
                   color: ProtonColors.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Center(
+                child: Center(
                   child: Icon(
-                    Icons.account_circle_rounded,
-                    color: ProtonColors.activeLabel,
-                    size: 24,
+                    _isSuccess ? Icons.check_circle_rounded : Icons.account_circle_rounded,
+                    color: _isSuccess ? ProtonColors.connected : ProtonColors.activeLabel,
+                    size: 26,
                   ),
                 ),
               ),
@@ -190,14 +228,18 @@ class _SignInDialogState extends State<SignInDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isVerificationStep ? 'Verification Code' : 'Sign In with Account',
+                      _isSuccess
+                          ? 'Sign In Complete!'
+                          : (isVerificationStep ? 'Verification Code' : 'Sign In with Firefox Account'),
                       style: ProtonTypography.titleMedium,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isVerificationStep
-                          ? 'Enter the code sent to your email/app'
-                          : 'Firefox Account credentials for Fastly MASQUE',
+                      _isSuccess
+                          ? 'Session authenticated with Fastly MASQUE backend'
+                          : (isVerificationStep
+                              ? 'Enter the 6-digit code sent to your email/authenticator'
+                              : 'Firefox Account credentials for Fastly MASQUE'),
                       style: ProtonTypography.bodySmall,
                     ),
                   ],
@@ -353,25 +395,81 @@ class _SignInDialogState extends State<SignInDialog> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : (isVerificationStep ? _submitAnswer : _submitInitial),
               style: ElevatedButton.styleFrom(
-                backgroundColor: ProtonColors.primary,
+                backgroundColor: _isSuccess ? ProtonColors.connected : ProtonColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: _isLoading
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
+                  ? const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Text('Signing in...', style: TextStyle(fontWeight: FontWeight.w700)),
+                      ],
                     )
-                  : Text(
-                      isVerificationStep ? 'Verify Code' : 'Sign In',
-                      style: ProtonTypography.labelLarge,
-                    ),
+                  : (_isSuccess
+                      ? const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_rounded, color: Colors.white, size: 20),
+                            SizedBox(width: 8),
+                            Text('Sign In Complete', style: TextStyle(fontWeight: FontWeight.w700)),
+                          ],
+                        )
+                      : Text(
+                          isVerificationStep ? 'Verify Code' : 'Sign In',
+                          style: ProtonTypography.labelLarge,
+                        )),
             ),
           ),
+
+          if (!isVerificationStep) ...[
+            const SizedBox(height: 18),
+            // Don't have a Firefox Account link
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Don't have a Firefox Account? ",
+                  style: ProtonTypography.bodySmall.copyWith(color: ProtonColors.textMuted),
+                ),
+                GestureDetector(
+                  onTap: () => AndroidCore.openUrl('https://accounts.firefox.com/signup'),
+                  child: Text(
+                    'Create Account',
+                    style: ProtonTypography.bodySmall.copyWith(
+                      color: ProtonColors.activeLabel,
+                      fontWeight: FontWeight.w700,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Forgot password link
+            Center(
+              child: GestureDetector(
+                onTap: () => AndroidCore.openUrl('https://accounts.firefox.com/reset_password'),
+                child: Text(
+                  'Forgot password?',
+                  style: ProtonTypography.bodySmall.copyWith(
+                    color: ProtonColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

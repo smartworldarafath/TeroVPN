@@ -43,12 +43,12 @@ class VpnStatusView extends StatelessWidget {
             shape: BoxShape.circle,
             color: ProtonColors.surface,
             border: Border.all(
-              color: statusColor.withOpacity(0.4),
+              color: statusColor.withValues(alpha: 0.4),
               width: 2,
             ),
             boxShadow: [
               BoxShadow(
-                color: statusColor.withOpacity(isConnected ? 0.35 : 0.15),
+                color: statusColor.withValues(alpha: isConnected ? 0.35 : 0.15),
                 blurRadius: 24,
                 spreadRadius: 2,
               ),

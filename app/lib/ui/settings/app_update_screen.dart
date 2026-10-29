@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/app_preferences.dart';
+import '../../core/android_core.dart';
 import 'settings_row.dart';
 
 class AppUpdateScreen extends StatefulWidget {
@@ -15,7 +16,6 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
   late bool _notifyUpdates;
-  late bool _joinBeta;
   bool _isDownloading = false;
 
   @override
@@ -24,7 +24,60 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     _autoUpdateWifi = AppPreferences.autoUpdateWifi;
     _allowUpdateMobile = AppPreferences.allowUpdateMobile;
     _notifyUpdates = AppPreferences.notifyUpdates;
-    _joinBeta = AppPreferences.joinBeta;
+  }
+
+  void _showBetaDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: ProtonColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: ProtonColors.cardBorder),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFF6D4AFF).withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.science_outlined,
+                color: Color(0xFF6D4AFF),
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Join Beta Program',
+              style: ProtonTypography.titleMedium.copyWith(fontSize: 18),
+            ),
+          ],
+        ),
+        content: Text(
+          'This feature is currently under development and will be available very soon.',
+          style: ProtonTypography.bodyMedium.copyWith(
+            color: ProtonColors.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6D4AFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -139,7 +192,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Version 1.0.5 (99.2 MB)',
+                                'Version 1.0.6 (99.2 MB)',
                                 style: ProtonTypography.bodySmall.copyWith(
                                   color: ProtonColors.textLight,
                                   fontWeight: FontWeight.w600,
@@ -147,7 +200,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                'Your current version: 1.0.0',
+                                'Your current version: 1.0.5',
                                 style: ProtonTypography.bodySmall.copyWith(
                                   color: ProtonColors.textMuted,
                                 ),
@@ -246,6 +299,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       SettingsRow(
                         icon: Icons.wifi_rounded,
                         title: 'Auto-update over Wi-Fi',
+                        subtitle: 'Automatically download package on Wi-Fi',
                         trailing: Switch(
                           value: _autoUpdateWifi,
                           activeThumbColor: const Color(0xFF6D4AFF),
@@ -258,6 +312,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       SettingsRow(
                         icon: Icons.signal_cellular_alt_rounded,
                         title: 'Allow updates over mobile data',
+                        subtitle: 'Download updates using cellular network',
                         trailing: Switch(
                           value: _allowUpdateMobile,
                           activeThumbColor: const Color(0xFF6D4AFF),
@@ -270,27 +325,54 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       SettingsRow(
                         icon: Icons.notifications_active_outlined,
                         title: 'Notify me when updates are available',
+                        subtitle: 'Push alert for critical security releases',
                         trailing: Switch(
                           value: _notifyUpdates,
                           activeThumbColor: const Color(0xFF6D4AFF),
                           onChanged: (val) {
                             setState(() => _notifyUpdates = val);
                             AppPreferences.setNotifyUpdates(val);
+                            if (val) {
+                              AndroidCore.askNotifications();
+                            }
                           },
                         ),
                       ),
                       SettingsRow(
                         icon: Icons.science_outlined,
                         title: 'Join Beta Program',
-                        subtitle: 'Try new features first',
-                        trailing: Switch(
-                          value: _joinBeta,
-                          activeThumbColor: const Color(0xFF6D4AFF),
-                          onChanged: (val) {
-                            setState(() => _joinBeta = val);
-                            AppPreferences.setJoinBeta(val);
-                          },
+                        subtitle: 'Try preview features & early builds',
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF6D4AFF).withValues(alpha: 0.18),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                  color: const Color(0xFF6D4AFF).withValues(alpha: 0.4),
+                                  width: 0.8,
+                                ),
+                              ),
+                              child: const Text(
+                                'BETA',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w800,
+                                  color: Color(0xFF6D4AFF),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Icon(
+                              Icons.chevron_right_rounded,
+                              color: ProtonColors.textMuted,
+                              size: 20,
+                            ),
+                          ],
                         ),
+                        onTap: _showBetaDialog,
                       ),
                     ],
                   ),

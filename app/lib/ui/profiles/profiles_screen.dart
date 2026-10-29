@@ -3,6 +3,8 @@ import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../countries/country_manager.dart';
+import '../components/signin_dialog.dart';
 import 'profile_card.dart';
 import 'account_pool_card.dart';
 
@@ -22,19 +24,32 @@ class ProfilesScreen extends StatefulWidget {
 
 class _ProfilesScreenState extends State<ProfilesScreen> {
   late String _activeProfileTitle;
+  late DynamicCountry _lowestLatencyCountry;
 
   @override
   void initState() {
     super.initState();
     _activeProfileTitle = AppPreferences.selectedProfile;
+    // Pre-calculate lowest latency server so it's instantly ready
+    _lowestLatencyCountry = CountryManager.instance.getFastestCountry();
   }
 
-  Future<void> _selectProfile(String title, String countryCode) async {
+  Future<void> _selectProfile(String title, String countryCode, {bool autoConnect = false}) async {
     setState(() => _activeProfileTitle = title);
     await AppPreferences.setSelectedProfile(title);
     await AppPreferences.setSelectedLocation(countryCode);
     await widget.controller.setLocation(countryCode.toLowerCase());
     widget.onProfileSelected(countryCode);
+
+    if (autoConnect || widget.controller.isVpnOn) {
+      if (!widget.controller.hasAccount) {
+        if (mounted) SignInDialog.show(context, widget.controller);
+        return;
+      }
+      if (!widget.controller.isVpnOn) {
+        await widget.controller.setOn(true);
+      }
+    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -99,12 +114,16 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
 
               ProfileCard(
                 title: 'Low Latency Gaming',
-                description: 'Sub-20ms ping routing via Amsterdam IX',
-                countryCode: 'NL',
-                countryName: 'Netherlands',
+                description: 'Instant lowest-ping routing via ${_lowestLatencyCountry.name} (${_lowestLatencyCountry.pingMs}ms)',
+                countryCode: _lowestLatencyCountry.code,
+                countryName: _lowestLatencyCountry.name,
                 icon: Icons.sports_esports_outlined,
                 isActive: _activeProfileTitle == 'Low Latency Gaming',
-                onTap: () => _selectProfile('Low Latency Gaming', 'NL'),
+                onTap: () => _selectProfile(
+                  'Low Latency Gaming',
+                  _lowestLatencyCountry.code,
+                  autoConnect: true,
+                ),
               ),
 
               ProfileCard(
@@ -133,30 +152,20 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 listenable: widget.controller,
                 builder: (context, _) => AccountPoolCard(
                   accounts: widget.controller.accounts,
-                  onRotate: () async {
-                    final accounts = widget.controller.accounts?.accounts ?? [];
-                    if (accounts.length > 1) {
-                      final nonActive = accounts.firstWhere((a) => !a.active, orElse: () => accounts.first);
-                      await widget.controller.activate(nonActive);
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Switched to next active session token.'),
-                            backgroundColor: ProtonColors.surfaceDark,
-                          ),
-                        );
-                      }
-                    } else {
-                      await widget.controller.refresh(accountsToo: true);
+                  onRefresh: () async {
+                    final active = widget.controller.activeAccount;
+                    if (active != null) {
+                      await widget.controller.refreshQuota(active);
                     }
-                  },
-                  onAddAccount: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Account session pool synchronized with Fastly MASQUE backend.'),
-                        backgroundColor: ProtonColors.surfaceDark,
-                      ),
-                    );
+                    await widget.controller.refresh(accountsToo: true);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Multi-Account Token Pool & bandwidth refreshed.'),
+                          backgroundColor: ProtonColors.surfaceDark,
+                        ),
+                      );
+                    }
                   },
                 ),
               ),

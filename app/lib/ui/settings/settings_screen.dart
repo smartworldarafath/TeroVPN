@@ -9,6 +9,7 @@ import 'settings_row.dart';
 import 'split_tunneling_screen.dart';
 import 'about_screen.dart';
 import 'app_update_screen.dart';
+import 'account_management_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final CoreController controller;
@@ -152,7 +153,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           ),
                         ),
-                        onTap: () => SignInDialog.show(context, widget.controller),
+                        onTap: hasAccount
+                            ? () => Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => AccountManagementScreen(controller: widget.controller),
+                                  ),
+                                )
+                            : () => SignInDialog.show(context, widget.controller),
                       ),
 
                       // 2. TeroVPN Unlimited Pass - ONLY visible when account is logged in!
@@ -305,7 +312,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SettingsRow(
                         icon: Icons.info_outline_rounded,
                         title: 'About TeroVPN',
-                        subtitle: 'Version 1.0.5 · Legal, Support & Acknowledgements',
+                        subtitle: 'Version 1.0.6 · Legal, Support & Acknowledgements',
                         trailing: const Icon(Icons.chevron_right_rounded, color: ProtonColors.textMuted),
                         onTap: () {
                           Navigator.of(context).push(

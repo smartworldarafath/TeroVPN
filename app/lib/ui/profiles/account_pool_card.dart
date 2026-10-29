@@ -6,14 +6,12 @@ import '../../core/format.dart';
 
 class AccountPoolCard extends StatelessWidget {
   final AccountList? accounts;
-  final VoidCallback onRotate;
-  final VoidCallback onAddAccount;
+  final VoidCallback onRefresh;
 
   const AccountPoolCard({
     super.key,
     required this.accounts,
-    required this.onRotate,
-    required this.onAddAccount,
+    required this.onRefresh,
   });
 
   @override
@@ -24,7 +22,7 @@ class AccountPoolCard extends StatelessWidget {
 
     // Fastly MASQUE session pool: 50GB monthly per account
     const totalPoolBytes = 50 * 1024 * 1024 * 1024; // 50 GB
-    final usedBytes = active?.usage?.usedBytes ?? (12 * 1024 * 1024 * 1024);
+    final usedBytes = active?.usage?.usedBytes ?? 0;
     final ratio = (usedBytes / totalPoolBytes).clamp(0.0, 1.0);
 
     return Container(
@@ -82,7 +80,7 @@ class AccountPoolCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
 
-          // Bandwidth Progress Bar
+          // Real-Time Bandwidth Progress Bar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -115,41 +113,23 @@ class AccountPoolCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
 
-          // Action Buttons Row
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: onRotate,
-                  icon: const Icon(Icons.sync_rounded, size: 16),
-                  label: const Text('Rotate Now'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: ProtonColors.activeLabel,
-                    side: const BorderSide(color: ProtonColors.cardBorder),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
+          // Single Full-Width Action Button: Refresh Now
+          SizedBox(
+            width: double.infinity,
+            height: 46,
+            child: OutlinedButton.icon(
+              onPressed: onRefresh,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Refresh Now'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: ProtonColors.activeLabel,
+                side: const BorderSide(color: ProtonColors.cardBorder),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: onAddAccount,
-                  icon: const Icon(Icons.add_rounded, size: 16),
-                  label: const Text('Add Token'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ProtonColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

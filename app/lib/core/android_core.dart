@@ -138,6 +138,13 @@ class AndroidCore {
     }
   }
 
+  /// Requests notification permission on Android 13+.
+  static Future<void> askNotifications() async {
+    try {
+      await _channel.invokeMethod<void>('askNotifications');
+    } catch (_) {}
+  }
+
   static Future<void> setOn(bool on) async {
     try {
       await _channel.invokeMethod<void>('setOn', {'on': on});

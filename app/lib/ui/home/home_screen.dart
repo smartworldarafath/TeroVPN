@@ -6,6 +6,7 @@ import '../../core/models.dart';
 import '../../core/app_preferences.dart';
 import '../components/signin_dialog.dart';
 import '../countries/country_data.dart';
+import '../countries/country_manager.dart';
 import '../components/details_sheet.dart';
 import 'world_map_atmosphere.dart';
 import 'vpn_status_view.dart';
@@ -114,14 +115,67 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          IconButton(
-                            icon: const Icon(
-                              Icons.info_outline_rounded,
-                              color: ProtonColors.textSecondary,
-                              size: 24,
-                            ),
-                            tooltip: 'Connection Details',
-                            onPressed: () => DetailsSheet.show(context, status: status),
+                          Row(
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: isConnected
+                                      ? ProtonColors.connected.withValues(alpha: 0.15)
+                                      : (isConnecting
+                                          ? ProtonColors.connecting.withValues(alpha: 0.15)
+                                          : ProtonColors.surfaceDark),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isConnected
+                                        ? ProtonColors.connected.withValues(alpha: 0.4)
+                                        : (isConnecting
+                                            ? ProtonColors.connecting.withValues(alpha: 0.4)
+                                            : ProtonColors.cardBorder),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      isConnected
+                                          ? Icons.lock_rounded
+                                          : (isConnecting ? Icons.sync_rounded : Icons.lock_open_rounded),
+                                      color: isConnected
+                                          ? ProtonColors.connected
+                                          : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
+                                      size: 15,
+                                    ),
+                                    const SizedBox(width: 5),
+                                    Text(
+                                      isConnected
+                                          ? 'LOCKED'
+                                          : (isConnecting ? 'TUNNELING' : 'UNLOCKED'),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.5,
+                                        color: isConnected
+                                            ? ProtonColors.connected
+                                            : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.info_outline_rounded,
+                                  color: ProtonColors.textSecondary,
+                                  size: 24,
+                                ),
+                                tooltip: 'Connection Details',
+                                onPressed: () => DetailsSheet.show(context, status: status),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -153,7 +207,7 @@ class HomeScreen extends StatelessWidget {
                               isConnected: isConnected,
                               isConnecting: isConnecting,
                               isVpnOn: isVpnOn,
-                              onToggle: () {
+                              onToggle: () async {
                                 if (isVpnOn || isConnected || isConnecting) {
                                   controller.setOn(false);
                                 } else {
@@ -161,6 +215,10 @@ class HomeScreen extends StatelessWidget {
                                     SignInDialog.show(context, controller);
                                     return;
                                   }
+                                  // Connect to the fastest available server in real-time
+                                  final fastest = CountryManager.instance.getFastestCountry();
+                                  await controller.setLocation(fastest.code.toLowerCase());
+                                  await AppPreferences.setSelectedLocation(fastest.code);
                                   controller.setOn(true);
                                 }
                               },

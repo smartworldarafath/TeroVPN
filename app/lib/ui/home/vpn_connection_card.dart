@@ -120,55 +120,78 @@ class VpnConnectionCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: SizedBox(
               height: 52,
-              child: ElevatedButton(
-                onPressed: onToggle,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: (isConnected || isVpnOn)
-                      ? ProtonColors.cancelBtn
-                      : (isConnecting ? ProtonColors.cancelBtn : ProtonColors.primary),
-                  foregroundColor: Colors.white,
-                  elevation: (isConnected || isVpnOn) ? 0 : 4,
-                  shadowColor: (isConnected || isVpnOn)
-                      ? Colors.transparent
-                      : ProtonColors.primary.withOpacity(0.5),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    side: (isConnected || isVpnOn)
-                        ? BorderSide(
-                            color: ProtonColors.disconnected.withOpacity(0.4),
-                            width: 1,
-                          )
-                        : BorderSide.none,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: ScaleTransition(
+                    scale: Tween<double>(begin: 0.96, end: 1.0).animate(animation),
+                    child: child,
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (isConnecting)
-                      const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                        ),
-                      )
-                    else
-                      Icon(
-                        (isConnected || isVpnOn) ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
-                        size: 20,
-                        color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
-                      ),
-                    const SizedBox(width: 10),
-                    Text(
-                      (isConnected || isVpnOn)
-                          ? 'Disconnect'
-                          : (isConnecting ? 'Cancel' : 'Quick Connect'),
-                      style: ProtonTypography.labelLarge.copyWith(
-                        color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
-                      ),
+                child: ElevatedButton(
+                  key: ValueKey<String>(
+                    isConnecting ? 'connecting' : ((isConnected || isVpnOn) ? 'disconnect' : 'connect'),
+                  ),
+                  onPressed: onToggle,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: (isConnected || isVpnOn)
+                        ? ProtonColors.cancelBtn
+                        : (isConnecting ? ProtonColors.cancelBtn : ProtonColors.primary),
+                    foregroundColor: Colors.white,
+                    elevation: (isConnected || isVpnOn) ? 0 : 4,
+                    shadowColor: (isConnected || isVpnOn)
+                        ? Colors.transparent
+                        : ProtonColors.primary.withValues(alpha: 0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: (isConnected || isVpnOn)
+                          ? BorderSide(
+                              color: ProtonColors.disconnected.withValues(alpha: 0.4),
+                              width: 1,
+                            )
+                          : BorderSide.none,
                     ),
-                  ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (isConnecting) ...[
+                        const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(ProtonColors.connecting),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Connecting...',
+                          style: ProtonTypography.labelLarge.copyWith(
+                            color: ProtonColors.connecting,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ] else ...[
+                        Icon(
+                          (isConnected || isVpnOn) ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
+                          size: 20,
+                          color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          (isConnected || isVpnOn) ? 'Disconnect' : 'Quick Connect',
+                          style: ProtonTypography.labelLarge.copyWith(
+                            color: (isConnected || isVpnOn) ? ProtonColors.disconnected : Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
               ),
             ),
