@@ -298,8 +298,14 @@ class CoreController extends ChangeNotifier {
       return;
     }
     try {
-      await (turnOn ?? _require().setPower)(on);
       final api = _require();
+      if (!kIsWeb && turnOn == null) {
+        // Desktop environment: ensure Windows/OS routes browser & system traffic through core
+        try {
+          await api.setSystemProxy(on ? 'set' : 'clear');
+        } catch (_) {}
+      }
+      await (turnOn ?? api.setPower)(on);
       for (var i = 0; i < 20; i++) {
         final next = await api.status();
         status = next;

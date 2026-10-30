@@ -1,5 +1,5 @@
 #define MyAppName "TeroVPN"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.1.1"
 #define MyAppPublisher "TeroVPN"
 #define MyAppURL "https://github.com/smartworldarafath/TeroVPN"
 #define MyAppExeName "terovpn.exe"
@@ -16,7 +16,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\..\dist
-OutputBaseFilename=TeroVPN-v1.1.0-Windows-Setup
+OutputBaseFilename=TeroVPN-v1.1.1-Windows-Setup
 SetupIconFile=..\..\app\windows\runner\resources\app_icon.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
@@ -32,7 +32,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\..\dist\TeroVPN-v1.1.0-Windows-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "..\..\dist\TeroVPN-v1.1.1-Windows-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
