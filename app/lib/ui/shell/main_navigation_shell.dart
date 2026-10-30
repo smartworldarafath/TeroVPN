@@ -69,6 +69,35 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     }
   }
 
+  Widget _buildDesktopScreen(int index) {
+    switch (index) {
+      case 0:
+        return DesktopHomeView(
+          controller: widget.controller,
+          onNavigateToCountries: () => _onTabSelected(1),
+        );
+      case 1:
+        return DesktopCountriesView(
+          controller: widget.controller,
+          onCountrySelected: (_) => _onTabSelected(0),
+        );
+      case 2:
+        return DesktopProfilesView(
+          controller: widget.controller,
+          onProfileSelected: (_) => _onTabSelected(0),
+        );
+      case 3:
+        return DesktopSettingsView(
+          controller: widget.controller,
+        );
+      default:
+        return DesktopHomeView(
+          controller: widget.controller,
+          onNavigateToCountries: () => _onTabSelected(1),
+        );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -97,45 +126,58 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         final isDesktop = (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) ||
             MediaQuery.of(context).size.width >= 768;
 
+        final isForward = _currentIndex >= _previousIndex;
+
         if (isDesktop) {
-          // Native Desktop Shell matching Telegram Reference Screenshots
-          return Scaffold(
-            backgroundColor: const Color(0xFF0D0C15),
-            body: Row(
-              children: [
-                DesktopSidebar(
-                  currentIndex: _currentIndex,
-                  onTabSelected: _onTabSelected,
-                  status: widget.controller.status,
-                ),
-                Expanded(
-                  child: IndexedStack(
-                    index: _currentIndex,
-                    children: [
-                      DesktopHomeView(
-                        controller: widget.controller,
-                        onNavigateToCountries: () => _onTabSelected(1),
-                      ),
-                      DesktopCountriesView(
-                        controller: widget.controller,
-                        onCountrySelected: (_) => _onTabSelected(0),
-                      ),
-                      DesktopProfilesView(
-                        controller: widget.controller,
-                        onProfileSelected: (_) => _onTabSelected(0),
-                      ),
-                      DesktopSettingsView(
-                        controller: widget.controller,
-                      ),
-                    ],
+          // Native Desktop Shell matching Telegram Reference Screenshots with Ultra-Smooth AnimatedSwitcher
+          return LiquidGlassAtmosphere(
+            isConnected: isConnected,
+            isConnecting: isConnecting,
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: Row(
+                children: [
+                  DesktopSidebar(
+                    currentIndex: _currentIndex,
+                    onTabSelected: _onTabSelected,
+                    status: widget.controller.status,
                   ),
-                ),
-              ],
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 280),
+                      switchInCurve: Curves.easeOutCubic,
+                      switchOutCurve: Curves.easeInCubic,
+                      transitionBuilder: (child, animation) {
+                        final inOffset = Tween<Offset>(
+                          begin: Offset(0.0, isForward ? 0.025 : -0.025),
+                          end: Offset.zero,
+                        ).animate(CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ));
+
+                        return FadeTransition(
+                          opacity: CurvedAnimation(
+                            parent: animation,
+                            curve: Curves.easeOut,
+                          ),
+                          child: SlideTransition(
+                            position: inOffset,
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey<int>(_currentIndex),
+                        child: _buildDesktopScreen(_currentIndex),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         }
-
-        final isForward = _currentIndex >= _previousIndex;
 
         return LiquidGlassAtmosphere(
           isConnected: isConnected,

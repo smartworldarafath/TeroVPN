@@ -4,6 +4,7 @@ import '../../core/app_preferences.dart';
 import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
 import '../countries/country_manager.dart';
+import '../countries/country_details_sheet.dart';
 
 class DesktopCountriesView extends StatefulWidget {
   final CoreController controller;
@@ -363,9 +364,18 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                     return Material(
                       color: Colors.transparent,
                       child: InkWell(
-                        onTap: () => _connectTo(item.code),
+                        onTap: () {
+                          CountryDetailsSheet.show(
+                            context,
+                            country: item,
+                            controller: widget.controller,
+                            onServerSelected: (c) => _connectTo(c),
+                          );
+                        },
                         borderRadius: BorderRadius.circular(14),
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
                             color: const Color(0xFF161426),
@@ -429,18 +439,25 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                                     ),
                                   ),
                                   const SizedBox(width: 10),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF261D4C),
+                                  Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => _connectTo(item.code),
                                       borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'Connect',
-                                      style: TextStyle(
-                                        color: Color(0xFF8B6BFF),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF261D4C),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: const Text(
+                                          'Connect',
+                                          style: TextStyle(
+                                            color: Color(0xFF8B6BFF),
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ),

@@ -126,11 +126,12 @@ class DesktopSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Text(
-              'v1.0.9 Desktop',
+              'v1.1.0 Desktop',
               style: TextStyle(
                 fontSize: 11,
-                color: Colors.white.withValues(alpha: 0.25),
+                color: Colors.white.withValues(alpha: 0.3),
                 letterSpacing: 0.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -151,36 +152,58 @@ class DesktopSidebar extends StatelessWidget {
       child: InkWell(
         onTap: () => onTabSelected(index),
         borderRadius: BorderRadius.circular(12),
-        hoverColor: Colors.white.withValues(alpha: 0.04),
+        hoverColor: Colors.white.withValues(alpha: 0.05),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           height: 44,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: isSelected
-                ? const Color(0xFF282046)
+                ? const Color(0xFF261D4C)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: isSelected
-                ? Border.all(color: const Color(0xFF6B42FF).withValues(alpha: 0.35), width: 1)
+                ? Border.all(color: const Color(0xFF6B42FF).withValues(alpha: 0.4), width: 1)
+                : null,
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF6B42FF).withValues(alpha: 0.20),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
                 : null,
           ),
           child: Row(
             children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOutCubic,
+                width: isSelected ? 3 : 0,
+                height: isSelected ? 18 : 0,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B6BFF),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              if (isSelected) const SizedBox(width: 8),
               Icon(
                 icon,
                 color: isSelected ? Colors.white : const Color(0xFF8A889A),
                 size: 20,
               ),
-              const SizedBox(width: 14),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF8A889A),
-                  fontSize: 14,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  letterSpacing: -0.2,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : const Color(0xFF8A889A),
+                    fontSize: 14,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ),
             ],

@@ -5,10 +5,175 @@ import '../../core/app_preferences.dart';
 import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
 import '../components/details_sheet.dart';
+import '../home/default_connection_sheet.dart';
 import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
 
-class DesktopHomeView extends StatelessWidget {
+class AnimatedConnectButton extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isConnected;
+  final bool isConnecting;
+  final String label;
+
+  const AnimatedConnectButton({
+    super.key,
+    required this.onTap,
+    this.isConnected = false,
+    this.isConnecting = false,
+    this.label = 'Connect',
+  });
+
+  @override
+  State<AnimatedConnectButton> createState() => _AnimatedConnectButtonState();
+}
+
+class _AnimatedConnectButtonState extends State<AnimatedConnectButton> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  bool _isHovered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 140),
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.90).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _handleTap() async {
+    await _controller.forward();
+    await _controller.reverse();
+    widget.onTap();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isConn = widget.isConnected;
+    final isStarting = widget.isConnecting;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _handleTap,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            decoration: BoxDecoration(
+              gradient: isConn
+                  ? const LinearGradient(
+                      colors: [Color(0xFF00C896), Color(0xFF00E676)],
+                    )
+                  : (isStarting
+                      ? const LinearGradient(
+                          colors: [Color(0xFF7B42FF), Color(0xFFA855F7)],
+                        )
+                      : LinearGradient(
+                          colors: _isHovered
+                              ? [const Color(0xFF3B2E6E), const Color(0xFF4C3691)]
+                              : [const Color(0xFF261D4C), const Color(0xFF281E48)],
+                        )),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isConn
+                    ? const Color(0xFF00E676)
+                    : (_isHovered
+                        ? const Color(0xFF8B6BFF)
+                        : const Color(0xFF6B42FF).withValues(alpha: 0.45)),
+                width: 1,
+              ),
+              boxShadow: isConn
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF00E676).withValues(alpha: 0.35),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : (_isHovered
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF6B42FF).withValues(alpha: 0.40),
+                            blurRadius: 12,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null),
+            ),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutCubic,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isStarting) ...[
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Connecting',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ] else if (isConn) ...[
+                    const Icon(
+                      Icons.check_circle_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 5),
+                    const Text(
+                      'Connected',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ] else ...[
+                    Text(
+                      widget.label,
+                      style: TextStyle(
+                        color: _isHovered ? Colors.white : const Color(0xFF9E85FF),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class DesktopHomeView extends StatefulWidget {
   final CoreController controller;
   final VoidCallback onNavigateToCountries;
 
@@ -19,12 +184,19 @@ class DesktopHomeView extends StatelessWidget {
   });
 
   @override
+  State<DesktopHomeView> createState() => _DesktopHomeViewState();
+}
+
+class _DesktopHomeViewState extends State<DesktopHomeView> {
+  bool _isQuickConnectHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    final status = controller.status;
+    final status = widget.controller.status;
     final phase = status?.state.phase ?? Phase.off;
     final isConnected = phase == Phase.running;
-    final isConnecting = phase == Phase.starting || controller.switchingProxy;
-    final isVpnOn = controller.isVpnOn || isConnected;
+    final isConnecting = phase == Phase.starting || widget.controller.switchingProxy;
+    final isVpnOn = widget.controller.isVpnOn || isConnected;
 
     final savedCode = AppPreferences.selectedLocation;
     final proxy = status?.proxy;
@@ -42,7 +214,7 @@ class DesktopHomeView extends StatelessWidget {
 
     final recentCodes = AppPreferences.recentLocations.isNotEmpty
         ? AppPreferences.recentLocations
-        : ['DE', 'US', 'NL', 'DE', 'US'];
+        : ['NL', 'DE', 'US'];
     final recentItems = recentCodes.take(5).map((code) {
       final item = kFastlyCountries.firstWhere(
         (c) => c.code.toUpperCase() == code.toUpperCase(),
@@ -83,228 +255,251 @@ class DesktopHomeView extends StatelessWidget {
                     const SizedBox(height: 10),
 
                     // Atmospheric Glow & Padlock Ring
-                  Center(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Soft radial background glow
-                        Container(
-                          width: 150,
-                          height: 150,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: RadialGradient(
-                              colors: [
-                                (isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950))
-                                    .withValues(alpha: 0.16),
-                                Colors.transparent,
+                    Center(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Soft radial background glow
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 350),
+                            curve: Curves.easeOutCubic,
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  (isConnected
+                                          ? const Color(0xFF2CFFCC)
+                                          : (isConnecting ? const Color(0xFFFFB800) : const Color(0xFFE53950)))
+                                      .withValues(alpha: 0.18),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Padlock Ring Container
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeOutCubic,
+                            width: 108,
+                            height: 108,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF161426),
+                              border: Border.all(
+                                color: (isConnected
+                                        ? const Color(0xFF2CFFCC)
+                                        : (isConnecting ? const Color(0xFFFFB800) : const Color(0xFFE53950)))
+                                    .withValues(alpha: 0.75),
+                                width: 2.2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (isConnected
+                                          ? const Color(0xFF2CFFCC)
+                                          : (isConnecting ? const Color(0xFFFFB800) : const Color(0xFFE53950)))
+                                      .withValues(alpha: 0.28),
+                                  blurRadius: 24,
+                                  spreadRadius: 2,
+                                ),
                               ],
+                            ),
+                            child: Center(
+                              child: isConnecting
+                                  ? const SizedBox(
+                                      width: 32,
+                                      height: 32,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFB800)),
+                                      ),
+                                    )
+                                  : Icon(
+                                      isConnected ? Icons.lock_rounded : Icons.lock_open_rounded,
+                                      size: 40,
+                                      color: isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950),
+                                    ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // Connection State Label
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 250),
+                      style: TextStyle(
+                        color: isConnecting
+                            ? const Color(0xFFFFB800)
+                            : (isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950)),
+                        fontSize: 16.5,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                      child: Text(
+                        isConnecting
+                            ? 'CONNECTING...'
+                            : (isConnected ? 'CONNECTED' : 'NOT CONNECTED'),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      isConnected
+                          ? 'Your network traffic is encrypted and private via Fastly MASQUE'
+                          : 'Your network traffic is unencrypted',
+                      style: const TextStyle(
+                        color: Color(0xFF8E8B9D),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // Quick Connect Button with Animated Hover & Scale
+                    MouseRegion(
+                      onEnter: (_) => setState(() => _isQuickConnectHovered = true),
+                      onExit: (_) => setState(() => _isQuickConnectHovered = false),
+                      cursor: SystemMouseCursors.click,
+                      child: AnimatedScale(
+                        scale: _isQuickConnectHovered ? 1.02 : 1.0,
+                        duration: const Duration(milliseconds: 180),
+                        curve: Curves.easeOutCubic,
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: isConnected ? const Color(0xFF221F38) : const Color(0xFF6B42FF),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                side: isConnected
+                                    ? BorderSide(color: Colors.white.withValues(alpha: 0.12))
+                                    : BorderSide.none,
+                              ),
+                              shadowColor: const Color(0xFF6B42FF).withValues(alpha: 0.4),
+                            ),
+                            onPressed: () async {
+                              if (isVpnOn || isConnected || isConnecting) {
+                                widget.controller.setOn(false);
+                              } else {
+                                if (!widget.controller.hasAccount) {
+                                  SignInDialog.show(context, widget.controller);
+                                  return;
+                                }
+                                final fastest = CountryManager.instance.getFastestCountry();
+                                await widget.controller.setLocation(fastest.code.toLowerCase());
+                                await AppPreferences.setSelectedLocation(fastest.code);
+                                widget.controller.setOn(true);
+                              }
+                            },
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    isConnected ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
+                                    size: 20,
+                                    color: isConnected ? const Color(0xFFE53950) : Colors.white,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isConnected ? 'Disconnect' : 'Quick Connect',
+                                    style: const TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                        // Padlock Ring Container
-                        Container(
-                          width: 104,
-                          height: 104,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF161426),
-                            border: Border.all(
-                              color: (isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950))
-                                  .withValues(alpha: 0.65),
-                              width: 2.2,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: (isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950))
-                                    .withValues(alpha: 0.25),
-                                blurRadius: 20,
-                                spreadRadius: 2,
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Bottom Metadata & Details trigger
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Current IP: $currentIp',
+                                style: const TextStyle(
+                                  color: Color(0xFF8E8B9D),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'Protocol: ${AppPreferences.selectedProtocol}',
+                                style: const TextStyle(
+                                  color: Color(0xFF8E8B9D),
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                          child: Center(
-                            child: isConnecting
-                                ? const SizedBox(
-                                    width: 32,
-                                    height: 32,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
+                        ),
+                        const SizedBox(width: 8),
+                        Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () => DetailsSheet.show(context, status: status),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF261D4C),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: const Color(0xFF6B42FF).withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.info_outline_rounded, color: Color(0xFF8B6BFF), size: 15),
+                                  SizedBox(width: 5),
+                                  Text(
+                                    'Details',
+                                    style: TextStyle(
+                                      color: Color(0xFF8B6BFF),
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  )
-                                : Icon(
-                                    isConnected ? Icons.lock_rounded : Icons.lock_open_rounded,
-                                    color: isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950),
-                                    size: 38,
                                   ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
-                  ),
-
-                  const SizedBox(height: 22),
-
-                  // Status Label
-                  Text(
-                    isConnecting
-                        ? 'CONNECTING'
-                        : (isConnected ? 'CONNECTED' : 'DISCONNECTED'),
-                    style: TextStyle(
-                      color: isConnecting
-                          ? const Color(0xFFFFB800)
-                          : (isConnected ? const Color(0xFF2CFFCC) : const Color(0xFFE53950)),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    isConnected
-                        ? 'Your network traffic is encrypted and private'
-                        : 'Your network traffic is unencrypted',
-                    style: const TextStyle(
-                      color: Color(0xFF8E8B9D),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-
-                  const SizedBox(height: 36),
-
-                  // Quick Connect Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: isConnected ? const Color(0xFF221F38) : const Color(0xFF6B42FF),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: isConnected
-                              ? BorderSide(color: Colors.white.withValues(alpha: 0.12))
-                              : BorderSide.none,
-                        ),
-                        shadowColor: const Color(0xFF6B42FF).withValues(alpha: 0.4),
-                      ),
-                      onPressed: () async {
-                        if (isVpnOn || isConnected || isConnecting) {
-                          controller.setOn(false);
-                        } else {
-                          if (!controller.hasAccount) {
-                            SignInDialog.show(context, controller);
-                            return;
-                          }
-                          final fastest = CountryManager.instance.getFastestCountry();
-                          await controller.setLocation(fastest.code.toLowerCase());
-                          await AppPreferences.setSelectedLocation(fastest.code);
-                          controller.setOn(true);
-                        }
-                      },
-                      child: FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              isConnected ? Icons.power_settings_new_rounded : Icons.bolt_rounded,
-                              size: 20,
-                              color: isConnected ? const Color(0xFFE53950) : Colors.white,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              isConnected ? 'Disconnect' : 'Quick Connect',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Bottom Metadata & Details trigger
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Current IP: $currentIp',
-                              style: const TextStyle(
-                                color: Color(0xFF8E8B9D),
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Protocol: ${AppPreferences.selectedProtocol}',
-                              style: const TextStyle(
-                                color: Color(0xFF8E8B9D),
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () => DetailsSheet.show(context, status: status),
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF261D4C),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: const Color(0xFF6B42FF).withValues(alpha: 0.4),
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Icon(Icons.info_outline_rounded, color: Color(0xFF8B6BFF), size: 15),
-                                SizedBox(width: 5),
-                                Text(
-                                  'Details',
-                                  style: TextStyle(
-                                    color: Color(0xFF8B6BFF),
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
           const SizedBox(width: 18),
 
@@ -316,14 +511,50 @@ class DesktopHomeView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Selected Location Header
-                  const Text(
-                    'Selected Location',
-                    style: TextStyle(
-                      color: Color(0xFF9E9BAE),
-                      fontSize: 13.5,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  // Selected Location Header with Default Connection Changer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Selected Location',
+                          style: TextStyle(
+                            color: Color(0xFF9E9BAE),
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () {
+                            DefaultConnectionSheet.show(
+                              context,
+                              controller: widget.controller,
+                              onSelected: (code) async {
+                                await widget.controller.setLocation(code.toLowerCase());
+                                await AppPreferences.setSelectedLocation(code);
+                              },
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Text(
+                              'Change Default',
+                              style: TextStyle(
+                                color: Color(0xFF8B6BFF),
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 10),
 
@@ -331,7 +562,7 @@ class DesktopHomeView extends StatelessWidget {
                   Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: onNavigateToCountries,
+                      onTap: widget.onNavigateToCountries,
                       borderRadius: BorderRadius.circular(16),
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -415,16 +646,26 @@ class DesktopHomeView extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
 
-                  // Recent Items List
+                  // Recent Items List with AnimatedConnectButton
                   ...recentItems.map((item) {
-                    return Container(
+                    final isThisActive = countryCode.toUpperCase() == item.code.toUpperCase();
+                    final isThisConnected = isThisActive && isConnected;
+                    final isThisConnecting = isThisActive && isConnecting;
+
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 220),
+                      curve: Curves.easeOutCubic,
                       margin: const EdgeInsets.only(bottom: 8),
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
                         color: const Color(0xFF161426),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.05),
+                          color: isThisConnected
+                              ? const Color(0xFF00E676).withValues(alpha: 0.5)
+                              : (isThisConnecting
+                                  ? const Color(0xFFFFB800).withValues(alpha: 0.5)
+                                  : Colors.white.withValues(alpha: 0.05)),
                           width: 1,
                         ),
                       ),
@@ -465,8 +706,10 @@ class DesktopHomeView extends StatelessWidget {
                               Container(
                                 width: 5,
                                 height: 5,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF2CFFCC),
+                                decoration: BoxDecoration(
+                                  color: isThisConnected
+                                      ? const Color(0xFF00E676)
+                                      : (isThisConnecting ? const Color(0xFFFFB800) : const Color(0xFF2CFFCC)),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -479,39 +722,23 @@ class DesktopHomeView extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 10),
-                              Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () async {
-                                    await controller.setLocation(item.code.toLowerCase());
-                                    await AppPreferences.setSelectedLocation(item.code);
-                                    if (!isVpnOn) {
-                                      if (!controller.hasAccount) {
-                                        if (context.mounted) {
-                                          SignInDialog.show(context, controller);
-                                        }
-                                        return;
+                              // Interactive Animated Connect Button
+                              AnimatedConnectButton(
+                                isConnected: isThisConnected,
+                                isConnecting: isThisConnecting,
+                                onTap: () async {
+                                  await widget.controller.setLocation(item.code.toLowerCase());
+                                  await AppPreferences.setSelectedLocation(item.code);
+                                  if (!isVpnOn) {
+                                    if (!widget.controller.hasAccount) {
+                                      if (context.mounted) {
+                                        SignInDialog.show(context, widget.controller);
                                       }
-                                      controller.setOn(true);
+                                      return;
                                     }
-                                  },
-                                  borderRadius: BorderRadius.circular(10),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF261D4C),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: const Text(
-                                      'Connect',
-                                      style: TextStyle(
-                                        color: Color(0xFF8B6BFF),
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                                    widget.controller.setOn(true);
+                                  }
+                                },
                               ),
                             ],
                           ),
