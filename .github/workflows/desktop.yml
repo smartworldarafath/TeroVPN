@@ -96,9 +96,9 @@ jobs:
           curl -sL "https://github.com/armanlife/firefox-vpn-client/releases/download/v1.0.5/Firefox-VPN-Linux-amd64.tar.gz" -o /tmp/core-linux.tar.gz
           mkdir -p /tmp/core-linux
           tar -xzf /tmp/core-linux.tar.gz -C /tmp/core-linux
-          cp /tmp/core-linux/core/firefox-vpn-core dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-core
-          cp /tmp/core-linux/core/firefox-vpn-tun dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-tun
-          chmod +x dist/TeroVPN-v1.0.8-Linux-x64/core/*
+          find /tmp/core-linux -type f -name "firefox-vpn-core" -exec cp {} dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-core \;
+          find /tmp/core-linux -type f -name "firefox-vpn-tun" -exec cp {} dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-tun \;
+          chmod +x dist/TeroVPN-v1.0.8-Linux-x64/core/* || true
           touch dist/TeroVPN-v1.0.8-Linux-x64/portable
 
           tar -czvf dist/TeroVPN-v1.0.8-Linux-x64.tar.gz -C dist TeroVPN-v1.0.8-Linux-x64
@@ -142,10 +142,9 @@ jobs:
           curl -sL "https://github.com/armanlife/firefox-vpn-client/releases/download/v1.0.5/Firefox-VPN-macOS.tar.gz" -o /tmp/core-macos.tar.gz
           mkdir -p /tmp/core-macos
           tar -xzf /tmp/core-macos.tar.gz -C /tmp/core-macos
-          if [ -f "/tmp/core-macos/Firefox VPN.app/Contents/MacOS/firefox-vpn-core" ]; then
-            cp "/tmp/core-macos/Firefox VPN.app/Contents/MacOS/firefox-vpn-core" dist/TeroVPN.app/Contents/MacOS/terovpn-core
-            chmod +x dist/TeroVPN.app/Contents/MacOS/terovpn-core
-          fi
+          find /tmp/core-macos -type f -name "firefox-vpn-core" -exec cp {} dist/TeroVPN.app/Contents/MacOS/terovpn-core \; || true
+          find /tmp/core-macos -type f -name "firefox-vpn-tun" -exec cp {} dist/TeroVPN.app/Contents/MacOS/terovpn-tun \; || true
+          chmod +x dist/TeroVPN.app/Contents/MacOS/terovpn-* || true
 
           tar -czvf dist/TeroVPN-v1.0.8-macOS.tar.gz -C dist TeroVPN.app
 
