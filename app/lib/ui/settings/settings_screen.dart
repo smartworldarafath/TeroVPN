@@ -354,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           SettingsRow(
                             icon: Icons.info_outline_rounded,
                             title: 'About TeroVPN',
-                            subtitle: 'Version 2.0.0 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.1.0 · Legal, Support & Acknowledgements',
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
                             onTap: () {
                               Navigator.of(context).push(
