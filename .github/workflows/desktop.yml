@@ -1,0 +1,182 @@
+name: Build Desktop (Windows, Linux, macOS)
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Build Windows Desktop (x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Windows Desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build Windows Release
+        working-directory: app
+        run: flutter build windows --release --dart-define=APP_VERSION=1.0.8
+
+      - name: Download & Bundle Desktop Core
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist/TeroVPN-v1.0.8-Windows-x64/core | Out-Null
+          Copy-Item -Path "app/build/windows/x64/runner/Release/*" -Destination "dist/TeroVPN-v1.0.8-Windows-x64/" -Recurse -Force
+          
+          # Fetch matching core and tun service binaries
+          Invoke-WebRequest -Uri "https://github.com/armanlife/firefox-vpn-client/releases/download/v1.0.5/Firefox-VPN-Windows-x64.zip" -OutFile "$env:TEMP/core-win.zip"
+          Expand-Archive -Path "$env:TEMP/core-win.zip" -DestinationPath "$env:TEMP/core-win" -Force
+          Copy-Item -Path "$env:TEMP/core-win/Firefox VPN/core/firefox-vpn-core.exe" -Destination "dist/TeroVPN-v1.0.8-Windows-x64/core/terovpn-core.exe" -Force
+          Copy-Item -Path "$env:TEMP/core-win/Firefox VPN/core/firefox-vpn-tun.exe" -Destination "dist/TeroVPN-v1.0.8-Windows-x64/core/terovpn-tun.exe" -Force
+
+          # Create portable flag file
+          New-Item -ItemType File -Force "dist/TeroVPN-v1.0.8-Windows-x64/portable" | Out-Null
+
+          # Compress to zip
+          Compress-Archive -Path "dist/TeroVPN-v1.0.8-Windows-x64/*" -DestinationPath "dist/TeroVPN-v1.0.8-Windows-x64.zip" -Force
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeroVPN-v1.0.8-Windows-x64
+          path: dist/TeroVPN-v1.0.8-Windows-x64.zip
+
+  linux:
+    name: Build Linux Desktop (x64)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable Linux Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build Linux Release
+        working-directory: app
+        run: flutter build linux --release --dart-define=APP_VERSION=1.0.8
+
+      - name: Download & Bundle Desktop Core
+        run: |
+          mkdir -p dist/TeroVPN-v1.0.8-Linux-x64/core
+          cp -r app/build/linux/x64/release/bundle/* dist/TeroVPN-v1.0.8-Linux-x64/
+          
+          # Fetch matching Linux core and tun service binaries
+          curl -sL "https://github.com/armanlife/firefox-vpn-client/releases/download/v1.0.5/Firefox-VPN-Linux-amd64.tar.gz" -o /tmp/core-linux.tar.gz
+          mkdir -p /tmp/core-linux
+          tar -xzf /tmp/core-linux.tar.gz -C /tmp/core-linux
+          cp /tmp/core-linux/core/firefox-vpn-core dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-core
+          cp /tmp/core-linux/core/firefox-vpn-tun dist/TeroVPN-v1.0.8-Linux-x64/core/terovpn-tun
+          chmod +x dist/TeroVPN-v1.0.8-Linux-x64/core/*
+          touch dist/TeroVPN-v1.0.8-Linux-x64/portable
+
+          tar -czvf dist/TeroVPN-v1.0.8-Linux-x64.tar.gz -C dist TeroVPN-v1.0.8-Linux-x64
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeroVPN-v1.0.8-Linux-x64
+          path: dist/TeroVPN-v1.0.8-Linux-x64.tar.gz
+
+  macos:
+    name: Build macOS Desktop
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Enable macOS Desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build macOS Release
+        working-directory: app
+        run: flutter build macos --release --dart-define=APP_VERSION=1.0.8
+
+      - name: Bundle Desktop Core & Archive
+        run: |
+          mkdir -p dist
+          cp -r app/build/macos/Build/Products/Release/TeroVPN.app dist/
+
+          # Fetch matching macOS core binary
+          curl -sL "https://github.com/armanlife/firefox-vpn-client/releases/download/v1.0.5/Firefox-VPN-macOS.tar.gz" -o /tmp/core-macos.tar.gz
+          mkdir -p /tmp/core-macos
+          tar -xzf /tmp/core-macos.tar.gz -C /tmp/core-macos
+          if [ -f "/tmp/core-macos/Firefox VPN.app/Contents/MacOS/firefox-vpn-core" ]; then
+            cp "/tmp/core-macos/Firefox VPN.app/Contents/MacOS/firefox-vpn-core" dist/TeroVPN.app/Contents/MacOS/terovpn-core
+            chmod +x dist/TeroVPN.app/Contents/MacOS/terovpn-core
+          fi
+
+          tar -czvf dist/TeroVPN-v1.0.8-macOS.tar.gz -C dist TeroVPN.app
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeroVPN-v1.0.8-macOS
+          path: dist/TeroVPN-v1.0.8-macOS.tar.gz
+
+  release:
+    name: Publish Release Assets
+    needs: [windows, linux, macos]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v1.0.8"
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+          
+          gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1 || \
+            gh release create "$tag" --repo "${{ github.repository }}" --title "TeroVPN $tag - Desktop Edition" --notes "Desktop release for Windows, Linux, and macOS."
+          
+          gh release upload "$tag" release-artifacts/* --repo "${{ github.repository }}" --clobber
