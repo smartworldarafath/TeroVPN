@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 
 class DockItemData {
@@ -52,6 +51,7 @@ class ProtonDock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -65,18 +65,27 @@ class ProtonDock extends StatelessWidget {
 
         final dockRadius = BorderRadius.circular(isLiquid ? 36 : 22);
 
+        final dockBg = isDark
+            ? (isLiquid ? const Color(0xFF131122).withValues(alpha: 0.85) : ProtonColors.surface)
+            : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+        final dockBorderColor = isDark
+            ? (isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder.withValues(alpha: 0.8))
+            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED));
+
         return Container(
           height: isLiquid ? 72 : 68,
           decoration: BoxDecoration(
             borderRadius: dockRadius,
             boxShadow: [
-              if (isLiquid) ...[
-                BoxShadow(
-                  color: const Color(0xFF6B42FF).withValues(alpha: 0.42),
-                  blurRadius: 36,
-                  spreadRadius: 3,
-                  offset: const Offset(0, 6),
-                ),
+              if (isDark) ...[
+                if (isLiquid)
+                  BoxShadow(
+                    color: const Color(0xFF6B42FF).withValues(alpha: 0.42),
+                    blurRadius: 36,
+                    spreadRadius: 3,
+                    offset: const Offset(0, 6),
+                  ),
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.65),
                   blurRadius: 22,
@@ -84,9 +93,15 @@ class ProtonDock extends StatelessWidget {
                 ),
               ] else ...[
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 20,
+                  color: const Color(0xFF6B42FF).withValues(alpha: 0.25),
+                  blurRadius: 32,
+                  spreadRadius: 2,
                   offset: const Offset(0, 6),
+                ),
+                BoxShadow(
+                  color: const Color(0xFF5D5380).withValues(alpha: 0.12),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ],
@@ -100,14 +115,10 @@ class ProtonDock extends StatelessWidget {
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isLiquid
-                      ? const Color(0xFF131122).withValues(alpha: 0.85)
-                      : ProtonColors.surface,
+                  color: dockBg,
                   borderRadius: dockRadius,
                   border: Border.all(
-                    color: isLiquid
-                        ? Colors.white.withValues(alpha: 0.10)
-                        : ProtonColors.cardBorder.withValues(alpha: 0.8),
+                    color: dockBorderColor,
                     width: 1.0,
                   ),
                 ),
@@ -123,8 +134,8 @@ class ProtonDock extends StatelessWidget {
                       height: pillHeight,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: isLiquid ? const Color(0xFF6B42FF) : ProtonColors.activePill,
-                          borderRadius: BorderRadius.circular(isLiquid ? 16 : 16),
+                          color: const Color(0xFF6B42FF),
+                          borderRadius: BorderRadius.circular(16),
                         ),
                       ),
                     ),
@@ -134,6 +145,9 @@ class ProtonDock extends StatelessWidget {
                       children: List.generate(items.length, (index) {
                         final item = items[index];
                         final isSelected = index == currentIndex;
+
+                        final inactiveColor = isDark ? const Color(0xFF757288) : const Color(0xFF757288);
+                        final activeLabelColor = const Color(0xFF6B42FF);
 
                         return Expanded(
                           child: InkWell(
@@ -149,11 +163,7 @@ class ProtonDock extends StatelessWidget {
                                   child: Center(
                                     child: Icon(
                                       isSelected ? item.activeIcon : item.inactiveIcon,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : (isLiquid
-                                              ? const Color(0xFF757288)
-                                              : ProtonColors.textSecondary),
+                                      color: isSelected ? Colors.white : inactiveColor,
                                       size: 21,
                                     ),
                                   ),
@@ -161,14 +171,10 @@ class ProtonDock extends StatelessWidget {
                                 const SizedBox(height: 3),
                                 Text(
                                   item.label,
-                                  style: ProtonTypography.labelSmall.copyWith(
+                                  style: TextStyle(
                                     fontSize: 10,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                    color: isSelected
-                                        ? (isLiquid ? const Color(0xFF8B6CFF) : ProtonColors.activeLabel)
-                                        : (isLiquid
-                                            ? const Color(0xFF757288)
-                                            : ProtonColors.textSecondary),
+                                    color: isSelected ? activeLabelColor : inactiveColor,
                                   ),
                                 ),
                               ],

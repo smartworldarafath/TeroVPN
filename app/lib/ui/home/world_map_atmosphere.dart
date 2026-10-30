@@ -21,40 +21,53 @@ class WorldMapAtmosphere extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
 
     return Positioned(
       top: 0,
       left: 0,
       right: 0,
-      height: 400,
+      height: 420,
       child: IgnorePointer(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOut,
           decoration: BoxDecoration(
-            gradient: isLiquid
-                ? RadialGradient(
-                    center: const Alignment(0, -0.65),
-                    radius: 1.15,
-                    colors: [
-                      const Color(0xFF8B1538).withValues(alpha: isConnected ? 0.38 : (isConnecting ? 0.32 : 0.28)),
-                      const Color(0xFF4B237C).withValues(alpha: isConnected ? 0.32 : (isConnecting ? 0.25 : 0.18)),
-                      Colors.transparent,
-                    ],
-                    stops: const [0.0, 0.55, 1.0],
-                  )
+            gradient: isDark
+                ? (isLiquid
+                    ? RadialGradient(
+                        center: const Alignment(0, -0.65),
+                        radius: 1.15,
+                        colors: [
+                          const Color(0xFF8B1538).withValues(alpha: isConnected ? 0.38 : (isConnecting ? 0.32 : 0.28)),
+                          const Color(0xFF4B237C).withValues(alpha: isConnected ? 0.32 : (isConnecting ? 0.25 : 0.18)),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.55, 1.0],
+                      )
+                    : RadialGradient(
+                        center: const Alignment(0, -0.6),
+                        radius: 1.1,
+                        colors: [
+                          _glowColor.withValues(alpha: isConnected ? 0.16 : (isConnecting ? 0.14 : 0.08)),
+                          _glowColor.withValues(alpha: isConnected ? 0.06 : 0.03),
+                          Colors.transparent,
+                        ],
+                        stops: const [0.0, 0.45, 1.0],
+                      ))
                 : RadialGradient(
-                    center: const Alignment(0, -0.6),
-                    radius: 1.1,
+                    center: const Alignment(0.4, -0.75),
+                    radius: 1.25,
                     colors: [
-                      _glowColor.withValues(alpha: isConnected ? 0.16 : (isConnecting ? 0.14 : 0.08)),
-                      _glowColor.withValues(alpha: isConnected ? 0.06 : 0.03),
+                      const Color(0xFFFFD7CB).withValues(alpha: 0.70),
+                      const Color(0xFFE5D8FD).withValues(alpha: 0.55),
+                      const Color(0xFFD6EEFF).withValues(alpha: 0.25),
                       Colors.transparent,
                     ],
-                    stops: const [0.0, 0.45, 1.0],
+                    stops: const [0.0, 0.45, 0.75, 1.0],
                   ),
           ),
-          child: isLiquid
+          child: (isLiquid || !isDark)
               ? const SizedBox.shrink()
               : CustomPaint(
                   painter: _DottedMapPainter(
@@ -98,5 +111,6 @@ class _DottedMapPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _DottedMapPainter oldDelegate) =>
+      oldDelegate.dotColor != dotColor;
 }

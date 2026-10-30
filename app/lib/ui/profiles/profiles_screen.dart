@@ -53,10 +53,11 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     }
 
     if (mounted) {
+      final isDark = ThemeManager.instance.isDarkMode;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Switched to profile: $title ($countryCode)'),
-          backgroundColor: ProtonColors.surfaceDark,
+          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -71,7 +72,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          backgroundColor: ThemeManager.instance.backgroundColor,
           body: SafeArea(
             bottom: false,
             child: SingleChildScrollView(
@@ -88,19 +89,21 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                   Text(
                     'Profiles',
                     style: isLiquid
-                        ? const TextStyle(
+                        ? TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
-                            color: Colors.white,
+                            color: ThemeManager.instance.textPrimaryColor,
                             letterSpacing: -0.5,
                           )
-                        : ProtonTypography.titleLarge,
+                        : ProtonTypography.titleLarge.copyWith(
+                            color: ThemeManager.instance.textPrimaryColor,
+                          ),
                   ),
               const SizedBox(height: 8),
               Text(
                 'Pre-configured setups optimized for streaming, gaming, and privacy.',
                 style: ProtonTypography.bodySmall.copyWith(
-                  color: ProtonColors.textMuted,
+                  color: ThemeManager.instance.textMutedColor,
                 ),
               ),
               const SizedBox(height: 24),
@@ -109,7 +112,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 'Fast Presets',
                 style: ProtonTypography.bodySmall.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: ProtonColors.textSecondary,
+                  color: ThemeManager.instance.textSecondaryColor,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -155,7 +158,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                 'Account & Rotation',
                 style: ProtonTypography.bodySmall.copyWith(
                   fontWeight: FontWeight.w700,
-                  color: ProtonColors.textSecondary,
+                  color: ThemeManager.instance.textSecondaryColor,
                   letterSpacing: 0.5,
                 ),
               ),
@@ -173,10 +176,11 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                     }
                     await widget.controller.refresh(accountsToo: true);
                     if (context.mounted) {
+                      final isDark = ThemeManager.instance.isDarkMode;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Multi-Account Token Pool & bandwidth refreshed.'),
-                          backgroundColor: ProtonColors.surfaceDark,
+                        SnackBar(
+                          content: const Text('Multi-Account Token Pool & bandwidth refreshed.'),
+                          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
                         ),
                       );
                     }

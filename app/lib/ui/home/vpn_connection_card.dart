@@ -29,36 +29,46 @@ class VpnConnectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
+
+    final cardBg = isDark
+        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+    final cardBorder = isDark
+        ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED));
+
+    final countryTextColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final cityTextColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
 
     return Container(
       decoration: BoxDecoration(
-        color: isLiquid
-            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-            : ProtonColors.surface,
+        color: cardBg,
         borderRadius: BorderRadius.circular(isLiquid ? 24 : 20),
         border: Border.all(
           color: isConnected
-              ? (isLiquid ? const Color(0xFF00E676).withValues(alpha: 0.4) : ProtonColors.connected.withValues(alpha: 0.45))
-              : (isLiquid
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : ProtonColors.cardBorder),
+              ? (isDark
+                  ? const Color(0xFF00E676).withValues(alpha: 0.4)
+                  : const Color(0xFF00A36C).withValues(alpha: 0.5))
+              : cardBorder,
           width: 1.0,
         ),
-        boxShadow: [
-          if (isLiquid) ...[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.45),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ] else ...[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ],
+        boxShadow: isDark
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : [
+                BoxShadow(
+                  color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -86,17 +96,17 @@ class VpnConnectionCard extends StatelessWidget {
                         children: [
                           Text(
                             countryName.isEmpty ? 'Netherlands' : countryName,
-                            style: ProtonTypography.bodyLarge.copyWith(
+                            style: TextStyle(
                               fontWeight: FontWeight.w700,
                               fontSize: 17,
-                              color: Colors.white,
+                              color: countryTextColor,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             cityName.isEmpty ? 'Amsterdam #12' : cityName,
-                            style: ProtonTypography.bodySmall.copyWith(
-                              color: const Color(0xFF8F8C9E),
+                            style: TextStyle(
+                              color: cityTextColor,
                               fontSize: 13,
                             ),
                           ),
@@ -106,7 +116,7 @@ class VpnConnectionCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF231E38),
+                        color: isDark ? const Color(0xFF231E38) : const Color(0xFFF0EDFA),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
@@ -114,14 +124,14 @@ class VpnConnectionCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Color(0xFF8B6CFF),
+                          color: Color(0xFF6B42FF),
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
-                      color: Color(0xFF8F8C9E),
+                      color: cityTextColor,
                       size: 22,
                     ),
                   ],
@@ -131,7 +141,7 @@ class VpnConnectionCard extends StatelessWidget {
 
             if (!isLiquid) ...[
               const SizedBox(height: 12),
-              const Divider(height: 1, color: ProtonColors.cardBorder),
+              Divider(height: 1, color: isDark ? ProtonColors.cardBorder : const Color(0xFFEFEFF6)),
               const SizedBox(height: 12),
             ] else ...[
               const SizedBox(height: 18),
@@ -158,18 +168,18 @@ class VpnConnectionCard extends StatelessWidget {
                   onPressed: onToggle,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: (isConnected || isVpnOn)
-                        ? const Color(0xFF231D28)
-                        : (isConnecting ? const Color(0xFF231D28) : const Color(0xFF6B42FF)),
+                        ? (isDark ? const Color(0xFF231D28) : const Color(0xFFFFF0F2))
+                        : (isConnecting ? (isDark ? const Color(0xFF231D28) : const Color(0xFFFFF8EE)) : const Color(0xFF6B42FF)),
                     foregroundColor: Colors.white,
-                    elevation: (isConnected || isVpnOn) ? 0 : 6,
+                    elevation: (isConnected || isVpnOn) ? 0 : 4,
                     shadowColor: (isConnected || isVpnOn)
                         ? Colors.transparent
-                        : const Color(0xFF6B42FF).withValues(alpha: 0.45),
+                        : const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.45 : 0.35),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                       side: (isConnected || isVpnOn)
                           ? BorderSide(
-                              color: const Color(0xFFDC3251).withValues(alpha: 0.4),
+                              color: const Color(0xFFDC3251).withValues(alpha: isDark ? 0.4 : 0.5),
                               width: 1,
                             )
                           : BorderSide.none,

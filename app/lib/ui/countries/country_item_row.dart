@@ -32,27 +32,46 @@ class CountryItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
 
-    if (isFastest && isLiquid) {
-      // Standalone Fastest Country card matching photo_2 & photo_3
+    if (isFastest && (isLiquid || !isDark)) {
+      // Standalone Fastest Country card matching photo_2 (dark) & photo_11 (light)
+      final cardBg = isDark
+          ? const Color(0xFF1A1728).withValues(alpha: 0.72)
+          : Colors.white.withValues(alpha: 0.90);
+      final borderColor = isSelected
+          ? const Color(0xFF6B42FF)
+          : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.95));
+
+      final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+      final subtitleColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
+
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1728).withValues(alpha: 0.72),
+          color: cardBg,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? const Color(0xFF6B42FF) : Colors.white.withValues(alpha: 0.08),
+            color: borderColor,
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF6B42FF).withValues(alpha: 0.25),
+                    color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.25 : 0.20),
                     blurRadius: 16,
                     spreadRadius: 1,
                   ),
                 ]
-              : null,
+              : (isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+                        blurRadius: 16,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]),
         ),
         child: Material(
           color: Colors.transparent,
@@ -67,15 +86,19 @@ class CountryItemRow extends StatelessWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF133226),
+                      color: isDark ? const Color(0xFF133226) : const Color(0xFFD8F5EB),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Center(
-                      child: Icon(Icons.bolt_rounded, color: Color(0xFF1FE5BD), size: 20),
+                    child: Center(
+                      child: Icon(
+                        Icons.bolt_rounded,
+                        color: isDark ? const Color(0xFF1FE5BD) : const Color(0xFF00A36C),
+                        size: 20,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 14),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -84,15 +107,15 @@ class CountryItemRow extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: Colors.white,
+                            color: titleColor,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Connects to closest edge server',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF8F8C9E),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
@@ -101,17 +124,17 @@ class CountryItemRow extends StatelessWidget {
                   Container(
                     width: 6,
                     height: 6,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF00E676),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF00E676) : const Color(0xFF00A36C),
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '$load%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF8F8C9E),
+                      color: subtitleColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -129,9 +152,9 @@ class CountryItemRow extends StatelessWidget {
                       ),
                     )
                   else
-                    const Icon(
+                    Icon(
                       Icons.chevron_right_rounded,
-                      color: Color(0xFF757288),
+                      color: subtitleColor,
                       size: 20,
                     ),
                 ],
@@ -142,26 +165,45 @@ class CountryItemRow extends StatelessWidget {
       );
     }
 
-    if (isLiquid) {
-      // Continuous grouped glass card item matching photo_2 & photo_3
+    if (isLiquid || !isDark) {
+      // Continuous grouped glass card item matching photo_2 (dark) & photo_11 (light)
       final Color dotColor = load > 60
           ? const Color(0xFFFF9900)
-          : (load > 40 ? const Color(0xFF00E676) : const Color(0xFF00E676));
+          : (isDark ? const Color(0xFF00E676) : const Color(0xFF00A36C));
+
+      final cardBg = isDark
+          ? const Color(0xFF1A1728).withValues(alpha: 0.72)
+          : Colors.white.withValues(alpha: 0.90);
+      final borderColor = isDark
+          ? Colors.white.withValues(alpha: 0.08)
+          : Colors.white.withValues(alpha: 0.95);
+
+      final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+      final subtitleColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
 
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1728).withValues(alpha: 0.72),
+          color: cardBg,
           borderRadius: BorderRadius.vertical(
             top: isFirstInGroup ? const Radius.circular(24) : Radius.zero,
             bottom: isLastInGroup ? const Radius.circular(24) : Radius.zero,
           ),
           border: Border(
-            left: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-            right: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-            top: isFirstInGroup ? BorderSide(color: Colors.white.withValues(alpha: 0.08)) : BorderSide.none,
-            bottom: isLastInGroup ? BorderSide(color: Colors.white.withValues(alpha: 0.08)) : BorderSide.none,
+            left: BorderSide(color: borderColor),
+            right: BorderSide(color: borderColor),
+            top: isFirstInGroup ? BorderSide(color: borderColor) : BorderSide.none,
+            bottom: isLastInGroup ? BorderSide(color: borderColor) : BorderSide.none,
           ),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: const Color(0xFF5D5380).withValues(alpha: 0.06),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: Material(
           color: Colors.transparent,
@@ -188,18 +230,18 @@ class CountryItemRow extends StatelessWidget {
                       children: [
                         Text(
                           name,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                            color: titleColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           subtitle,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF8F8C9E),
+                            color: subtitleColor,
                           ),
                         ),
                       ],
@@ -216,16 +258,16 @@ class CountryItemRow extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     '$load%',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF8F8C9E),
+                      color: subtitleColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Icon(
                     isSelected ? Icons.check_circle_rounded : Icons.chevron_right_rounded,
-                    color: isSelected ? const Color(0xFF6B42FF) : const Color(0xFF757288),
+                    color: isSelected ? const Color(0xFF6B42FF) : subtitleColor,
                     size: 20,
                   ),
                 ],

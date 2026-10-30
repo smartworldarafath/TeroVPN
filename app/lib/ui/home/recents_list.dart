@@ -36,6 +36,21 @@ class RecentsList extends StatelessWidget {
     if (items.isEmpty) return const SizedBox.shrink();
 
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
+
+    final headerColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
+    final cardBg = isDark
+        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+    final cardBorder = isDark
+        ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED));
+    final dividerColor = isDark
+        ? (isLiquid ? Colors.white.withValues(alpha: 0.05) : ProtonColors.cardBorder)
+        : const Color(0xFFEFEFF6);
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final subtitleColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -46,24 +61,20 @@ class RecentsList extends StatelessWidget {
             'Recents',
             style: ProtonTypography.bodySmall.copyWith(
               fontWeight: FontWeight.w600,
-              color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+              color: headerColor,
               fontSize: 14,
             ),
           ),
         ),
         Container(
           decoration: BoxDecoration(
-            color: isLiquid
-                ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-                : ProtonColors.surface,
+            color: cardBg,
             borderRadius: BorderRadius.circular(isLiquid ? 24 : 16),
             border: Border.all(
-              color: isLiquid
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : ProtonColors.cardBorder,
+              color: cardBorder,
               width: 1,
             ),
-            boxShadow: isLiquid
+            boxShadow: isDark
                 ? [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.4),
@@ -71,7 +82,13 @@ class RecentsList extends StatelessWidget {
                       offset: const Offset(0, 4),
                     ),
                   ]
-                : null,
+                : [
+                    BoxShadow(
+                      color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: ListView.separated(
             shrinkWrap: true,
@@ -79,9 +96,7 @@ class RecentsList extends StatelessWidget {
             itemCount: items.length,
             separatorBuilder: (_, _) => Divider(
               height: 1,
-              color: isLiquid
-                  ? Colors.white.withValues(alpha: 0.05)
-                  : ProtonColors.cardBorder,
+              color: dividerColor,
               indent: isLiquid ? 62 : 0,
             ),
             itemBuilder: (context, index) {
@@ -90,7 +105,7 @@ class RecentsList extends StatelessWidget {
 
               final Color dotColor = item.load > 60
                   ? const Color(0xFFFF9900)
-                  : (item.load > 40 ? const Color(0xFF2CFFCC) : const Color(0xFF00E676));
+                  : (item.load > 40 ? const Color(0xFF2CFFCC) : (isDark ? const Color(0xFF00E676) : const Color(0xFF00A36C)));
 
               return InkWell(
                 onTap: () => onSelect(item),
@@ -115,24 +130,24 @@ class RecentsList extends StatelessWidget {
                           children: [
                             Text(
                               item.name,
-                              style: ProtonTypography.bodyMedium.copyWith(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 15,
-                                color: Colors.white,
+                                color: titleColor,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               item.city,
-                              style: ProtonTypography.bodySmall.copyWith(
-                                color: const Color(0xFF8F8C9E),
+                              style: TextStyle(
+                                color: subtitleColor,
                                 fontSize: 12,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      if (isLiquid) ...[
+                      if (isLiquid || !isDark) ...[
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -144,32 +159,48 @@ class RecentsList extends StatelessWidget {
                                 shape: BoxShape.circle,
                               ),
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 5),
                             Text(
-                              '${item.load}%  ${item.latencyMs} ms',
-                              style: const TextStyle(
-                                fontSize: 13,
+                              '${item.load}%',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: subtitleColor,
                                 fontWeight: FontWeight.w500,
-                                color: Color(0xFF8F8C9E),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              color: Color(0xFF757288),
-                              size: 20,
+                            Text(
+                              '${item.latencyMs} ms',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: subtitleColor,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
                         ),
                       ] else ...[
-                        ServerLoadBar(percentage: item.load),
-                        const SizedBox(width: 10),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          color: ProtonColors.textMuted,
-                          size: 20,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${item.latencyMs} ms',
+                              style: ProtonTypography.labelSmall.copyWith(
+                                color: ProtonColors.textMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            ServerLoadBar(percentage: item.load),
+                          ],
                         ),
                       ],
+                      const SizedBox(width: 8),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: subtitleColor,
+                        size: 20,
+                      ),
                     ],
                   ),
                 ),

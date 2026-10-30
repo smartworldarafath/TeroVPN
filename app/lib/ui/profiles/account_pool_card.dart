@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/models.dart';
 import '../../core/format.dart';
@@ -20,6 +19,7 @@ class AccountPoolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
     final list = accounts?.accounts ?? [];
     final active = list.where((a) => a.active).firstOrNull ?? list.firstOrNull;
     final totalAccounts = list.length;
@@ -32,23 +32,13 @@ class AccountPoolCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isLiquid
-            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-            : ProtonColors.surface,
+        color: ThemeManager.instance.surfaceColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder,
+          color: ThemeManager.instance.cardBorderColor,
           width: 1,
         ),
-        boxShadow: isLiquid
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-            : null,
+        boxShadow: isLiquid ? ThemeManager.instance.cardShadow : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -56,20 +46,20 @@ class AccountPoolCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.layers_rounded,
                     color: Color(0xFF6B42FF),
                     size: 22,
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Text(
                     'Multi-Account Token Pool',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: Colors.white,
+                      color: ThemeManager.instance.textPrimaryColor,
                     ),
                   ),
                 ],
@@ -77,7 +67,7 @@ class AccountPoolCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF261D42),
+                  color: isDark ? const Color(0xFF261D42) : const Color(0xFFF0EDFA),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -85,17 +75,17 @@ class AccountPoolCard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF8B6CFF),
+                    color: Color(0xFF6B42FF),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Rotates across Fastly MASQUE edge sessions to maintain uninterrupted 50GB high-speed bandwidth.',
             style: TextStyle(
-              color: Color(0xFF8F8C9E),
+              color: ThemeManager.instance.textSecondaryColor,
               fontSize: 12,
               height: 1.35,
             ),
@@ -106,17 +96,17 @@ class AccountPoolCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Monthly Bandwidth Used',
                 style: TextStyle(
-                  color: Color(0xFF8F8C9E),
+                  color: ThemeManager.instance.textSecondaryColor,
                   fontSize: 13,
                 ),
               ),
               Text(
                 '${formatBytes(usedBytes)} / 50.0 GB',
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: ThemeManager.instance.textPrimaryColor,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),
@@ -129,7 +119,7 @@ class AccountPoolCard extends StatelessWidget {
             child: LinearProgressIndicator(
               value: ratio,
               minHeight: 5,
-              backgroundColor: const Color(0xFF131122),
+              backgroundColor: isDark ? const Color(0xFF131122) : const Color(0xFFEAE7F2),
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
             ),
           ),
@@ -144,9 +134,9 @@ class AccountPoolCard extends StatelessWidget {
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Refresh Now'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF8B6CFF),
+                foregroundColor: const Color(0xFF6B42FF),
                 side: BorderSide(
-                  color: isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : Colors.white.withValues(alpha: 0.12),
+                  color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.6 : 0.8),
                   width: 1.2,
                 ),
                 shape: RoundedRectangleBorder(

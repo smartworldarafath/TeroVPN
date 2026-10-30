@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
+import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/android_core.dart';
@@ -15,7 +16,7 @@ class SignInDialog extends StatefulWidget {
     return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: ProtonColors.surface,
+      backgroundColor: ThemeManager.instance.surfaceColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -179,6 +180,7 @@ class _SignInDialogState extends State<SignInDialog> {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final isVerificationStep = _state != null && _state!.needsAnswer;
+    final isDark = ThemeManager.instance.isDarkMode;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -197,7 +199,7 @@ class _SignInDialogState extends State<SignInDialog> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: ProtonColors.borderLight,
+                color: ThemeManager.instance.dividerColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -211,13 +213,15 @@ class _SignInDialogState extends State<SignInDialog> {
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: ProtonColors.primary.withValues(alpha: 0.15),
+                  color: isDark
+                      ? const Color(0xFF6B42FF).withValues(alpha: 0.15)
+                      : const Color(0xFFF0EDFA),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Icon(
                     _isSuccess ? Icons.check_circle_rounded : Icons.account_circle_rounded,
-                    color: _isSuccess ? ProtonColors.connected : ProtonColors.activeLabel,
+                    color: _isSuccess ? ProtonColors.connected : const Color(0xFF6B42FF),
                     size: 26,
                   ),
                 ),
@@ -231,7 +235,9 @@ class _SignInDialogState extends State<SignInDialog> {
                       _isSuccess
                           ? 'Sign In Complete!'
                           : (isVerificationStep ? 'Verification Code' : 'Sign In with Firefox Account'),
-                      style: ProtonTypography.titleMedium,
+                      style: ProtonTypography.titleMedium.copyWith(
+                        color: ThemeManager.instance.textPrimaryColor,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -240,7 +246,9 @@ class _SignInDialogState extends State<SignInDialog> {
                           : (isVerificationStep
                               ? 'Enter the 6-digit code sent to your email/authenticator'
                               : 'Firefox Account credentials for Fastly MASQUE'),
-                      style: ProtonTypography.bodySmall,
+                      style: ProtonTypography.bodySmall.copyWith(
+                        color: ThemeManager.instance.textSecondaryColor,
+                      ),
                     ),
                   ],
                 ),
@@ -272,7 +280,7 @@ class _SignInDialogState extends State<SignInDialog> {
                     child: Text(
                       _errorMessage!,
                       style: ProtonTypography.bodySmall.copyWith(
-                        color: Colors.white,
+                        color: isDark ? Colors.white : const Color(0xFFB00020),
                       ),
                     ),
                   ),
@@ -289,24 +297,26 @@ class _SignInDialogState extends State<SignInDialog> {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
-              style: ProtonTypography.bodyLarge,
+              style: ProtonTypography.bodyLarge.copyWith(
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
               decoration: InputDecoration(
                 labelText: 'Email Address',
-                labelStyle: const TextStyle(color: ProtonColors.textSecondary),
-                prefixIcon: const Icon(Icons.email_outlined, color: ProtonColors.textSecondary, size: 20),
+                labelStyle: TextStyle(color: ThemeManager.instance.textSecondaryColor),
+                prefixIcon: Icon(Icons.email_outlined, color: ThemeManager.instance.textSecondaryColor, size: 20),
                 filled: true,
-                fillColor: ProtonColors.surfaceDark,
+                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.primary, width: 1.5),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: Color(0xFF6B42FF), width: 1.5),
                 ),
               ),
             ),
@@ -316,32 +326,34 @@ class _SignInDialogState extends State<SignInDialog> {
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
-              style: ProtonTypography.bodyLarge,
+              style: ProtonTypography.bodyLarge.copyWith(
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
               decoration: InputDecoration(
                 labelText: 'Password',
-                labelStyle: const TextStyle(color: ProtonColors.textSecondary),
-                prefixIcon: const Icon(Icons.lock_outline_rounded, color: ProtonColors.textSecondary, size: 20),
+                labelStyle: TextStyle(color: ThemeManager.instance.textSecondaryColor),
+                prefixIcon: Icon(Icons.lock_outline_rounded, color: ThemeManager.instance.textSecondaryColor, size: 20),
                 suffixIcon: IconButton(
                   icon: Icon(
                     _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                    color: ProtonColors.textSecondary,
+                    color: ThemeManager.instance.textSecondaryColor,
                     size: 20,
                   ),
                   onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 filled: true,
-                fillColor: ProtonColors.surfaceDark,
+                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.primary, width: 1.5),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: Color(0xFF6B42FF), width: 1.5),
                 ),
               ),
             ),
@@ -361,27 +373,30 @@ class _SignInDialogState extends State<SignInDialog> {
               controller: _codeController,
               keyboardType: TextInputType.number,
               autofocus: true,
-              style: ProtonTypography.titleLarge.copyWith(letterSpacing: 4),
+              style: ProtonTypography.titleLarge.copyWith(
+                letterSpacing: 4,
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
               textAlign: TextAlign.center,
               decoration: InputDecoration(
                 hintText: 'Enter 6-digit code',
                 hintStyle: ProtonTypography.bodyLarge.copyWith(
-                  color: ProtonColors.textMuted,
+                  color: ThemeManager.instance.textMutedColor,
                   letterSpacing: 1,
                 ),
                 filled: true,
-                fillColor: ProtonColors.surfaceDark,
+                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.cardBorder),
+                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: ProtonColors.primary, width: 1.5),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: Color(0xFF6B42FF), width: 1.5),
                 ),
               ),
             ),
@@ -395,7 +410,7 @@ class _SignInDialogState extends State<SignInDialog> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : (isVerificationStep ? _submitAnswer : _submitInitial),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isSuccess ? ProtonColors.connected : ProtonColors.primary,
+                backgroundColor: _isSuccess ? ProtonColors.connected : const Color(0xFF6B42FF),
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -439,14 +454,14 @@ class _SignInDialogState extends State<SignInDialog> {
               children: [
                 Text(
                   "Don't have a Firefox Account? ",
-                  style: ProtonTypography.bodySmall.copyWith(color: ProtonColors.textMuted),
+                  style: ProtonTypography.bodySmall.copyWith(color: ThemeManager.instance.textSecondaryColor),
                 ),
                 GestureDetector(
                   onTap: () => AndroidCore.openUrl('https://accounts.firefox.com/signup'),
-                  child: Text(
+                  child: const Text(
                     'Create Account',
-                    style: ProtonTypography.bodySmall.copyWith(
-                      color: ProtonColors.activeLabel,
+                    style: TextStyle(
+                      color: Color(0xFF6B42FF),
                       fontWeight: FontWeight.w700,
                       decoration: TextDecoration.underline,
                     ),
@@ -462,7 +477,7 @@ class _SignInDialogState extends State<SignInDialog> {
                 child: Text(
                   'Forgot password?',
                   style: ProtonTypography.bodySmall.copyWith(
-                    color: ProtonColors.textSecondary,
+                    color: ThemeManager.instance.textSecondaryColor,
                     fontWeight: FontWeight.w500,
                     decoration: TextDecoration.underline,
                   ),

@@ -42,11 +42,12 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     await widget.controller.refresh(accountsToo: true);
     if (mounted) {
       setState(() => _isRefreshing = false);
+      final isDark = ThemeManager.instance.isDarkMode;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account quotas and bandwidth synchronized.'),
-          backgroundColor: ProtonColors.surfaceDark,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text('Account quotas and bandwidth synchronized.'),
+          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -55,10 +56,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Future<void> _activateAccount(Account account) async {
     await widget.controller.activate(account);
     if (mounted) {
+      final isDark = ThemeManager.instance.isDarkMode;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Activated session for ${account.email}. Other accounts paused.'),
-          backgroundColor: ProtonColors.surfaceDark,
+          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
           duration: const Duration(seconds: 2),
         ),
       );
@@ -66,20 +68,30 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   }
 
   Future<void> _signOutAccount(Account account) async {
+    final isDark = ThemeManager.instance.isDarkMode;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: ProtonColors.surface,
+        backgroundColor: ThemeManager.instance.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: ProtonColors.cardBorder),
+          side: BorderSide(color: ThemeManager.instance.cardBorderColor),
         ),
-        title: const Text('Sign Out Account', style: TextStyle(fontWeight: FontWeight.w700)),
-        content: Text('Are you sure you want to remove ${account.email} from this device?'),
+        title: Text(
+          'Sign Out Account',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: ThemeManager.instance.textPrimaryColor,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to remove ${account.email} from this device?',
+          style: TextStyle(color: ThemeManager.instance.textSecondaryColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: ProtonColors.textSecondary)),
+            child: Text('Cancel', style: TextStyle(color: ThemeManager.instance.textSecondaryColor)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -99,7 +111,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Signed out ${account.email}'),
-            backgroundColor: ProtonColors.surfaceDark,
+            backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
           ),
         );
       }
@@ -109,31 +121,39 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.controller,
+      listenable: Listenable.merge([widget.controller, ThemeManager.instance]),
       builder: (context, _) {
         final accounts = widget.controller.accounts?.accounts ?? [];
-        final isLiquid = ThemeManager.instance.isLiquidGlass;
+        final isDark = ThemeManager.instance.isDarkMode;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
+          backgroundColor: ThemeManager.instance.backgroundColor,
           appBar: AppBar(
+            backgroundColor: ThemeManager.instance.backgroundColor,
+            elevation: 0,
             title: Text(
               'Account Management',
-              style: ProtonTypography.titleLarge.copyWith(fontSize: 20),
+              style: ProtonTypography.titleLarge.copyWith(
+                fontSize: 20,
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: ProtonColors.textPrimary),
+              icon: Icon(Icons.arrow_back_rounded, color: ThemeManager.instance.textPrimaryColor),
               onPressed: () => Navigator.of(context).pop(),
             ),
             actions: [
               IconButton(
                 icon: _isRefreshing
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: ThemeManager.instance.textPrimaryColor,
+                        ),
                       )
-                    : const Icon(Icons.refresh_rounded, color: ProtonColors.textSecondary),
+                    : Icon(Icons.refresh_rounded, color: ThemeManager.instance.textPrimaryColor),
                 tooltip: 'Refresh Quota',
                 onPressed: _isRefreshing ? null : _refreshAllQuotas,
               ),
@@ -149,21 +169,24 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: ProtonColors.surface,
+                    color: ThemeManager.instance.surfaceColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: ProtonColors.cardBorder),
+                    border: Border.all(color: ThemeManager.instance.cardBorderColor),
+                    boxShadow: ThemeManager.instance.cardShadow,
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: ProtonColors.primary.withValues(alpha: 0.15),
+                          color: isDark
+                              ? const Color(0xFF6B42FF).withValues(alpha: 0.15)
+                              : const Color(0xFFF0EDFA),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
                           Icons.vpn_key_rounded,
-                          color: ProtonColors.activeLabel,
+                          color: Color(0xFF6B42FF),
                           size: 22,
                         ),
                       ),
@@ -176,13 +199,14 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                               'Multi-Account Session Pool',
                               style: ProtonTypography.bodyLarge.copyWith(
                                 fontWeight: FontWeight.w700,
+                                color: ThemeManager.instance.textPrimaryColor,
                               ),
                             ),
                             const SizedBox(height: 3),
                             Text(
                               'Only 1 account runs active in real-time. Secondary accounts remain paused until activated.',
                               style: ProtonTypography.bodySmall.copyWith(
-                                color: ProtonColors.textMuted,
+                                color: ThemeManager.instance.textSecondaryColor,
                               ),
                             ),
                           ],
@@ -202,7 +226,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                         icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
                         label: const Text('Add Another Account'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: ProtonColors.primary,
+                          backgroundColor: const Color(0xFF6B42FF),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 13),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -215,8 +239,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                       icon: const Icon(Icons.sync_rounded, size: 18),
                       label: const Text('Refresh Quota'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: ProtonColors.activeLabel,
-                        side: const BorderSide(color: ProtonColors.cardBorder),
+                        foregroundColor: const Color(0xFF6B42FF),
+                        side: BorderSide(color: ThemeManager.instance.cardBorderColor),
                         padding: const EdgeInsets.symmetric(vertical: 13, horizontal: 16),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -229,7 +253,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 Text(
                   'CONNECTED ACCOUNTS (${accounts.length})',
                   style: ProtonTypography.labelSmall.copyWith(
-                    color: ProtonColors.textSecondary,
+                    color: ThemeManager.instance.textSecondaryColor,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w700,
                   ),
@@ -240,26 +264,32 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                   Container(
                     padding: const EdgeInsets.all(32),
                     decoration: BoxDecoration(
-                      color: ProtonColors.surface,
+                      color: ThemeManager.instance.surfaceColor,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ProtonColors.cardBorder),
+                      border: Border.all(color: ThemeManager.instance.cardBorderColor),
+                      boxShadow: ThemeManager.instance.cardShadow,
                     ),
                     child: Column(
                       children: [
-                        const Icon(Icons.account_circle_outlined, size: 48, color: ProtonColors.textMuted),
+                        Icon(Icons.account_circle_outlined, size: 48, color: ThemeManager.instance.textMutedColor),
                         const SizedBox(height: 12),
-                        Text('No Accounts Connected', style: ProtonTypography.titleMedium),
+                        Text(
+                          'No Accounts Connected',
+                          style: ProtonTypography.titleMedium.copyWith(
+                            color: ThemeManager.instance.textPrimaryColor,
+                          ),
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           'Sign in with a Firefox Account to unlock high-speed Fastly MASQUE proxying.',
                           textAlign: TextAlign.center,
-                          style: ProtonTypography.bodySmall.copyWith(color: ProtonColors.textMuted),
+                          style: ProtonTypography.bodySmall.copyWith(color: ThemeManager.instance.textMutedColor),
                         ),
                         const SizedBox(height: 18),
                         ElevatedButton(
                           onPressed: () => SignInDialog.show(context, widget.controller),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: ProtonColors.primary,
+                            backgroundColor: const Color(0xFF6B42FF),
                             foregroundColor: Colors.white,
                           ),
                           child: const Text('Sign In Now'),
@@ -283,14 +313,15 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: ProtonColors.surface,
+                        color: ThemeManager.instance.surfaceColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
                           color: isActive
-                              ? ProtonColors.connected.withValues(alpha: 0.5)
-                              : ProtonColors.cardBorder,
+                              ? ProtonColors.connected.withValues(alpha: 0.6)
+                              : ThemeManager.instance.cardBorderColor,
                           width: isActive ? 1.4 : 1.0,
                         ),
+                        boxShadow: ThemeManager.instance.cardShadow,
                       ),
                       child: Column(
                         children: [
@@ -305,11 +336,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                   CircleAvatar(
                                     radius: 20,
                                     backgroundColor: isActive
-                                        ? ProtonColors.connected.withValues(alpha: 0.2)
-                                        : ProtonColors.surfaceDark,
+                                        ? (isDark
+                                            ? ProtonColors.connected.withValues(alpha: 0.2)
+                                            : const Color(0xFFE0F7EF))
+                                        : (isDark
+                                            ? const Color(0xFF131122)
+                                            : const Color(0xFFF0EDFA)),
                                     child: Icon(
                                       Icons.person_rounded,
-                                      color: isActive ? ProtonColors.connected : ProtonColors.textSecondary,
+                                      color: isActive
+                                          ? ProtonColors.connected
+                                          : (isDark ? ProtonColors.textSecondary : const Color(0xFF6B42FF)),
                                       size: 22,
                                     ),
                                   ),
@@ -323,6 +360,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                           style: ProtonTypography.bodyLarge.copyWith(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 15,
+                                            color: ThemeManager.instance.textPrimaryColor,
                                           ),
                                         ),
                                         const SizedBox(height: 2),
@@ -331,7 +369,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                               ? 'Active Session · Fastly Tunneling'
                                               : 'Paused · Inactive Session',
                                           style: ProtonTypography.bodySmall.copyWith(
-                                            color: isActive ? ProtonColors.connected : ProtonColors.textMuted,
+                                            color: isActive ? ProtonColors.connected : ThemeManager.instance.textSecondaryColor,
                                             fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                                           ),
                                         ),
@@ -343,13 +381,17 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                     decoration: BoxDecoration(
                                       color: isActive
-                                          ? ProtonColors.connected.withValues(alpha: 0.15)
-                                          : ProtonColors.surfaceDark,
+                                          ? (isDark
+                                              ? ProtonColors.connected.withValues(alpha: 0.15)
+                                              : const Color(0xFFE0F7EF))
+                                          : (isDark
+                                              ? const Color(0xFF261D42)
+                                              : const Color(0xFFF0EDFA)),
                                       borderRadius: BorderRadius.circular(6),
                                       border: Border.all(
                                         color: isActive
                                             ? ProtonColors.connected.withValues(alpha: 0.4)
-                                            : ProtonColors.cardBorder,
+                                            : (isDark ? Colors.white.withValues(alpha: 0.08) : Colors.transparent),
                                         width: 0.8,
                                       ),
                                     ),
@@ -359,7 +401,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                         fontSize: 10,
                                         fontWeight: FontWeight.w800,
                                         letterSpacing: 0.5,
-                                        color: isActive ? ProtonColors.connected : ProtonColors.textMuted,
+                                        color: isActive
+                                            ? (isDark ? ProtonColors.connected : const Color(0xFF00A36C))
+                                            : (isDark ? const Color(0xFF8B6CFF) : const Color(0xFF6B42FF)),
                                       ),
                                     ),
                                   ),
@@ -367,7 +411,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                   // Expand Chevron
                                   Icon(
                                     isExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
-                                    color: ProtonColors.textSecondary,
+                                    color: ThemeManager.instance.textSecondaryColor,
                                   ),
                                 ],
                               ),
@@ -383,7 +427,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Divider(height: 1, color: ProtonColors.cardBorder),
+                                  Divider(height: 1, color: ThemeManager.instance.dividerColor),
                                   const SizedBox(height: 14),
 
                                   // Usage Line
@@ -393,13 +437,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                       Text(
                                         'Bandwidth Consumed',
                                         style: ProtonTypography.bodySmall.copyWith(
-                                          color: ProtonColors.textSecondary,
+                                          color: ThemeManager.instance.textSecondaryColor,
                                         ),
                                       ),
                                       Text(
                                         '${formatBytes(used)} of 50.0 GB',
                                         style: ProtonTypography.bodySmall.copyWith(
-                                          color: ProtonColors.textPrimary,
+                                          color: ThemeManager.instance.textPrimaryColor,
                                           fontWeight: FontWeight.w700,
                                         ),
                                       ),
@@ -411,9 +455,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                     child: LinearProgressIndicator(
                                       value: ratio,
                                       minHeight: 6,
-                                      backgroundColor: ProtonColors.surfaceDark,
+                                      backgroundColor: isDark ? const Color(0xFF131122) : const Color(0xFFEAE7F2),
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                        ratio > 0.85 ? ProtonColors.disconnected : ProtonColors.primary,
+                                        ratio > 0.85 ? ProtonColors.disconnected : const Color(0xFF6B42FF),
                                       ),
                                     ),
                                   ),
@@ -426,13 +470,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                       Text(
                                         'Quota Reset Date',
                                         style: ProtonTypography.bodySmall.copyWith(
-                                          color: ProtonColors.textSecondary,
+                                          color: ThemeManager.instance.textSecondaryColor,
                                         ),
                                       ),
                                       Text(
                                         resetDate,
                                         style: ProtonTypography.bodySmall.copyWith(
-                                          color: ProtonColors.textLight,
+                                          color: ThemeManager.instance.textPrimaryColor,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -450,7 +494,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                             icon: const Icon(Icons.play_arrow_rounded, size: 16),
                                             label: const Text('Activate'),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: ProtonColors.primary,
+                                              backgroundColor: const Color(0xFF6B42FF),
                                               foregroundColor: Colors.white,
                                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -467,8 +511,8 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                                           icon: const Icon(Icons.sync_rounded, size: 16),
                                           label: const Text('Refresh'),
                                           style: OutlinedButton.styleFrom(
-                                            foregroundColor: ProtonColors.activeLabel,
-                                            side: const BorderSide(color: ProtonColors.cardBorder),
+                                            foregroundColor: const Color(0xFF6B42FF),
+                                            side: BorderSide(color: ThemeManager.instance.cardBorderColor),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                             padding: const EdgeInsets.symmetric(vertical: 10),
                                           ),

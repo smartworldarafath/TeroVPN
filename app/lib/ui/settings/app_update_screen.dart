@@ -19,7 +19,7 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
-  static const String currentVersion = '1.0.8';
+  static const String currentVersion = '1.0.9';
 
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
@@ -289,36 +289,39 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: ProtonColors.surface,
+        backgroundColor: ThemeManager.instance.surfaceColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: ProtonColors.cardBorder),
+          side: BorderSide(color: ThemeManager.instance.cardBorderColor),
         ),
         title: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: const Color(0xFF6D4AFF).withValues(alpha: 0.15),
+                color: const Color(0xFF6B42FF).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(
                 Icons.science_outlined,
-                color: Color(0xFF6D4AFF),
+                color: Color(0xFF6B42FF),
                 size: 24,
               ),
             ),
             const SizedBox(width: 12),
             Text(
               'Join Beta Program',
-              style: ProtonTypography.titleMedium.copyWith(fontSize: 18),
+              style: ProtonTypography.titleMedium.copyWith(
+                fontSize: 18,
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
             ),
           ],
         ),
         content: Text(
           'This feature is currently under active development and will be available very soon.',
           style: ProtonTypography.bodyMedium.copyWith(
-            color: ProtonColors.textSecondary,
+            color: ThemeManager.instance.textSecondaryColor,
             height: 1.4,
           ),
         ),
@@ -326,7 +329,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6D4AFF),
+              backgroundColor: const Color(0xFF6B42FF),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -346,280 +349,286 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
+    return ListenableBuilder(
+      listenable: ThemeManager.instance,
+      builder: (context, _) {
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
+        final isDark = ThemeManager.instance.isDarkMode;
 
-    return Scaffold(
-      backgroundColor: isLiquid ? const Color(0xFF0B0A13) : ProtonColors.background,
-      appBar: AppBar(
-        title: Text(
-          'App Update',
-          style: ProtonTypography.titleLarge.copyWith(fontSize: 22),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: ProtonColors.textPrimary),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        actions: [
-          IconButton(
-            icon: _isChecking
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: ProtonColors.primary),
-                  )
-                : const Icon(Icons.refresh_rounded, color: ProtonColors.textSecondary),
-            tooltip: 'Check for Updates',
-            onPressed: _isChecking || _isDownloading ? null : _fetchLatestRelease,
+        return Scaffold(
+          backgroundColor: ThemeManager.instance.backgroundColor,
+          appBar: AppBar(
+            backgroundColor: ThemeManager.instance.backgroundColor,
+            elevation: 0,
+            title: Text(
+              'App Update',
+              style: ProtonTypography.titleLarge.copyWith(
+                fontSize: 22,
+                color: ThemeManager.instance.textPrimaryColor,
+              ),
+            ),
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_rounded, color: ThemeManager.instance.textPrimaryColor),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            actions: [
+              IconButton(
+                icon: _isChecking
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF6B42FF)),
+                      )
+                    : Icon(Icons.refresh_rounded, color: ThemeManager.instance.textSecondaryColor),
+                tooltip: 'Check for Updates',
+                onPressed: _isChecking || _isDownloading ? null : _fetchLatestRelease,
+              ),
+              const SizedBox(width: 8),
+            ],
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Background Atmospheric Glow
-          Positioned(
-            top: -40,
-            left: 0,
-            right: 0,
-            height: 300,
-            child: IgnorePointer(
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.4),
-                    radius: 1.1,
-                    colors: [
-                      isLiquid
-                          ? const Color(0xFF7E1C33).withValues(alpha: 0.32)
-                          : const Color(0xFFDC3251).withValues(alpha: 0.15),
-                      isLiquid
-                          ? const Color(0xFF4B237C).withValues(alpha: 0.25)
-                          : const Color(0xFF6D4AFF).withValues(alpha: 0.08),
-                      Colors.transparent,
+          body: Stack(
+            children: [
+              // Background Atmospheric Glow (Dark mode only)
+              if (isDark)
+                Positioned(
+                  top: -40,
+                  left: 0,
+                  right: 0,
+                  height: 300,
+                  child: IgnorePointer(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0, -0.4),
+                          radius: 1.1,
+                          colors: [
+                            isLiquid
+                                ? const Color(0xFF7E1C33).withValues(alpha: 0.32)
+                                : const Color(0xFFDC3251).withValues(alpha: 0.15),
+                            isLiquid
+                                ? const Color(0xFF4B237C).withValues(alpha: 0.25)
+                                : const Color(0xFF6D4AFF).withValues(alpha: 0.08),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+              SafeArea(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (_errorMessage != null)
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 20),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : const Color(0xFFB00020),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                      // State 1: Checking
+                      if (_isChecking)
+                        _buildCheckingCard(isLiquid)
+                      // State 2: Update Available
+                      else if (_updateAvailable)
+                        _buildUpdateAvailableCard(isLiquid)
+                      // State 3: Up To Date
+                      else
+                        _buildUpToDateCard(isLiquid),
+
+                      const SizedBox(height: 24),
+
+                      // WHAT'S NEW Section
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          "WHAT'S NEW IN $_latestVersionTag",
+                          style: ProtonTypography.labelSmall.copyWith(
+                            color: ThemeManager.instance.textSecondaryColor,
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: ThemeManager.instance.surfaceColor,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: ThemeManager.instance.cardBorderColor),
+                          boxShadow: ThemeManager.instance.cardShadow,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: _changelogPoints.map((point) => _buildBulletPoint(point)).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // PREFERENCES & SETTINGS Section
+                      SettingsSectionCard(
+                        title: 'PREFERENCES & SETTINGS',
+                        children: [
+                          SettingsRow(
+                            icon: Icons.wifi_rounded,
+                            title: 'Auto-update over Wi-Fi',
+                            subtitle: 'Automatically download package on Wi-Fi',
+                            trailing: Switch(
+                              value: _autoUpdateWifi,
+                              activeThumbColor: const Color(0xFF6B42FF),
+                              onChanged: (val) {
+                                setState(() => _autoUpdateWifi = val);
+                                AppPreferences.setAutoUpdateWifi(val);
+                              },
+                            ),
+                          ),
+                          SettingsRow(
+                            icon: Icons.signal_cellular_alt_rounded,
+                            title: 'Allow updates over mobile data',
+                            subtitle: 'Download updates using cellular network',
+                            trailing: Switch(
+                              value: _allowUpdateMobile,
+                              activeThumbColor: const Color(0xFF6B42FF),
+                              onChanged: (val) {
+                                setState(() => _allowUpdateMobile = val);
+                                AppPreferences.setAllowUpdateMobile(val);
+                              },
+                            ),
+                          ),
+                          SettingsRow(
+                            icon: Icons.notifications_active_outlined,
+                            title: 'Notify me when updates are available',
+                            subtitle: 'Push alert for critical security releases',
+                            trailing: Switch(
+                              value: _notifyUpdates,
+                              activeThumbColor: const Color(0xFF6B42FF),
+                              onChanged: (val) {
+                                setState(() => _notifyUpdates = val);
+                                AppPreferences.setNotifyUpdates(val);
+                                if (val) {
+                                  AndroidCore.askNotifications();
+                                }
+                              },
+                            ),
+                          ),
+                          SettingsRow(
+                            icon: Icons.science_outlined,
+                            title: 'Join Beta Program',
+                            subtitle: 'Try preview features & early builds',
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6B42FF).withValues(alpha: 0.18),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: const Color(0xFF6B42FF).withValues(alpha: 0.4),
+                                      width: 0.8,
+                                    ),
+                                  ),
+                                  child: const Text(
+                                    'BETA',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      color: Color(0xFF6B42FF),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  Icons.chevron_right_rounded,
+                                  color: ThemeManager.instance.textMutedColor,
+                                  size: 20,
+                                ),
+                              ],
+                            ),
+                            onTap: _showBetaDialog,
+                          ),
+                        ],
+                      ),
+
+                      // ABOUT UPDATE Section
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4, bottom: 8),
+                        child: Text(
+                          'ABOUT UPDATE',
+                          style: ProtonTypography.labelSmall.copyWith(
+                            color: ThemeManager.instance.textSecondaryColor,
+                            letterSpacing: 0.8,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: ThemeManager.instance.surfaceColor,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: ThemeManager.instance.cardBorderColor),
+                          boxShadow: ThemeManager.instance.cardShadow,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Release channel: Official GitHub Releases',
+                              style: ProtonTypography.bodyMedium.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: ThemeManager.instance.textPrimaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Release date: $_releaseDate',
+                              style: ProtonTypography.bodySmall.copyWith(
+                                color: ThemeManager.instance.textSecondaryColor,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Repository: smartworldarafath/TeroVPN',
+                              style: ProtonTypography.bodySmall.copyWith(
+                                color: ThemeManager.instance.textSecondaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 32),
                     ],
                   ),
                 ),
               ),
-            ),
+            ],
           ),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (_errorMessage != null)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline_rounded, color: Colors.redAccent, size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: const TextStyle(color: Colors.white, fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  // State 1: Checking
-                  if (_isChecking)
-                    _buildCheckingCard(isLiquid)
-                  // State 2: Update Available
-                  else if (_updateAvailable)
-                    _buildUpdateAvailableCard(isLiquid)
-                  // State 3: Up To Date
-                  else
-                    _buildUpToDateCard(isLiquid),
-
-                  const SizedBox(height: 24),
-
-                  // WHAT'S NEW Section
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 8),
-                    child: Text(
-                      "WHAT'S NEW IN $_latestVersionTag",
-                      style: ProtonTypography.labelSmall.copyWith(
-                        color: ProtonColors.textSecondary,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: isLiquid
-                          ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
-                          : ProtonColors.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isLiquid
-                            ? Colors.white.withValues(alpha: 0.10)
-                            : ProtonColors.cardBorder,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: _changelogPoints.map((point) => _buildBulletPoint(point)).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // PREFERENCES & SETTINGS Section
-                  SettingsSectionCard(
-                    title: 'PREFERENCES & SETTINGS',
-                    children: [
-                      SettingsRow(
-                        icon: Icons.wifi_rounded,
-                        title: 'Auto-update over Wi-Fi',
-                        subtitle: 'Automatically download package on Wi-Fi',
-                        trailing: Switch(
-                          value: _autoUpdateWifi,
-                          activeThumbColor: const Color(0xFF6D4AFF),
-                          onChanged: (val) {
-                            setState(() => _autoUpdateWifi = val);
-                            AppPreferences.setAutoUpdateWifi(val);
-                          },
-                        ),
-                      ),
-                      SettingsRow(
-                        icon: Icons.signal_cellular_alt_rounded,
-                        title: 'Allow updates over mobile data',
-                        subtitle: 'Download updates using cellular network',
-                        trailing: Switch(
-                          value: _allowUpdateMobile,
-                          activeThumbColor: const Color(0xFF6D4AFF),
-                          onChanged: (val) {
-                            setState(() => _allowUpdateMobile = val);
-                            AppPreferences.setAllowUpdateMobile(val);
-                          },
-                        ),
-                      ),
-                      SettingsRow(
-                        icon: Icons.notifications_active_outlined,
-                        title: 'Notify me when updates are available',
-                        subtitle: 'Push alert for critical security releases',
-                        trailing: Switch(
-                          value: _notifyUpdates,
-                          activeThumbColor: const Color(0xFF6D4AFF),
-                          onChanged: (val) {
-                            setState(() => _notifyUpdates = val);
-                            AppPreferences.setNotifyUpdates(val);
-                            if (val) {
-                              AndroidCore.askNotifications();
-                            }
-                          },
-                        ),
-                      ),
-                      SettingsRow(
-                        icon: Icons.science_outlined,
-                        title: 'Join Beta Program',
-                        subtitle: 'Try preview features & early builds',
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF6D4AFF).withValues(alpha: 0.18),
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: const Color(0xFF6D4AFF).withValues(alpha: 0.4),
-                                  width: 0.8,
-                                ),
-                              ),
-                              child: const Text(
-                                'BETA',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w800,
-                                  color: Color(0xFF6D4AFF),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            const Icon(
-                              Icons.chevron_right_rounded,
-                              color: ProtonColors.textMuted,
-                              size: 20,
-                            ),
-                          ],
-                        ),
-                        onTap: _showBetaDialog,
-                      ),
-                    ],
-                  ),
-
-                  // ABOUT UPDATE Section
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 8),
-                    child: Text(
-                      'ABOUT UPDATE',
-                      style: ProtonTypography.labelSmall.copyWith(
-                        color: ProtonColors.textSecondary,
-                        letterSpacing: 0.8,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(18),
-                    decoration: BoxDecoration(
-                      color: isLiquid
-                          ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
-                          : ProtonColors.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(
-                        color: isLiquid
-                            ? Colors.white.withValues(alpha: 0.10)
-                            : ProtonColors.cardBorder,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Release channel: Official GitHub Releases',
-                          style: ProtonTypography.bodyMedium.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Release date: $_releaseDate',
-                          style: ProtonTypography.bodySmall.copyWith(
-                            color: ProtonColors.textMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Repository: smartworldarafath/TeroVPN',
-                          style: ProtonTypography.bodySmall.copyWith(
-                            color: ProtonColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -627,21 +636,26 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.65) : ProtonColors.surface,
+        color: ThemeManager.instance.surfaceColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ProtonColors.cardBorder),
+        border: Border.all(color: ThemeManager.instance.cardBorderColor),
+        boxShadow: ThemeManager.instance.cardShadow,
       ),
-      child: const Row(
+      child: Row(
         children: [
-          SizedBox(
+          const SizedBox(
             width: 24,
             height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6D4AFF)),
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: Color(0xFF6B42FF)),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Text(
             'Checking GitHub for newer releases...',
-            style: TextStyle(color: ProtonColors.textLight, fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              color: ThemeManager.instance.textPrimaryColor,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -652,11 +666,10 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.65) : ProtonColors.surface,
+        color: ThemeManager.instance.surfaceColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isLiquid ? Colors.white.withValues(alpha: 0.12) : ProtonColors.cardBorder,
-        ),
+        border: Border.all(color: ThemeManager.instance.cardBorderColor),
+        boxShadow: ThemeManager.instance.cardShadow,
       ),
       child: Column(
         children: [
@@ -671,7 +684,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                   border: Border.all(color: const Color(0xFF00C853).withValues(alpha: 0.3)),
                 ),
                 child: const Center(
-                  child: Icon(Icons.verified_rounded, color: Color(0xFF00E676), size: 32),
+                  child: Icon(Icons.verified_rounded, color: Color(0xFF00C853), size: 32),
                 ),
               ),
               const SizedBox(width: 16),
@@ -684,14 +697,14 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       style: ProtonTypography.titleMedium.copyWith(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                        color: ThemeManager.instance.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Version $currentVersion (Latest build)',
                       style: ProtonTypography.bodySmall.copyWith(
-                        color: const Color(0xFF00E676),
+                        color: const Color(0xFF00C853),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -699,7 +712,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                     Text(
                       'All security protocols and features are current',
                       style: ProtonTypography.bodySmall.copyWith(
-                        color: ProtonColors.textMuted,
+                        color: ThemeManager.instance.textSecondaryColor,
                         fontSize: 12,
                       ),
                     ),
@@ -718,8 +731,8 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               icon: const Icon(Icons.sync_rounded, size: 18),
               label: const Text('Check Again'),
               style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF6D4AFF),
-                side: const BorderSide(color: Color(0xFF6D4AFF), width: 1.2),
+                foregroundColor: const Color(0xFF6B42FF),
+                side: const BorderSide(color: Color(0xFF6B42FF), width: 1.2),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -733,15 +746,15 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.75) : ProtonColors.surface,
+        color: ThemeManager.instance.surfaceColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: const Color(0xFF6D4AFF).withValues(alpha: 0.5),
+          color: const Color(0xFF6B42FF).withValues(alpha: 0.5),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF6D4AFF).withValues(alpha: 0.2),
+            color: const Color(0xFF6B42FF).withValues(alpha: 0.2),
             blurRadius: 20,
             spreadRadius: 2,
           ),
@@ -759,11 +772,11 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                     width: 60,
                     height: 60,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF573BC7),
+                      color: const Color(0xFF6B42FF),
                       borderRadius: BorderRadius.circular(18),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFF6D4AFF).withValues(alpha: 0.5),
+                          color: const Color(0xFF6B42FF).withValues(alpha: 0.5),
                           blurRadius: 18,
                         ),
                       ],
@@ -779,7 +792,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       width: 22,
                       height: 22,
                       decoration: const BoxDecoration(
-                        color: Color(0xFF6D4AFF),
+                        color: Color(0xFF6B42FF),
                         shape: BoxShape.circle,
                       ),
                       child: const Center(
@@ -799,13 +812,14 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                       style: ProtonTypography.titleMedium.copyWith(
                         fontSize: 19,
                         fontWeight: FontWeight.w800,
+                        color: ThemeManager.instance.textPrimaryColor,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       '$_latestReleaseName${_apkSizeBytes > 0 ? " (${_formatMB(_apkSizeBytes)})" : ""}',
                       style: ProtonTypography.bodySmall.copyWith(
-                        color: ProtonColors.textLight,
+                        color: ThemeManager.instance.textPrimaryColor,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -813,7 +827,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                     Text(
                       'Your current version: $currentVersion',
                       style: ProtonTypography.bodySmall.copyWith(
-                        color: ProtonColors.textMuted,
+                        color: ThemeManager.instance.textSecondaryColor,
                       ),
                     ),
                   ],
@@ -830,8 +844,8 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               child: LinearProgressIndicator(
                 value: _downloadProgress > 0 ? _downloadProgress : null,
                 minHeight: 8,
-                backgroundColor: ProtonColors.surfaceDark,
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6D4AFF)),
+                backgroundColor: ThemeManager.instance.dividerColor,
+                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
               ),
             ),
             const SizedBox(height: 10),
@@ -840,16 +854,16 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               children: [
                 Text(
                   '${_formatMB(_receivedBytes)} / ${_formatMB(_totalBytes)} (${(_downloadProgress * 100).toStringAsFixed(0)}%)',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: ProtonColors.textLight,
+                    color: ThemeManager.instance.textPrimaryColor,
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF6D4AFF).withValues(alpha: 0.2),
+                    color: const Color(0xFF6B42FF).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
@@ -885,7 +899,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               child: ElevatedButton(
                 onPressed: _startDownload,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6D4AFF),
+                  backgroundColor: const Color(0xFF6B42FF),
                   foregroundColor: Colors.white,
                   elevation: 4,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -911,12 +925,12 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('• ', style: TextStyle(color: ProtonColors.textLight, fontSize: 16)),
+          Text('• ', style: TextStyle(color: ThemeManager.instance.textPrimaryColor, fontSize: 16)),
           Expanded(
             child: Text(
               text,
               style: ProtonTypography.bodyMedium.copyWith(
-                color: ProtonColors.textLight,
+                color: ThemeManager.instance.textPrimaryColor,
                 height: 1.35,
               ),
             ),

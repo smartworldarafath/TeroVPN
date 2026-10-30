@@ -17,17 +17,28 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
       listenable: ThemeManager.instance,
       builder: (context, _) {
         final currentTheme = ThemeManager.instance.currentTheme;
+        final isDark = ThemeManager.instance.isDarkMode;
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
+        final bgColor = ThemeManager.instance.backgroundColor;
+        final textColor = ThemeManager.instance.textPrimaryColor;
+        final secondaryColor = ThemeManager.instance.textSecondaryColor;
+
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          backgroundColor: bgColor,
           appBar: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
             title: Text(
-              'Theme',
-              style: ProtonTypography.titleLarge.copyWith(fontSize: 20),
+              'Theme & Appearance',
+              style: ProtonTypography.titleLarge.copyWith(
+                fontSize: 20,
+                color: textColor,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: ProtonColors.textPrimary),
+              icon: Icon(Icons.arrow_back_rounded, color: textColor),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -35,38 +46,85 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               children: [
+                // 1. SELECT APP THEME
                 Text(
                   'SELECT APP THEME',
-                  style: ProtonTypography.labelSmall.copyWith(
-                    color: ProtonColors.textSecondary,
+                  style: TextStyle(
+                    color: secondaryColor,
                     letterSpacing: 0.8,
                     fontWeight: FontWeight.w700,
+                    fontSize: 12,
                   ),
                 ),
                 const SizedBox(height: 12),
 
-                // 1. Proton UI (Default)
+                // Proton UI (Default)
                 _buildThemeCard(
                   title: 'Proton UI',
                   badge: 'DEFAULT',
-                  description: 'Classic official Proton VPN dark mode with deep obsidian contrast and subtle card borders.',
-                  icon: Icons.dark_mode_rounded,
+                  description: 'Classic official Proton VPN layout with clean borders and contrast.',
+                  icon: Icons.shield_outlined,
                   isSelected: currentTheme == 'Proton UI',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
                   onTap: () async {
                     await ThemeManager.instance.setTheme('Proton UI');
                   },
                 ),
                 const SizedBox(height: 14),
 
-                // 2. Proton UI (Liquid Glass)
+                // Proton UI (Liquid Glass)
                 _buildThemeCard(
                   title: 'Proton UI (Liquid Glass)',
                   badge: 'PREMIUM',
-                  description: 'Next-gen frosted liquid glass materials, translucent depth, floating capsule dock, and ambient cosmic glow.',
+                  description: 'Next-gen frosted liquid glass materials, translucent depth, floating capsule dock, and ambient glow.',
                   icon: Icons.blur_on_rounded,
                   isSelected: currentTheme == 'Proton UI (Liquid Glass)',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
                   onTap: () async {
                     await ThemeManager.instance.setTheme('Proton UI (Liquid Glass)');
+                  },
+                ),
+
+                const SizedBox(height: 32),
+
+                // 2. APPEARANCE MODE (DARK / LIGHT)
+                Text(
+                  'APPEARANCE MODE',
+                  style: TextStyle(
+                    color: secondaryColor,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Dark Mode Card
+                _buildModeCard(
+                  title: 'Dark Mode',
+                  subtitle: 'Deep obsidian contrast with cosmic neon atmosphere',
+                  icon: Icons.dark_mode_rounded,
+                  isSelected: isDark,
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                  onTap: () async {
+                    await ThemeManager.instance.setDarkMode(true);
+                  },
+                ),
+                const SizedBox(height: 14),
+
+                // Light Mode Card
+                _buildModeCard(
+                  title: 'Light Mode',
+                  subtitle: 'Iridescent frosted pastel glass with bright lavender ambience',
+                  icon: Icons.light_mode_rounded,
+                  isSelected: !isDark,
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                  onTap: () async {
+                    await ThemeManager.instance.setDarkMode(false);
                   },
                 ),
               ],
@@ -83,35 +141,55 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
     required String description,
     required IconData icon,
     required bool isSelected,
+    required bool isDark,
+    required bool isLiquid,
     required VoidCallback onTap,
   }) {
+    final cardColor = isDark
+        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+    final borderColor = isSelected
+        ? const Color(0xFF6B42FF)
+        : (isDark
+            ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
+            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED)));
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final descColor = isDark ? ProtonColors.textMuted : const Color(0xFF757288);
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: ThemeManager.instance.isLiquidGlass
-                ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-                : ProtonColors.surface,
+            color: cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF6B42FF)
-                  : (ThemeManager.instance.isLiquidGlass ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder),
+              color: borderColor,
               width: isSelected ? 1.5 : 1.0,
             ),
-            boxShadow: [
-              if (isSelected)
-                BoxShadow(
-                  color: const Color(0xFF6B42FF).withValues(alpha: 0.30),
-                  blurRadius: 18,
-                  spreadRadius: 1,
-                ),
-            ],
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.30 : 0.22),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : (isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,14 +199,14 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                 height: 44,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? const Color(0xFF6D4AFF).withValues(alpha: 0.2)
-                      : ProtonColors.surfaceDark,
+                      ? const Color(0xFF6D4AFF).withValues(alpha: isDark ? 0.2 : 0.12)
+                      : (isDark ? ProtonColors.surfaceDark : const Color(0xFFF3F2F8)),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
                   child: Icon(
                     icon,
-                    color: isSelected ? const Color(0xFF8B6CFF) : ProtonColors.textSecondary,
+                    color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textSecondary : const Color(0xFF757288)),
                     size: 24,
                   ),
                 ),
@@ -138,13 +216,17 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Flexible title + badge to completely prevent ANY right overflow
                     Row(
                       children: [
-                        Text(
-                          title,
-                          style: ProtonTypography.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                              color: titleColor,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -152,13 +234,13 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? const Color(0xFF6D4AFF).withValues(alpha: 0.2)
-                                : ProtonColors.surfaceDark,
+                                ? const Color(0xFF6D4AFF).withValues(alpha: isDark ? 0.2 : 0.12)
+                                : (isDark ? ProtonColors.surfaceDark : const Color(0xFFF0EDFA)),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
                               color: isSelected
                                   ? const Color(0xFF6D4AFF).withValues(alpha: 0.5)
-                                  : ProtonColors.cardBorder,
+                                  : (isDark ? ProtonColors.cardBorder : const Color(0xFFE5E3ED)),
                               width: 0.8,
                             ),
                           ),
@@ -168,7 +250,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                               fontSize: 9,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.4,
-                              color: isSelected ? const Color(0xFF8B6CFF) : ProtonColors.textMuted,
+                              color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textMuted : const Color(0xFF757288)),
                             ),
                           ),
                         ),
@@ -177,8 +259,9 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                     const SizedBox(height: 6),
                     Text(
                       description,
-                      style: ProtonTypography.bodySmall.copyWith(
-                        color: ProtonColors.textMuted,
+                      style: TextStyle(
+                        color: descColor,
+                        fontSize: 12,
                         height: 1.35,
                       ),
                     ),
@@ -191,9 +274,131 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                 height: 22,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: isSelected ? const Color(0xFF6D4AFF) : Colors.transparent,
+                  color: isSelected ? const Color(0xFF6B42FF) : Colors.transparent,
                   border: Border.all(
-                    color: isSelected ? const Color(0xFF6D4AFF) : ProtonColors.textMuted,
+                    color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textMuted : const Color(0xFFD8D5E5)),
+                    width: 2,
+                  ),
+                ),
+                child: isSelected
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModeCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required bool isSelected,
+    required bool isDark,
+    required bool isLiquid,
+    required VoidCallback onTap,
+  }) {
+    final cardColor = isDark
+        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+    final borderColor = isSelected
+        ? const Color(0xFF6B42FF)
+        : (isDark
+            ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
+            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED)));
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final descColor = isDark ? ProtonColors.textMuted : const Color(0xFF757288);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: borderColor,
+              width: isSelected ? 1.5 : 1.0,
+            ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.30 : 0.22),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ]
+                : (isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? const Color(0xFF6D4AFF).withValues(alpha: isDark ? 0.2 : 0.12)
+                      : (isDark ? ProtonColors.surfaceDark : const Color(0xFFF3F2F8)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Icon(
+                    icon,
+                    color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textSecondary : const Color(0xFF757288)),
+                    size: 24,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16,
+                        color: titleColor,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: descColor,
+                        fontSize: 12,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected ? const Color(0xFF6B42FF) : Colors.transparent,
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textMuted : const Color(0xFFD8D5E5)),
                     width: 2,
                   ),
                 ),

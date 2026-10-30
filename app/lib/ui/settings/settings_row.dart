@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
 
 class SettingsRow extends StatelessWidget {
@@ -20,7 +19,8 @@ class SettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final textPrimary = ThemeManager.instance.textPrimaryColor;
+    final textSecondary = ThemeManager.instance.textSecondaryColor;
 
     return Material(
       color: Colors.transparent,
@@ -33,7 +33,7 @@ class SettingsRow extends StatelessWidget {
               Icon(
                 icon,
                 size: 22,
-                color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+                color: textSecondary,
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -42,10 +42,10 @@ class SettingsRow extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
-                        color: Colors.white,
+                        color: textPrimary,
                       ),
                     ),
                     if (subtitle != null) ...[
@@ -53,7 +53,7 @@ class SettingsRow extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: TextStyle(
-                          color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textMuted,
+                          color: textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -83,6 +83,11 @@ class SettingsSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final surfaceColor = ThemeManager.instance.surfaceColor;
+    final borderColor = ThemeManager.instance.cardBorderColor;
+    final textSecondary = ThemeManager.instance.textSecondaryColor;
+    final dividerColor = ThemeManager.instance.dividerColor;
+    final shadows = ThemeManager.instance.cardShadow;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,7 +97,7 @@ class SettingsSectionCard extends StatelessWidget {
           child: Text(
             title.toUpperCase(),
             style: TextStyle(
-              color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+              color: textSecondary,
               letterSpacing: 0.8,
               fontWeight: FontWeight.w700,
               fontSize: 12,
@@ -101,23 +106,13 @@ class SettingsSectionCard extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: isLiquid
-                ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-                : ProtonColors.surface,
+            color: surfaceColor,
             borderRadius: BorderRadius.circular(isLiquid ? 24 : 16),
             border: Border.all(
-              color: isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder,
+              color: borderColor,
               width: 1,
             ),
-            boxShadow: isLiquid
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : null,
+            boxShadow: shadows,
           ),
           child: ListView.separated(
             shrinkWrap: true,
@@ -125,7 +120,7 @@ class SettingsSectionCard extends StatelessWidget {
             itemCount: children.length,
             separatorBuilder: (_, _) => Divider(
               height: 1,
-              color: isLiquid ? Colors.white.withValues(alpha: 0.05) : ProtonColors.cardBorder,
+              color: dividerColor,
               indent: 56,
             ),
             itemBuilder: (_, index) => children[index],

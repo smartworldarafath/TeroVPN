@@ -65,9 +65,12 @@ class HomeScreen extends StatelessWidget {
         }).toList();
 
         final isLiquid = ThemeManager.instance.isLiquidGlass;
+        final bgColor = ThemeManager.instance.backgroundColor;
+        final textPrimary = ThemeManager.instance.textPrimaryColor;
+        final textSecondary = ThemeManager.instance.textSecondaryColor;
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          backgroundColor: bgColor,
           body: Stack(
             children: [
               WorldMapAtmosphere(
@@ -114,6 +117,7 @@ class HomeScreen extends StatelessWidget {
                                 style: ProtonTypography.titleMedium.copyWith(
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.4,
+                                  color: textPrimary,
                                 ),
                               ),
                             ],
@@ -174,7 +178,7 @@ class HomeScreen extends StatelessWidget {
                               IconButton(
                                 icon: Icon(
                                   Icons.info_outline_rounded,
-                                  color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+                                  color: textSecondary,
                                   size: 24,
                                 ),
                                 tooltip: 'Connection Details',

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
+import 'package:flutter/services.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../home/home_screen.dart';
@@ -51,10 +51,23 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
     return ListenableBuilder(
       listenable: ThemeManager.instance,
       builder: (context, _) {
-        final isLiquid = ThemeManager.instance.isLiquidGlass;
+        final isDark = ThemeManager.instance.isDarkMode;
+        final bgColor = ThemeManager.instance.backgroundColor;
+
+        // Dynamic System Status Bar & Navigation Bar brightness
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            systemNavigationBarDividerColor: Colors.transparent,
+          ),
+        );
 
         return Scaffold(
-          backgroundColor: isLiquid ? const Color(0xFF0D0C15) : ProtonColors.background,
+          backgroundColor: bgColor,
           body: Stack(
             children: [
               // Smooth Sliding Screen PageView

@@ -16,6 +16,7 @@ class AppPreferences {
   static const _keyNotifyUpdates = 'notify_updates';
   static const _keyJoinBeta = 'join_beta';
   static const _keySelectedTheme = 'selected_theme';
+  static const _keyIsDarkMode = 'is_dark_mode';
   static const _keyIpv6LeakProtection = 'ipv6_leak_protection';
   static const _keyDnsFallback = 'dns_fallback';
   static const _keyLanBypass = 'lan_bypass';
@@ -124,6 +125,11 @@ class AppPreferences {
       _prefs?.getString(_keySelectedTheme) ?? 'Proton UI';
   static Future<void> setSelectedTheme(String theme) async =>
       await _prefs?.setString(_keySelectedTheme, theme);
+
+  // Appearance: Dark Mode vs Light Mode
+  static bool get isDarkMode => _prefs?.getBool(_keyIsDarkMode) ?? true;
+  static Future<void> setIsDarkMode(bool isDark) async =>
+      await _prefs?.setBool(_keyIsDarkMode, isDark);
 
   // Extra Functions
   static bool get ipv6LeakProtection => _prefs?.getBool(_keyIpv6LeakProtection) ?? true;

@@ -26,37 +26,50 @@ class ProfileCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
+
+    final cardBg = isDark
+        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
+        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+    final borderColor = isActive
+        ? const Color(0xFF6B42FF)
+        : (isDark
+            ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
+            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED)));
+
+    final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final descColor = isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: isLiquid
-            ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-            : ProtonColors.surface,
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isActive
-              ? const Color(0xFF6B42FF)
-              : (isLiquid
-                  ? Colors.white.withValues(alpha: 0.08)
-                  : ProtonColors.cardBorder),
+          color: borderColor,
           width: isActive ? 1.5 : 1.0,
         ),
         boxShadow: [
-          if (isLiquid && isActive) ...[
+          if (isActive)
             BoxShadow(
-              color: const Color(0xFF6B42FF).withValues(alpha: 0.30),
+              color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.30 : 0.20),
               blurRadius: 18,
               spreadRadius: 1,
               offset: const Offset(0, 4),
-            ),
-          ] else if (isLiquid) ...[
+            )
+          else if (isDark)
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.35),
               blurRadius: 14,
               offset: const Offset(0, 4),
+            )
+          else
+            BoxShadow(
+              color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             ),
-          ],
         ],
       ),
       child: Material(
@@ -73,15 +86,15 @@ class ProfileCard extends StatelessWidget {
                   height: 44,
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFF281E48)
-                        : (isLiquid
-                            ? const Color(0xFF201D30)
-                            : ProtonColors.surfaceDark),
+                        ? (isDark ? const Color(0xFF281E48) : const Color(0xFFF0EDFA))
+                        : (isDark
+                            ? (isLiquid ? const Color(0xFF201D30) : ProtonColors.surfaceDark)
+                            : const Color(0xFFF3F2F8)),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isActive
-                          ? const Color(0xFF6B42FF).withValues(alpha: 0.4)
-                          : Colors.white.withValues(alpha: 0.06),
+                          ? const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.4 : 0.3)
+                          : (isDark ? Colors.white.withValues(alpha: 0.06) : Colors.transparent),
                       width: 1,
                     ),
                   ),
@@ -89,8 +102,8 @@ class ProfileCard extends StatelessWidget {
                     child: Icon(
                       icon,
                       color: isActive
-                          ? const Color(0xFF8B6CFF)
-                          : const Color(0xFF8F8C9E),
+                          ? const Color(0xFF6B42FF)
+                          : (isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288)),
                       size: 22,
                     ),
                   ),
@@ -102,12 +115,14 @@ class ProfileCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            title,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                          Flexible(
+                            child: Text(
+                              title,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: titleColor,
+                              ),
                             ),
                           ),
                           if (isActive) ...[
@@ -115,15 +130,15 @@ class ProfileCard extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0F2B26),
+                                color: isDark ? const Color(0xFF0F2B26) : const Color(0xFFE0F7EF),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'ACTIVE',
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w800,
-                                  color: Color(0xFF1FE5BD),
+                                  color: isDark ? const Color(0xFF1FE5BD) : const Color(0xFF00A36C),
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -134,8 +149,8 @@ class ProfileCard extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         description,
-                        style: const TextStyle(
-                          color: Color(0xFF8F8C9E),
+                        style: TextStyle(
+                          color: descColor,
                           fontSize: 12,
                           height: 1.3,
                         ),
@@ -144,7 +159,7 @@ class ProfileCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 10),
-                // Country flag on the right, matching photo_4 exactly
+                // Country flag on the right, matching photo_4 & photo_5
                 CountryFlag(
                   countryCode: countryCode,
                   width: 28,

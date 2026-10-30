@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 
 class VpnStatusView extends StatelessWidget {
@@ -18,9 +17,10 @@ class VpnStatusView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isLiquid = ThemeManager.instance.isLiquidGlass;
+    final isDark = ThemeManager.instance.isDarkMode;
 
     final statusColor = isConnected
-        ? (isLiquid ? const Color(0xFF00E676) : ProtonColors.connected)
+        ? (isDark ? const Color(0xFF00E676) : const Color(0xFF00A36C))
         : (isConnecting ? ProtonColors.connecting : const Color(0xFFDC3251));
 
     final statusText = isConnected
@@ -35,7 +35,8 @@ class VpnStatusView extends StatelessWidget {
             ? 'Establishing secure HTTP/3 tunnel'
             : 'Your network traffic is unencrypted');
 
-    return Column(
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
           duration: const Duration(milliseconds: 350),
@@ -44,18 +45,22 @@ class VpnStatusView extends StatelessWidget {
           height: isLiquid ? 88 : 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isLiquid
-                ? (isConnected
-                    ? const Color(0xFF13231B)
-                    : (isConnecting ? const Color(0xFF281F15) : const Color(0xFF20131B)))
-                : ProtonColors.surface,
+            color: isDark
+                ? (isLiquid
+                    ? (isConnected
+                        ? const Color(0xFF13231B)
+                        : (isConnecting ? const Color(0xFF281F15) : const Color(0xFF20131B)))
+                    : ProtonColors.surface)
+                : (isConnected
+                    ? const Color(0xFFE8F8F5)
+                    : (isConnecting ? const Color(0xFFFFF7EB) : const Color(0xFFFFF0F2))),
             border: Border.all(
-              color: isLiquid ? statusColor.withValues(alpha: 0.8) : statusColor.withValues(alpha: 0.4),
+              color: statusColor.withValues(alpha: isDark ? 0.8 : 0.6),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: statusColor.withValues(alpha: isLiquid ? 0.35 : 0.2),
+                color: statusColor.withValues(alpha: isDark ? 0.35 : 0.22),
                 blurRadius: isLiquid ? 36 : 24,
                 spreadRadius: isLiquid ? 4 : 2,
               ),
@@ -81,7 +86,7 @@ class VpnStatusView extends StatelessWidget {
         const SizedBox(height: 18),
         Text(
           statusText,
-          style: ProtonTypography.titleMedium.copyWith(
+          style: TextStyle(
             color: statusColor,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.2,
@@ -91,12 +96,38 @@ class VpnStatusView extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           subtitleText,
-          style: ProtonTypography.bodySmall.copyWith(
-            color: isLiquid ? const Color(0xFF8F8C9E) : ProtonColors.textSecondary,
+          style: TextStyle(
+            color: isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288),
             fontSize: 13,
           ),
         ),
       ],
     );
+
+    // In Light mode, wrap in the frosted glass card matching photo_12
+    if (!isDark) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.88),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.95),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF5D5380).withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: content,
+      );
+    }
+
+    return content;
   }
 }
