@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
@@ -18,37 +19,29 @@ class FilterChipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
     final isDark = ThemeManager.instance.isDarkMode;
 
     final unselectedBg = isDark
-        ? (isLiquid ? const Color(0xFF1E1B2E).withValues(alpha: 0.65) : ProtonColors.chipBackground)
-        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+        ? const Color(0xFF1E1B2E).withValues(alpha: 0.65)
+        : Colors.white.withValues(alpha: 0.78);
 
     final unselectedBorder = isDark
-        ? (isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder.withValues(alpha: 0.6))
-        : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED));
+        ? Colors.white.withValues(alpha: 0.10)
+        : Colors.white.withValues(alpha: 0.95);
 
     final unselectedTextColor = isDark ? ProtonColors.textLight : const Color(0xFF1D1536);
     final unselectedIconColor = isDark ? ProtonColors.textLight : const Color(0xFF1D1536);
+
+    final chipRadius = BorderRadius.circular(20);
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(isLiquid ? 20 : 12),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutCubic,
-          height: 42,
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        borderRadius: chipRadius,
+        child: Container(
           decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFF6B42FF) : unselectedBg,
-            borderRadius: BorderRadius.circular(isLiquid ? 20 : 12),
-            border: Border.all(
-              color: isSelected ? const Color(0xFF6B42FF) : unselectedBorder,
-              width: 1,
-            ),
+            borderRadius: chipRadius,
             boxShadow: isSelected
                 ? [
                     BoxShadow(
@@ -67,27 +60,45 @@ class FilterChipButton extends StatelessWidget {
                         ),
                       ]),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (icon != null) ...[
-                Icon(
-                  icon,
-                  size: 16,
-                  color: isSelected ? Colors.white : unselectedIconColor,
+          child: ClipRRect(
+            borderRadius: chipRadius,
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                height: 42,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isSelected ? const Color(0xFF6B42FF) : unselectedBg,
+                  borderRadius: chipRadius,
+                  border: Border.all(
+                    color: isSelected ? const Color(0xFF6B42FF) : unselectedBorder,
+                    width: 1.1,
+                  ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: isSelected ? Colors.white : unselectedTextColor,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (icon != null) ...[
+                      Icon(
+                        icon,
+                        size: 16,
+                        color: isSelected ? Colors.white : unselectedIconColor,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: isSelected ? Colors.white : unselectedTextColor,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),

@@ -1,3 +1,5 @@
+import '../components/liquid_glass_card.dart';
+import '../components/liquid_glass_atmosphere.dart';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../theme/proton_typography.dart';
@@ -81,10 +83,11 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
       builder: (context, _) {
         final isDark = ThemeManager.instance.isDarkMode;
 
-        return Scaffold(
-          backgroundColor: ThemeManager.instance.backgroundColor,
-          appBar: AppBar(
-            backgroundColor: ThemeManager.instance.backgroundColor,
+        return LiquidGlassAtmosphere(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
             elevation: 0,
             title: Text(
               'Split Tunneling',
@@ -103,14 +106,9 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               children: [
                 // Switch Card
-                Container(
+                LiquidGlassCard(
+                  radius: 20,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: ThemeManager.instance.surfaceColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                    boxShadow: ThemeManager.instance.cardShadow,
-                  ),
                   child: Row(
                     children: [
                       const Icon(Icons.alt_route_rounded, color: Color(0xFF6B42FF), size: 24),
@@ -233,13 +231,9 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
                           ),
                         )
                       else
-                        Container(
-                          decoration: BoxDecoration(
-                            color: ThemeManager.instance.surfaceColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                            boxShadow: ThemeManager.instance.cardShadow,
-                          ),
+                        LiquidGlassCard(
+                          radius: 22,
+                          padding: EdgeInsets.zero,
                           child: ListView.separated(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
@@ -293,10 +287,12 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
               ],
             ),
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
+
 }
 
 class AppIconWidget extends StatefulWidget {

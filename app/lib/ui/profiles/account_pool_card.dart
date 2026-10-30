@@ -3,6 +3,7 @@ import '../../theme/theme_manager.dart';
 import '../../core/models.dart';
 import '../../core/format.dart';
 import '../../core/core_controller.dart';
+import '../components/liquid_glass_card.dart';
 
 class AccountPoolCard extends StatelessWidget {
   final AccountList? accounts;
@@ -18,7 +19,6 @@ class AccountPoolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
     final isDark = ThemeManager.instance.isDarkMode;
     final list = accounts?.accounts ?? [];
     final active = list.where((a) => a.active).firstOrNull ?? list.firstOrNull;
@@ -29,17 +29,9 @@ class AccountPoolCard extends StatelessWidget {
     final usedBytes = active?.usage?.usedBytes ?? (12 * 1024 * 1024 * 1024); // fallback 12.0 GB
     final ratio = (usedBytes / totalPoolBytes).clamp(0.0, 1.0);
 
-    return Container(
+    return LiquidGlassCard(
+      radius: 24,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ThemeManager.instance.surfaceColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: ThemeManager.instance.cardBorderColor,
-          width: 1,
-        ),
-        boxShadow: isLiquid ? ThemeManager.instance.cardShadow : null,
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -81,68 +73,63 @@ class AccountPoolCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
             'Rotates across Fastly MASQUE edge sessions to maintain uninterrupted 50GB high-speed bandwidth.',
             style: TextStyle(
+              fontSize: 13,
               color: ThemeManager.instance.textSecondaryColor,
-              fontSize: 12,
               height: 1.35,
             ),
           ),
-          const SizedBox(height: 18),
-
-          // Real-Time Bandwidth Progress Bar
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Monthly Bandwidth Used',
                 style: TextStyle(
+                  fontSize: 12,
                   color: ThemeManager.instance.textSecondaryColor,
-                  fontSize: 13,
                 ),
               ),
               Text(
                 '${formatBytes(usedBytes)} / 50.0 GB',
                 style: TextStyle(
-                  color: ThemeManager.instance.textPrimaryColor,
-                  fontWeight: FontWeight.w700,
                   fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: ThemeManager.instance.textPrimaryColor,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: ratio,
-              minHeight: 5,
-              backgroundColor: isDark ? const Color(0xFF131122) : const Color(0xFFEAE7F2),
+              minHeight: 6,
+              backgroundColor: isDark ? const Color(0xFF231E38) : const Color(0xFFECEAF4),
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
             ),
           ),
-          const SizedBox(height: 20),
-
-          // Action Button: Refresh Now (Full Width matching photo_5)
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
-            height: 46,
+            height: 44,
             child: OutlinedButton.icon(
               onPressed: onRefresh,
-              icon: const Icon(Icons.refresh_rounded, size: 18),
+              icon: const Icon(Icons.sync_rounded, size: 18),
               label: const Text('Refresh Now'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: const Color(0xFF6B42FF),
                 side: BorderSide(
-                  color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.6 : 0.8),
+                  color: isDark
+                      ? const Color(0xFF6B42FF).withValues(alpha: 0.5)
+                      : const Color(0xFF6B42FF).withValues(alpha: 0.4),
                   width: 1.2,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
           ),

@@ -72,7 +72,7 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
         return Scaffold(
-          backgroundColor: ThemeManager.instance.backgroundColor,
+          backgroundColor: Colors.transparent,
           body: SafeArea(
             bottom: false,
             child: SingleChildScrollView(

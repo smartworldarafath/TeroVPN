@@ -1,3 +1,5 @@
+import '../components/liquid_glass_atmosphere.dart';
+import '../components/liquid_glass_card.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/proton_colors.dart';
@@ -126,10 +128,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
         final accounts = widget.controller.accounts?.accounts ?? [];
         final isDark = ThemeManager.instance.isDarkMode;
 
-        return Scaffold(
-          backgroundColor: ThemeManager.instance.backgroundColor,
-          appBar: AppBar(
-            backgroundColor: ThemeManager.instance.backgroundColor,
+        return LiquidGlassAtmosphere(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
             elevation: 0,
             title: Text(
               'Account Management',
@@ -166,14 +169,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               children: [
                 // Info Banner
-                Container(
+                LiquidGlassCard(
+                  radius: 20,
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: ThemeManager.instance.surfaceColor,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                    boxShadow: ThemeManager.instance.cardShadow,
-                  ),
                   child: Row(
                     children: [
                       Container(
@@ -261,14 +259,9 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                 const SizedBox(height: 10),
 
                 if (accounts.isEmpty)
-                  Container(
+                  LiquidGlassCard(
+                    radius: 20,
                     padding: const EdgeInsets.all(32),
-                    decoration: BoxDecoration(
-                      color: ThemeManager.instance.surfaceColor,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                      boxShadow: ThemeManager.instance.cardShadow,
-                    ),
                     child: Column(
                       children: [
                         Icon(Icons.account_circle_outlined, size: 48, color: ThemeManager.instance.textMutedColor),
@@ -310,19 +303,13 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                         ? DateFormat.yMMMd().format(account.usage!.resetAt!)
                         : 'End of billing cycle';
 
-                    return Container(
+                    return LiquidGlassCard(
+                      radius: 20,
                       margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: ThemeManager.instance.surfaceColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: isActive
-                              ? ProtonColors.connected.withValues(alpha: 0.6)
-                              : ThemeManager.instance.cardBorderColor,
-                          width: isActive ? 1.4 : 1.0,
-                        ),
-                        boxShadow: ThemeManager.instance.cardShadow,
-                      ),
+                      padding: EdgeInsets.zero,
+                      customBorder: isActive
+                          ? Border.all(color: const Color(0xFF00E676).withValues(alpha: 0.6), width: 1.4)
+                          : null,
                       child: Column(
                         children: [
                           // Account Header Tile
@@ -543,6 +530,7 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
                     );
                   }),
               ],
+            ),
             ),
           ),
         );

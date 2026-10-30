@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../core/app_preferences.dart';
-import 'proton_colors.dart';
 
 class ThemeManager extends ChangeNotifier {
   static final ThemeManager instance = ThemeManager._internal();
@@ -14,6 +13,7 @@ class ThemeManager extends ChangeNotifier {
   late bool _isDarkMode;
 
   String get currentTheme => _currentTheme;
+  // True only when 'Proton UI (Liquid Glass)' is selected; false for classic 'Proton UI'
   bool get isLiquidGlass => _currentTheme == 'Proton UI (Liquid Glass)';
   bool get isDarkMode => _isDarkMode;
 
@@ -35,30 +35,32 @@ class ThemeManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Adaptive Color System matching reference images
+  // Exact Adaptive Color System matching Dark UI and Light UI reference screenshots
   Color get backgroundColor => _isDarkMode
-      ? (isLiquidGlass ? const Color(0xFF0D0C15) : ProtonColors.background)
-      : const Color(0xFFF1F3F9);
+      ? const Color(0xFF0C0916) // Deep Obsidian Violet
+      : const Color(0xFFF5F6FC); // Clean serene off-white canvas
 
-  Color get surfaceColor => _isDarkMode
-      ? (isLiquidGlass
-          ? const Color(0xFF1A1728).withValues(alpha: 0.72)
-          : ProtonColors.surface)
-      : (isLiquidGlass
-          ? Colors.white.withValues(alpha: 0.90)
-          : Colors.white);
+  Color get surfaceColor {
+    if (!isLiquidGlass) {
+      return _isDarkMode ? const Color(0xFF181427) : Colors.white;
+    }
+    return _isDarkMode
+        ? const Color(0xFF1B172B).withValues(alpha: 0.72) // Translucent dark violet frosted glass
+        : Colors.white.withValues(alpha: 0.85); // Pure translucent white frosted glass
+  }
 
   Color get surfaceDarkColor => _isDarkMode
-      ? (isLiquidGlass ? const Color(0xFF151322) : ProtonColors.surfaceDark)
-      : (isLiquidGlass ? const Color(0xFFF6F5FA) : const Color(0xFFF3F2F8));
+      ? const Color(0xFF141122)
+      : const Color(0xFFEEEAF7);
 
-  Color get cardBorderColor => _isDarkMode
-      ? (isLiquidGlass
-          ? Colors.white.withValues(alpha: 0.08)
-          : ProtonColors.cardBorder)
-      : (isLiquidGlass
-          ? Colors.white.withValues(alpha: 0.95)
-          : const Color(0xFFE5E3ED));
+  Color get cardBorderColor {
+    if (!isLiquidGlass) {
+      return _isDarkMode ? const Color(0xFF2E2A42) : const Color(0xFFE5E3ED);
+    }
+    return _isDarkMode
+        ? Colors.white.withValues(alpha: 0.09) // Subtle crisp glass etch
+        : Colors.white.withValues(alpha: 0.95); // Luminous white specular rim
+  }
 
   Color get textPrimaryColor => _isDarkMode
       ? Colors.white
@@ -66,31 +68,42 @@ class ThemeManager extends ChangeNotifier {
 
   Color get textSecondaryColor => _isDarkMode
       ? const Color(0xFF8F8C9E)
-      : const Color(0xFF757288);
+      : const Color(0xFF6E6B80);
 
   Color get textMutedColor => _isDarkMode
-      ? const Color(0xFF676579)
-      : const Color(0xFF8F8C9E);
+      ? const Color(0xFF625F72)
+      : const Color(0xFF9693A8);
 
   Color get dividerColor => _isDarkMode
-      ? (isLiquidGlass
-          ? Colors.white.withValues(alpha: 0.05)
-          : ProtonColors.cardBorder)
-      : const Color(0xFFEFEFF6);
+      ? Colors.white.withValues(alpha: 0.06)
+      : const Color(0xFF5D5380).withValues(alpha: 0.08);
 
-  List<BoxShadow> get cardShadow => _isDarkMode
-      ? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.38),
-            blurRadius: 18,
-            offset: const Offset(0, 4),
-          ),
-        ]
-      : [
-          BoxShadow(
-            color: const Color(0xFF5D5380).withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ];
+  // Soft Liquid Glass Elevation Shadows
+  List<BoxShadow> get cardShadow {
+    if (!isLiquidGlass) {
+      return const [];
+    }
+    return _isDarkMode
+        ? [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.45),
+              blurRadius: 22,
+              spreadRadius: 0,
+              offset: const Offset(0, 6),
+            ),
+          ]
+        : [
+            BoxShadow(
+              color: const Color(0xFF524577).withValues(alpha: 0.08),
+              blurRadius: 24,
+              spreadRadius: 0,
+              offset: const Offset(0, 6),
+            ),
+            BoxShadow(
+              color: Colors.white.withValues(alpha: 0.85),
+              blurRadius: 1,
+              offset: const Offset(0, 1),
+            ),
+          ];
+  }
 }

@@ -1,3 +1,5 @@
+import '../components/liquid_glass_card.dart';
+import '../components/liquid_glass_atmosphere.dart';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
@@ -20,12 +22,12 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
         final isDark = ThemeManager.instance.isDarkMode;
         final isLiquid = ThemeManager.instance.isLiquidGlass;
 
-        final bgColor = ThemeManager.instance.backgroundColor;
-        final textColor = ThemeManager.instance.textPrimaryColor;
+                final textColor = ThemeManager.instance.textPrimaryColor;
         final secondaryColor = ThemeManager.instance.textSecondaryColor;
 
-        return Scaffold(
-          backgroundColor: bgColor,
+        return LiquidGlassAtmosphere(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
@@ -130,6 +132,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ],
             ),
           ),
+          ),
         );
       },
     );
@@ -145,53 +148,27 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
     required bool isLiquid,
     required VoidCallback onTap,
   }) {
-    final cardColor = isDark
-        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
-        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
-
-    final borderColor = isSelected
-        ? const Color(0xFF6B42FF)
-        : (isDark
-            ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
-            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED)));
 
     final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
     final descColor = isDark ? ProtonColors.textMuted : const Color(0xFF757288);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1.0,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.30 : 0.22),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : (isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: const Color(0xFF5D5380).withValues(alpha: 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]),
-          ),
-          child: Row(
+    return LiquidGlassCard(
+      radius: 20,
+      padding: const EdgeInsets.all(18),
+      customBorder: isSelected
+          ? Border.all(color: const Color(0xFF6B42FF), width: 1.6)
+          : null,
+      customShadow: isSelected
+          ? [
+              BoxShadow(
+                color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.35 : 0.25),
+                blurRadius: 18,
+                spreadRadius: 1,
+              ),
+            ]
+          : null,
+      onTap: onTap,
+      child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
@@ -286,8 +263,6 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 
@@ -300,53 +275,27 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
     required bool isLiquid,
     required VoidCallback onTap,
   }) {
-    final cardColor = isDark
-        ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
-        : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
-
-    final borderColor = isSelected
-        ? const Color(0xFF6B42FF)
-        : (isDark
-            ? (isLiquid ? Colors.white.withValues(alpha: 0.08) : ProtonColors.cardBorder)
-            : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED)));
 
     final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
     final descColor = isDark ? ProtonColors.textMuted : const Color(0xFF757288);
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 1.5 : 1.0,
-            ),
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.30 : 0.22),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : (isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: const Color(0xFF5D5380).withValues(alpha: 0.08),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]),
-          ),
-          child: Row(
+    return LiquidGlassCard(
+      radius: 20,
+      padding: const EdgeInsets.all(18),
+      customBorder: isSelected
+          ? Border.all(color: const Color(0xFF6B42FF), width: 1.6)
+          : null,
+      customShadow: isSelected
+          ? [
+              BoxShadow(
+                color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.35 : 0.25),
+                blurRadius: 18,
+                spreadRadius: 1,
+              ),
+            ]
+          : null,
+      onTap: onTap,
+      child: Row(
             children: [
               Container(
                 width: 44,
@@ -408,8 +357,6 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }

@@ -130,6 +130,7 @@ class CoreController extends ChangeNotifier {
   bool get connected => _api != null && unavailable == null;
 
   void start() {
+    if (kIsWeb) return;
     _timer ??= Timer.periodic(pollInterval, (_) => refresh());
     refresh();
   }
@@ -267,6 +268,35 @@ class CoreController extends ChangeNotifier {
     _localVpnOn = on;
     switchingProxy = true;
     notifyListeners();
+    if (kIsWeb) {
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      switchingProxy = false;
+      status = CoreStatus.fromJson({
+        'state': {'phase': on ? 'running' : 'off'},
+        'proxy': {
+          'country_code': AppPreferences.selectedLocation,
+          'country_name': 'Netherlands',
+          'city_name': 'Amsterdam #12',
+          'ip': '185.156.172.45',
+          'port': 51820,
+        },
+        'traffic': {'up_bps': on ? 124000 : 0, 'down_bps': on ? 482000 : 0},
+        'notices': [],
+        'accounts': {'running': 1, 'configured': 2},
+        'switch_threshold_percent': 10.0,
+        'version': '2.0.0',
+        'can_exit': true,
+        'system_proxy': on ? 'running' : 'off',
+        'system_proxy_supported': true,
+        'tun_supported': true,
+        'auto_connecting': false,
+        'connect_failure': '',
+        'selection': AppPreferences.selectedLocation,
+        'selection_name': 'Netherlands',
+      });
+      notifyListeners();
+      return;
+    }
     try {
       await (turnOn ?? _require().setPower)(on);
       final api = _require();
@@ -392,6 +422,35 @@ class CoreController extends ChangeNotifier {
   /// recommended one); the proxy restarts on it.
   Future<void> setLocation(String country) async {
     await AppPreferences.setSelectedLocation(country);
+    if (kIsWeb) {
+      if (status != null) {
+        status = CoreStatus.fromJson({
+          'state': {'phase': isConnected ? 'running' : 'off'},
+          'proxy': {
+            'country_code': country.toUpperCase(),
+            'country_name': country.toUpperCase(),
+            'city_name': '${country.toUpperCase()} #1',
+            'ip': '185.156.172.45',
+            'port': 51820,
+          },
+          'traffic': {'up_bps': isConnected ? 124000 : 0, 'down_bps': isConnected ? 482000 : 0},
+          'notices': [],
+          'accounts': {'running': 1, 'configured': 2},
+          'switch_threshold_percent': 10.0,
+          'version': '2.0.0',
+          'can_exit': true,
+          'system_proxy': isConnected ? 'running' : 'off',
+          'system_proxy_supported': true,
+          'tun_supported': true,
+          'auto_connecting': false,
+          'connect_failure': '',
+          'selection': country,
+          'selection_name': country,
+        });
+      }
+      notifyListeners();
+      return;
+    }
     return _act(() => _require().setLocation(country));
   }
 

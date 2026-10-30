@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
-import '../../core/models.dart';
 import '../../core/app_preferences.dart';
 import '../components/signin_dialog.dart';
-import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
 import '../components/details_sheet.dart';
 import 'world_map_atmosphere.dart';
 import 'vpn_status_view.dart';
 import 'vpn_connection_card.dart';
 import 'recents_list.dart';
+import 'default_connection_sheet.dart';
 
 class HomeScreen extends StatelessWidget {
   final CoreController controller;
@@ -30,31 +27,31 @@ class HomeScreen extends StatelessWidget {
       listenable: Listenable.merge([controller, ThemeManager.instance]),
       builder: (context, _) {
         final status = controller.status;
-        final phase = status?.state.phase ?? Phase.off;
-        final isConnected = phase == Phase.running;
-        final isConnecting = phase == Phase.starting || controller.switchingProxy;
-
-        final isVpnOn = controller.isVpnOn || isConnected;
-        final savedCode = AppPreferences.selectedLocation;
+        final isConnected = controller.isConnected;
+        final isConnecting = controller.isConnecting;
+        final isVpnOn = controller.isVpnOn;
         final proxy = status?.proxy;
-        final countryCode = proxy?.countryCode.isNotEmpty == true ? proxy!.countryCode : savedCode;
-        final matchedCountry = kFastlyCountries.firstWhere(
-          (c) => c.code.toUpperCase() == countryCode.toUpperCase(),
-          orElse: () => const CountryItem(code: 'NL', name: 'Netherlands', cities: 'Amsterdam', load: 32, pingMs: 18),
-        );
-        final countryName = proxy?.countryName.isNotEmpty == true
-            ? proxy!.countryName
-            : (countryCode.toLowerCase() == 'fastest' ? 'Fastest country' : matchedCountry.name);
-        final cityName = proxy?.cityName.isNotEmpty == true
-            ? proxy!.cityName
-            : (countryCode.toLowerCase() == 'fastest' ? 'Auto Anycast Routing' : '${matchedCountry.cities.split(',').first} #1');
 
-        final recentCodes = AppPreferences.recentLocations;
-        final recentItems = recentCodes.map((code) {
-          final item = kFastlyCountries.firstWhere(
-            (c) => c.code.toUpperCase() == code.toUpperCase(),
-            orElse: () => CountryItem(code: code, name: code, cities: 'Edge', load: 30, pingMs: 25),
-          );
+        final countryCode = proxy?.countryCode ?? 'NL';
+        final countryName = proxy?.countryName ?? 'Netherlands';
+        final cityName = proxy?.cityName ?? 'Amsterdam #12';
+
+        // Dynamic 3 recent servers from live Fastly countries
+        final dynamicCountries = CountryManager.instance.countries;
+        final nl = dynamicCountries.firstWhere(
+          (c) => c.code == 'NL',
+          orElse: () => DynamicCountry(code: 'NL', name: 'Netherlands', cities: 'Amsterdam #12', load: 32, pingMs: 18),
+        );
+        final de = dynamicCountries.firstWhere(
+          (c) => c.code == 'DE',
+          orElse: () => DynamicCountry(code: 'DE', name: 'Germany', cities: 'Frankfurt #8', load: 54, pingMs: 24),
+        );
+        final us = dynamicCountries.firstWhere(
+          (c) => c.code == 'US',
+          orElse: () => DynamicCountry(code: 'US', name: 'United States', cities: 'New York #102', load: 68, pingMs: 82),
+        );
+
+        final recentItems = [nl, de, us].map((item) {
           return RecentServerItem(
             code: item.code,
             name: item.name,
@@ -64,13 +61,11 @@ class HomeScreen extends StatelessWidget {
           );
         }).toList();
 
-        final isLiquid = ThemeManager.instance.isLiquidGlass;
-        final bgColor = ThemeManager.instance.backgroundColor;
         final textPrimary = ThemeManager.instance.textPrimaryColor;
         final textSecondary = ThemeManager.instance.textSecondaryColor;
 
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: Colors.transparent,
           body: Stack(
             children: [
               WorldMapAtmosphere(
@@ -82,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                 bottom: false,
                 child: Column(
                   children: [
-                    // Top App Bar
+                    // Top App Bar matching photo_1 & photo_12
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       child: Row(
@@ -91,15 +86,16 @@ class HomeScreen extends StatelessWidget {
                           Row(
                             children: [
                               Container(
-                                width: 34,
-                                height: 34,
+                                width: 36,
+                                height: 36,
                                 decoration: BoxDecoration(
-                                  color: ProtonColors.primary,
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: const Color(0xFF6B42FF),
+                                  borderRadius: BorderRadius.circular(11),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: const Color(0xFF6D4AFF).withValues(alpha: 0.4),
-                                      blurRadius: 8,
+                                      color: const Color(0xFF6B42FF).withValues(alpha: 0.45),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
@@ -111,10 +107,11 @@ class HomeScreen extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 12),
                               Text(
                                 'TeroVPN',
-                                style: ProtonTypography.titleMedium.copyWith(
+                                style: TextStyle(
+                                  fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.4,
                                   color: textPrimary,
@@ -122,69 +119,14 @@ class HomeScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          Row(
-                            children: [
-                              if (!isLiquid) ...[
-                                AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: isConnected
-                                        ? ProtonColors.connected.withValues(alpha: 0.15)
-                                        : (isConnecting
-                                            ? ProtonColors.connecting.withValues(alpha: 0.15)
-                                            : ProtonColors.surfaceDark),
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: Border.all(
-                                      color: isConnected
-                                          ? ProtonColors.connected.withValues(alpha: 0.4)
-                                          : (isConnecting
-                                              ? ProtonColors.connecting.withValues(alpha: 0.4)
-                                              : ProtonColors.cardBorder),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        isConnected
-                                            ? Icons.lock_rounded
-                                            : (isConnecting ? Icons.sync_rounded : Icons.lock_open_rounded),
-                                        color: isConnected
-                                            ? ProtonColors.connected
-                                            : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
-                                        size: 15,
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        isConnected
-                                            ? 'LOCKED'
-                                            : (isConnecting ? 'TUNNELING' : 'UNLOCKED'),
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w800,
-                                          letterSpacing: 0.5,
-                                          color: isConnected
-                                              ? ProtonColors.connected
-                                              : (isConnecting ? ProtonColors.connecting : ProtonColors.textMuted),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              IconButton(
-                                icon: Icon(
-                                  Icons.info_outline_rounded,
-                                  color: textSecondary,
-                                  size: 24,
-                                ),
-                                tooltip: 'Connection Details',
-                                onPressed: () => DetailsSheet.show(context, status: status),
-                              ),
-                            ],
+                          IconButton(
+                            icon: Icon(
+                              Icons.info_outline_rounded,
+                              color: textSecondary,
+                              size: 24,
+                            ),
+                            tooltip: 'Connection Details',
+                            onPressed: () => DetailsSheet.show(context, status: status),
                           ),
                         ],
                       ),
@@ -208,7 +150,40 @@ class HomeScreen extends StatelessWidget {
                               isConnecting: isConnecting,
                               exitCountry: proxy?.countryName,
                             ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 24),
+                            // Default connection selector matching video_20261030_222613.mp4
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 8),
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: InkWell(
+                                  onTap: () => DefaultConnectionSheet.show(
+                                    context,
+                                    controller: controller,
+                                    onSelected: (_) {},
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Default connection',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: textSecondary,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Icon(Icons.arrow_drop_down_rounded, size: 20, color: textSecondary),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                             VpnConnectionCard(
                               countryCode: countryCode,
                               countryName: countryName,

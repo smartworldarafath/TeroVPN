@@ -21,6 +21,8 @@ class AppPreferences {
   static const _keyDnsFallback = 'dns_fallback';
   static const _keyLanBypass = 'lan_bypass';
   static const _keyHardwareAcceleration = 'hardware_acceleration';
+  static const _keyDefaultConnectionType = 'default_connection_type';
+  static const _keyLastConnection = 'last_connection';
 
   static SharedPreferences? _prefs;
 
@@ -147,4 +149,15 @@ class AppPreferences {
   static bool get hardwareAcceleration => _prefs?.getBool(_keyHardwareAcceleration) ?? true;
   static Future<void> setHardwareAcceleration(bool val) async =>
       await _prefs?.setBool(_keyHardwareAcceleration, val);
+
+  // Default connection: 'fastest' (default), 'last', or country code
+  static String get defaultConnectionType =>
+      _prefs?.getString(_keyDefaultConnectionType) ?? 'fastest';
+  static Future<void> setDefaultConnectionType(String type) async =>
+      await _prefs?.setString(_keyDefaultConnectionType, type);
+
+  static String get lastConnection =>
+      _prefs?.getString(_keyLastConnection) ?? 'NL';
+  static Future<void> setLastConnection(String loc) async =>
+      await _prefs?.setString(_keyLastConnection, loc);
 }

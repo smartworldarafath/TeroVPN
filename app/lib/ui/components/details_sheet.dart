@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/models.dart';
@@ -15,32 +16,39 @@ class DetailsSheet extends StatelessWidget {
 
   static void show(BuildContext context, {CoreStatus? status}) {
     final isDark = ThemeManager.instance.isDarkMode;
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
 
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark
-                ? (isLiquid ? const Color(0xFF161426).withValues(alpha: 0.95) : const Color(0xFF181628))
-                : Colors.white.withValues(alpha: 0.96),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-            border: Border.all(
-              color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.95),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFF5D5380).withValues(alpha: 0.12),
-                blurRadius: 28,
-                offset: const Offset(0, -4),
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark
+                    ? const Color(0xFF161324).withValues(alpha: 0.75)
+                    : Colors.white.withValues(alpha: 0.82),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? Colors.white.withValues(alpha: 0.12) : Colors.white.withValues(alpha: 0.95),
+                    width: 1.2,
+                  ),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark ? Colors.black.withValues(alpha: 0.5) : const Color(0xFF5D5380).withValues(alpha: 0.12),
+                    blurRadius: 28,
+                    offset: const Offset(0, -4),
+                  ),
+                ],
               ),
-            ],
+              child: DetailsSheet(status: status),
+            ),
           ),
-          child: DetailsSheet(status: status),
         );
       },
     );

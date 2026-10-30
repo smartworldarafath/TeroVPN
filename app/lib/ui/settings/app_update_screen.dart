@@ -1,3 +1,5 @@
+import '../components/liquid_glass_card.dart';
+import '../components/liquid_glass_atmosphere.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -19,7 +21,7 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
-  static const String currentVersion = '1.0.9';
+  static const String currentVersion = '1.1.0';
 
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
@@ -33,6 +35,7 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
   String _latestReleaseName = 'TeroVPN v1.0.8';
   String _releaseDate = 'October 2026';
   List<String> _changelogPoints = [];
+  bool _isVersionInfoExpanded = false;
   String? _downloadUrl;
   int _apkSizeBytes = 0;
 
@@ -355,10 +358,11 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
         final isLiquid = ThemeManager.instance.isLiquidGlass;
         final isDark = ThemeManager.instance.isDarkMode;
 
-        return Scaffold(
-          backgroundColor: ThemeManager.instance.backgroundColor,
-          appBar: AppBar(
-            backgroundColor: ThemeManager.instance.backgroundColor,
+        return LiquidGlassAtmosphere(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
             elevation: 0,
             title: Text(
               'App Update',
@@ -461,29 +465,110 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
 
                       const SizedBox(height: 24),
 
-                      // WHAT'S NEW Section
+                      // WHAT'S NEW Section Header with Expand / Collapse
                       Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 8),
-                        child: Text(
-                          "WHAT'S NEW IN $_latestVersionTag",
-                          style: ProtonTypography.labelSmall.copyWith(
-                            color: ThemeManager.instance.textSecondaryColor,
-                            letterSpacing: 0.8,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        padding: const EdgeInsets.only(left: 4, bottom: 8, right: 4),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              "WHAT'S NEW IN $_latestVersionTag",
+                              style: ProtonTypography.labelSmall.copyWith(
+                                color: ThemeManager.instance.textSecondaryColor,
+                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isVersionInfoExpanded = !_isVersionInfoExpanded;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6B42FF).withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _isVersionInfoExpanded ? 'Collapse' : 'Expand',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: Color(0xFF6B42FF),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _isVersionInfoExpanded
+                                          ? Icons.keyboard_arrow_up_rounded
+                                          : Icons.keyboard_arrow_down_rounded,
+                                      size: 16,
+                                      color: const Color(0xFF6B42FF),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      Container(
+                      LiquidGlassCard(
+                        radius: 20,
                         padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: ThemeManager.instance.surfaceColor,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                          boxShadow: ThemeManager.instance.cardShadow,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: _changelogPoints.map((point) => _buildBulletPoint(point)).toList(),
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeInOutCubic,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              ...(_isVersionInfoExpanded
+                                      ? _changelogPoints
+                                      : _changelogPoints.take(4))
+                                  .map((point) => _buildBulletPoint(point)),
+                              if (!_isVersionInfoExpanded && _changelogPoints.length > 4) ...[
+                                const SizedBox(height: 8),
+                                Center(
+                                  child: InkWell(
+                                    onTap: () {
+                                      setState(() {
+                                        _isVersionInfoExpanded = true;
+                                      });
+                                    },
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            '+ ${_changelogPoints.length - 4} more points',
+                                            style: const TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Color(0xFF6B42FF),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          const Icon(
+                                            Icons.keyboard_arrow_down_rounded,
+                                            size: 18,
+                                            color: Color(0xFF6B42FF),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -585,14 +670,9 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
                           ),
                         ),
                       ),
-                      Container(
+                      LiquidGlassCard(
+                        radius: 20,
                         padding: const EdgeInsets.all(18),
-                        decoration: BoxDecoration(
-                          color: ThemeManager.instance.surfaceColor,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: ThemeManager.instance.cardBorderColor),
-                          boxShadow: ThemeManager.instance.cardShadow,
-                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -627,20 +707,16 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
               ),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Widget _buildCheckingCard(bool isLiquid) {
-    return Container(
+    return LiquidGlassCard(
+      radius: 20,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ThemeManager.instance.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ThemeManager.instance.cardBorderColor),
-        boxShadow: ThemeManager.instance.cardShadow,
-      ),
       child: Row(
         children: [
           const SizedBox(
@@ -663,14 +739,9 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
   }
 
   Widget _buildUpToDateCard(bool isLiquid) {
-    return Container(
+    return LiquidGlassCard(
+      radius: 20,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: ThemeManager.instance.surfaceColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: ThemeManager.instance.cardBorderColor),
-        boxShadow: ThemeManager.instance.cardShadow,
-      ),
       child: Column(
         children: [
           Row(

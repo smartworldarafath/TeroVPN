@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
-import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import 'country_manager.dart';
 import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
 import '../components/filter_chip_button.dart';
+import '../components/liquid_glass_card.dart';
 import 'country_item_row.dart';
+import 'country_details_sheet.dart';
 
 class CountriesScreen extends StatefulWidget {
   final CoreController controller;
@@ -94,16 +95,11 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
       builder: (context, _) {
         final allCountries = CountryManager.instance.countries;
         final filteredCountries = _getFilteredCountries(allCountries);
-        final isLiquid = ThemeManager.instance.isLiquidGlass;
-        final isDark = ThemeManager.instance.isDarkMode;
-
-        final bgColor = ThemeManager.instance.backgroundColor;
         final textPrimary = ThemeManager.instance.textPrimaryColor;
         final textSecondary = ThemeManager.instance.textSecondaryColor;
-        final dividerColor = ThemeManager.instance.dividerColor;
 
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: Colors.transparent,
           body: SafeArea(
             bottom: false,
             child: Column(
@@ -117,14 +113,12 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                     children: [
                       Text(
                         'Countries',
-                        style: isLiquid
-                            ? TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w800,
-                                color: textPrimary,
-                                letterSpacing: -0.5,
-                              )
-                            : ProtonTypography.titleLarge.copyWith(color: textPrimary),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: textPrimary,
+                          letterSpacing: -0.5,
+                        ),
                       ),
                       Row(
                         children: [
@@ -164,54 +158,33 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                   ),
                 ),
 
-                // Live Search Bar
+                // Live Frosted Liquid Glass Search Bar matching photo_3 & photo_10
                 if (_isSearchOpen)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      style: TextStyle(color: textPrimary, fontSize: 15),
-                      decoration: InputDecoration(
-                        hintText: 'Search countries or cities...',
-                        hintStyle: TextStyle(
-                          color: textSecondary,
-                          fontSize: 14,
-                        ),
-                        filled: true,
-                        fillColor: isDark
-                            ? (isLiquid ? const Color(0xFF1A1728).withValues(alpha: 0.72) : ProtonColors.surface)
-                            : Colors.white.withValues(alpha: 0.90),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? (isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : ProtonColors.cardBorder)
-                                : const Color(0xFFE5E3ED),
-                            width: 1.2,
+                    child: LiquidGlassCard(
+                      radius: 16,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                      child: TextField(
+                        controller: _searchController,
+                        autofocus: true,
+                        style: TextStyle(color: textPrimary, fontSize: 15),
+                        decoration: InputDecoration(
+                          hintText: 'Search countries or cities...',
+                          hintStyle: TextStyle(
+                            color: textSecondary,
+                            fontSize: 14,
                           ),
+                          border: InputBorder.none,
+                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide(
-                            color: isDark
-                                ? (isLiquid ? const Color(0xFF6B42FF).withValues(alpha: 0.5) : ProtonColors.cardBorder)
-                                : const Color(0xFFE5E3ED),
-                            width: 1.2,
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: const BorderSide(color: Color(0xFF6B42FF), width: 1.5),
-                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _searchQuery = val.trim();
+                          });
+                        },
                       ),
-                      onChanged: (val) {
-                        setState(() {
-                          _searchQuery = val.trim();
-                        });
-                      },
                     ),
                   ),
 
@@ -268,7 +241,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                   ),
                 ),
 
-                const SizedBox(height: 6),
+                const SizedBox(height: 4),
 
                 // Countries List
                 Expanded(
@@ -290,21 +263,10 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                     },
                     child: KeyedSubtree(
                       key: ValueKey<String>('$_selectedFilter-$_searchQuery'),
-                      child: ListView.separated(
+                      child: ListView.builder(
                         physics: const BouncingScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 120),
                         itemCount: filteredCountries.length + 1,
-                        separatorBuilder: (context, index) {
-                          if (index == 0) {
-                            return const SizedBox(height: 6);
-                          }
-                          return Divider(
-                            height: 1,
-                            color: dividerColor,
-                            indent: 68,
-                            endIndent: (isLiquid || !isDark) ? 20 : 0,
-                          );
-                        },
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';
@@ -313,6 +275,7 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                               name: 'Fastest country',
                               subtitle: 'Connects to closest edge server',
                               load: 25,
+                              pingMs: 18,
                               isFastest: true,
                               isSelected: isFastestSelected,
                               onTap: () async {
@@ -326,21 +289,29 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                           final countryIndex = index - 1;
                           final country = filteredCountries[countryIndex];
                           final isSelected = activeCode == country.code;
-                          final isFirst = countryIndex == 0;
-                          final isLast = countryIndex == filteredCountries.length - 1;
 
                           return CountryItemRow(
                             code: country.code,
                             name: country.name,
                             subtitle: country.cities,
                             load: country.load,
+                            pingMs: country.pingMs,
                             isSelected: isSelected,
-                            isFirstInGroup: isFirst,
-                            isLastInGroup: isLast,
                             onTap: () async {
                               await AppPreferences.setSelectedLocation(country.code);
+                              await AppPreferences.setLastConnection(country.code);
                               await widget.controller.setLocation(country.code.toLowerCase());
                               widget.onCountrySelected(country.code);
+                            },
+                            onExpand: () {
+                              CountryDetailsSheet.show(
+                                context,
+                                country: country,
+                                controller: widget.controller,
+                                onServerSelected: (serverName) {
+                                  widget.onCountrySelected(country.code);
+                                },
+                              );
                             },
                           );
                         },

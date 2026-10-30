@@ -2,6 +2,7 @@
 out/
 build/
 app/build/
+*.apk
 .dart_tool/
 app/.dart_tool/
 .flutter-plugins

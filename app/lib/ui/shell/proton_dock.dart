@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
 
 class DockItemData {
@@ -50,8 +49,8 @@ class ProtonDock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
     final isDark = ThemeManager.instance.isDarkMode;
+    final isLiquid = ThemeManager.instance.isLiquidGlass;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -60,58 +59,65 @@ class ProtonDock extends StatelessWidget {
         const pillWidth = 58.0;
         const pillHeight = 32.0;
 
-        // Exact horizontal centering of the active pill over the icon of the current tab
+        // Exact horizontal centering of the active pill over the icon of current tab
         final pillLeft = (currentIndex * itemWidth) + (itemWidth / 2) - (pillWidth / 2);
 
-        final dockRadius = BorderRadius.circular(isLiquid ? 36 : 22);
+        final dockRadius = BorderRadius.circular(isLiquid ? 36 : 20);
 
         final dockBg = isDark
-            ? (isLiquid ? const Color(0xFF131122).withValues(alpha: 0.85) : ProtonColors.surface)
-            : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+            ? (isLiquid ? const Color(0xFF131122).withValues(alpha: 0.68) : const Color(0xFF181526))
+            : (isLiquid ? Colors.white.withValues(alpha: 0.76) : Colors.white);
 
         final dockBorderColor = isDark
-            ? (isLiquid ? Colors.white.withValues(alpha: 0.10) : ProtonColors.cardBorder.withValues(alpha: 0.8))
+            ? (isLiquid ? Colors.white.withValues(alpha: 0.12) : const Color(0xFF2E2A42))
             : (isLiquid ? Colors.white.withValues(alpha: 0.95) : const Color(0xFFE5E3ED));
 
         return Container(
-          height: isLiquid ? 72 : 68,
+          height: isLiquid ? 72 : 66,
           decoration: BoxDecoration(
             borderRadius: dockRadius,
-            boxShadow: [
-              if (isDark) ...[
-                if (isLiquid)
-                  BoxShadow(
-                    color: const Color(0xFF6B42FF).withValues(alpha: 0.42),
-                    blurRadius: 36,
-                    spreadRadius: 3,
-                    offset: const Offset(0, 6),
-                  ),
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.65),
-                  blurRadius: 22,
-                  offset: const Offset(0, 4),
-                ),
-              ] else ...[
-                BoxShadow(
-                  color: const Color(0xFF6B42FF).withValues(alpha: 0.25),
-                  blurRadius: 32,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 6),
-                ),
-                BoxShadow(
-                  color: const Color(0xFF5D5380).withValues(alpha: 0.12),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ],
+            boxShadow: isLiquid
+                ? [
+                    if (isDark) ...[
+                      BoxShadow(
+                        color: const Color(0xFF6B42FF).withValues(alpha: 0.50),
+                        blurRadius: 40,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.65),
+                        blurRadius: 24,
+                        offset: const Offset(0, 4),
+                      ),
+                    ] else ...[
+                      BoxShadow(
+                        color: const Color(0xFF6B42FF).withValues(alpha: 0.28),
+                        blurRadius: 36,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 6),
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF5D5380).withValues(alpha: 0.10),
+                        blurRadius: 20,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.35 : 0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
           ),
           child: ClipRRect(
             borderRadius: dockRadius,
             child: BackdropFilter(
               filter: ImageFilter.blur(
-                sigmaX: isLiquid ? 20 : 0,
-                sigmaY: isLiquid ? 20 : 0,
+                sigmaX: isLiquid ? 28 : 0,
+                sigmaY: isLiquid ? 28 : 0,
               ),
               child: Container(
                 decoration: BoxDecoration(
@@ -119,8 +125,28 @@ class ProtonDock extends StatelessWidget {
                   borderRadius: dockRadius,
                   border: Border.all(
                     color: dockBorderColor,
-                    width: 1.0,
+                    width: 1.2,
                   ),
+                  gradient: isLiquid
+                      ? LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: isDark
+                              ? [
+                                  Colors.white.withValues(alpha: 0.08),
+                                  Colors.white.withValues(alpha: 0.02),
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.12),
+                                ]
+                              : [
+                                  Colors.white.withValues(alpha: 0.45),
+                                  Colors.white.withValues(alpha: 0.10),
+                                  Colors.transparent,
+                                  const Color(0xFF5D5380).withValues(alpha: 0.04),
+                                ],
+                          stops: const [0.0, 0.35, 0.70, 1.0],
+                        )
+                      : null,
                 ),
                 child: Stack(
                   children: [
@@ -129,13 +155,20 @@ class ProtonDock extends StatelessWidget {
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOutCubic,
                       left: pillLeft,
-                      top: isLiquid ? 10 : 8,
+                      top: 10,
                       width: pillWidth,
                       height: pillHeight,
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFF6B42FF),
                           borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6B42FF).withValues(alpha: 0.45),
+                              blurRadius: 12,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -146,8 +179,8 @@ class ProtonDock extends StatelessWidget {
                         final item = items[index];
                         final isSelected = index == currentIndex;
 
-                        final inactiveColor = isDark ? const Color(0xFF757288) : const Color(0xFF757288);
-                        final activeLabelColor = const Color(0xFF6B42FF);
+                        const inactiveColor = Color(0xFF757288);
+                        const activeLabelColor = Color(0xFF6B42FF);
 
                         return Expanded(
                           child: InkWell(
@@ -172,7 +205,7 @@ class ProtonDock extends StatelessWidget {
                                 Text(
                                   item.label,
                                   style: TextStyle(
-                                    fontSize: 10,
+                                    fontSize: 10.5,
                                     fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                                     color: isSelected ? activeLabelColor : inactiveColor,
                                   ),

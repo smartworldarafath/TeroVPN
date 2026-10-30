@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
+import '../components/liquid_glass_card.dart';
 
 class SettingsRow extends StatelessWidget {
   final IconData icon;
@@ -82,12 +83,8 @@ class SettingsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
-    final surfaceColor = ThemeManager.instance.surfaceColor;
-    final borderColor = ThemeManager.instance.cardBorderColor;
     final textSecondary = ThemeManager.instance.textSecondaryColor;
     final dividerColor = ThemeManager.instance.dividerColor;
-    final shadows = ThemeManager.instance.cardShadow;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -104,24 +101,19 @@ class SettingsSectionCard extends StatelessWidget {
             ),
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(isLiquid ? 24 : 16),
-            border: Border.all(
-              color: borderColor,
-              width: 1,
-            ),
-            boxShadow: shadows,
-          ),
+        LiquidGlassCard(
+          radius: 22,
+          padding: EdgeInsets.zero,
           child: ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             itemCount: children.length,
             separatorBuilder: (_, _) => Divider(
               height: 1,
               color: dividerColor,
               indent: 56,
+              endIndent: 16,
             ),
             itemBuilder: (_, index) => children[index],
           ),

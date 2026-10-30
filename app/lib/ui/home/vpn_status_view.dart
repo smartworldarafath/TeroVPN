@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
+import '../components/liquid_glass_card.dart';
 
 class VpnStatusView extends StatelessWidget {
   final bool isConnected;
@@ -35,7 +36,7 @@ class VpnStatusView extends StatelessWidget {
             ? 'Establishing secure HTTP/3 tunnel'
             : 'Your network traffic is unencrypted');
 
-    final content = Column(
+    final ringAndStatus = Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         AnimatedContainer(
@@ -83,7 +84,7 @@ class VpnStatusView extends StatelessWidget {
                   ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 16),
         Text(
           statusText,
           style: TextStyle(
@@ -93,41 +94,46 @@ class VpnStatusView extends StatelessWidget {
             fontSize: 16,
           ),
         ),
-        const SizedBox(height: 6),
+      ],
+    );
+
+    // In Light mode, wrap the ring & status in the frosted glass card matching photo_12
+    if (!isDark) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LiquidGlassCard(
+            radius: 28,
+            blur: 24,
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 36),
+            child: ringAndStatus,
+          ),
+          const SizedBox(height: 14),
+          Text(
+            subtitleText,
+            style: const TextStyle(
+              color: Color(0xFF2A2738),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        ringAndStatus,
+        const SizedBox(height: 8),
         Text(
           subtitleText,
-          style: TextStyle(
-            color: isDark ? const Color(0xFF8F8C9E) : const Color(0xFF757288),
+          style: const TextStyle(
+            color: Color(0xFF8F8C9E),
             fontSize: 13,
           ),
         ),
       ],
     );
-
-    // In Light mode, wrap in the frosted glass card matching photo_12
-    if (!isDark) {
-      return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 20),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.88),
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.95),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF5D5380).withValues(alpha: 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: content,
-      );
-    }
-
-    return content;
   }
 }

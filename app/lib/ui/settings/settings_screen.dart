@@ -119,13 +119,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             final activeAccount = widget.controller.activeAccount;
             final isLiquid = ThemeManager.instance.isLiquidGlass;
             final isDark = ThemeManager.instance.isDarkMode;
-
-            final bgColor = ThemeManager.instance.backgroundColor;
             final textPrimary = ThemeManager.instance.textPrimaryColor;
             final textSecondary = ThemeManager.instance.textSecondaryColor;
 
             return Scaffold(
-              backgroundColor: bgColor,
+              backgroundColor: Colors.transparent,
               body: SafeArea(
                 bottom: false,
                 child: SingleChildScrollView(
@@ -356,7 +354,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           SettingsRow(
                             icon: Icons.info_outline_rounded,
                             title: 'About TeroVPN',
-                            subtitle: 'Version 1.0.9 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 2.0.0 · Legal, Support & Acknowledgements',
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
                             onTap: () {
                               Navigator.of(context).push(

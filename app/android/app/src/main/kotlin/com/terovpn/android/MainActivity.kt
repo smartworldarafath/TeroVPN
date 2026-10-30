@@ -33,7 +33,28 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         holdPhoneUpright(resources.configuration)
+        optimizeDisplayRefreshRate()
         super.onCreate(savedInstanceState)
+    }
+
+    private fun optimizeDisplayRefreshRate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                display?.supportedModes?.maxByOrNull { it.refreshRate }?.let { bestMode ->
+                    val params = window.attributes
+                    params.preferredDisplayModeId = bestMode.modeId
+                    window.attributes = params
+                }
+            }
+        } catch (_: Exception) {
+            // Gracefully ignore on unsupported devices
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
