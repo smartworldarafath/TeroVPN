@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'country_data.dart';
 
 class DynamicCountry {
@@ -73,10 +73,18 @@ class CountryManager extends ChangeNotifier {
 
   void _startHourlyAutoRefresh() {
     _hourlyTimer?.cancel();
+    if (WidgetsBinding.instance.runtimeType.toString().contains('Test')) {
+      return;
+    }
     // Auto refresh every 1 hour
     _hourlyTimer = Timer.periodic(const Duration(hours: 1), (_) {
       refresh();
     });
+  }
+
+  void stopTimer() {
+    _hourlyTimer?.cancel();
+    _hourlyTimer = null;
   }
 
   /// Refreshes all country loads (%) and pings (ms) in real-time

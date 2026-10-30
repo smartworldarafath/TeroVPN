@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../theme/theme_manager.dart';
@@ -6,6 +7,11 @@ import '../home/home_screen.dart';
 import '../countries/countries_screen.dart';
 import '../profiles/profiles_screen.dart';
 import '../settings/settings_screen.dart';
+import '../desktop/desktop_sidebar.dart';
+import '../desktop/desktop_home_view.dart';
+import '../desktop/desktop_countries_view.dart';
+import '../desktop/desktop_profiles_view.dart';
+import '../desktop/desktop_settings_view.dart';
 import 'proton_dock.dart';
 
 class MainNavigationShell extends StatefulWidget {
@@ -39,17 +45,19 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
   void _onTabSelected(int index) {
     if (_currentIndex == index) return;
     setState(() => _currentIndex = index);
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 320),
-      curve: Curves.easeInOutCubic,
-    );
+    if (_pageController.hasClients) {
+      _pageController.animateToPage(
+        index,
+        duration: const Duration(milliseconds: 320),
+        curve: Curves.easeInOutCubic,
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: ThemeManager.instance,
+      listenable: Listenable.merge([widget.controller, ThemeManager.instance]),
       builder: (context, _) {
         final isDark = ThemeManager.instance.isDarkMode;
         final bgColor = ThemeManager.instance.backgroundColor;
@@ -66,11 +74,52 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           ),
         );
 
+        final isDesktop = (Platform.isWindows || Platform.isLinux || Platform.isMacOS) ||
+            MediaQuery.of(context).size.width >= 768;
+
+        if (isDesktop) {
+          // Native Desktop Shell matching Telegram Reference Screenshots
+          return Scaffold(
+            backgroundColor: const Color(0xFF0D0C15),
+            body: Row(
+              children: [
+                DesktopSidebar(
+                  currentIndex: _currentIndex,
+                  onTabSelected: _onTabSelected,
+                  status: widget.controller.status,
+                ),
+                Expanded(
+                  child: IndexedStack(
+                    index: _currentIndex,
+                    children: [
+                      DesktopHomeView(
+                        controller: widget.controller,
+                        onNavigateToCountries: () => _onTabSelected(1),
+                      ),
+                      DesktopCountriesView(
+                        controller: widget.controller,
+                        onCountrySelected: (_) => _onTabSelected(0),
+                      ),
+                      DesktopProfilesView(
+                        controller: widget.controller,
+                        onProfileSelected: (_) => _onTabSelected(0),
+                      ),
+                      DesktopSettingsView(
+                        controller: widget.controller,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // Mobile Layout with Proton Dock
         return Scaffold(
           backgroundColor: bgColor,
           body: Stack(
             children: [
-              // Smooth Sliding Screen PageView
               PageView(
                 controller: _pageController,
                 physics: const BouncingScrollPhysics(),
@@ -95,8 +144,6 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
                   ),
                 ],
               ),
-
-              // Floating Bottom Proton Dock
               Positioned(
                 left: 20,
                 right: 20,

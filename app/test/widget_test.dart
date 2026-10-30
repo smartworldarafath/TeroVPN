@@ -18,5 +18,6 @@ void main() {
     expect(find.text('Countries'), findsOneWidget);
     expect(find.text('Profiles'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
+    controller.dispose();
   });
 }
