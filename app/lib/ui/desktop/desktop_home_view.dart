@@ -4,6 +4,7 @@ import '../../core/models.dart';
 import '../../core/app_preferences.dart';
 import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
+import '../components/details_sheet.dart';
 import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
 
@@ -50,7 +51,11 @@ class DesktopHomeView extends StatelessWidget {
       return item;
     }).toList();
 
-    final currentIp = isConnected ? '103.145.74.22' : '103.xxx.xx.xx';
+    final currentIp = isConnected
+        ? ((status?.exit?.ipv4.isNotEmpty == true)
+            ? status!.exit!.ipv4
+            : ((status?.exit?.ipv6.isNotEmpty == true) ? status!.exit!.ipv6 : '185.156.73.42'))
+        : '103.xxx.xx.xx';
 
     return Padding(
       padding: const EdgeInsets.all(20),
@@ -227,31 +232,73 @@ class DesktopHomeView extends StatelessWidget {
 
                   const SizedBox(height: 24),
 
-                  // Bottom Metadata
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Current IP: $currentIp',
-                          style: const TextStyle(
-                            color: Color(0xFF8E8B9D),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
+                  // Bottom Metadata & Details trigger
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Current IP: $currentIp',
+                              style: const TextStyle(
+                                color: Color(0xFF8E8B9D),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              'Protocol: ${AppPreferences.selectedProtocol}',
+                              style: const TextStyle(
+                                color: Color(0xFF8E8B9D),
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => DetailsSheet.show(context, status: status),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF261D4C),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: const Color(0xFF6B42FF).withValues(alpha: 0.4),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Icon(Icons.info_outline_rounded, color: Color(0xFF8B6BFF), size: 15),
+                                SizedBox(width: 5),
+                                Text(
+                                  'Details',
+                                  style: TextStyle(
+                                    color: Color(0xFF8B6BFF),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        const Text(
-                          'Protocol: HTTP/3 (WireGuard)',
-                          style: TextStyle(
-                            color: Color(0xFF8E8B9D),
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),

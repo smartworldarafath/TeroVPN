@@ -42,25 +42,42 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
   }
 
   Future<void> _handleRefresh() async {
+    if (_spinController.isAnimating) return;
     _spinController.forward(from: 0.0);
     await CountryManager.instance.refresh();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Server ping & loads refreshed in real-time.'),
+          backgroundColor: const Color(0xFF161426),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   List<DynamicCountry> _getFilteredCountries(List<DynamicCountry> all) {
-    return all.where((c) {
-      if (_selectedFilter == 'Secure Core' && !c.isSecureCore) return false;
-      if (_selectedFilter == 'P2P' && !c.isP2p) return false;
-      if (_selectedFilter == 'Tor' && !c.isTor) return false;
+    var result = all;
+    if (_selectedFilter == 'Secure Core') {
+      result = result.where((c) => ['CH', 'IS', 'SE', 'NO', 'FI'].contains(c.code.toUpperCase())).toList();
+    } else if (_selectedFilter == 'P2P') {
+      result = result.where((c) => ['NL', 'DE', 'CH', 'CA', 'ES', 'SE'].contains(c.code.toUpperCase())).toList();
+    } else if (_selectedFilter == 'Tor') {
+      result = result.where((c) => ['CH', 'IS', 'SE'].contains(c.code.toUpperCase())).toList();
+    }
 
-      if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      result = result.where((c) {
         final matchesName = c.name.toLowerCase().contains(query);
         final matchesCode = c.code.toLowerCase().contains(query);
         final matchesCities = c.cities.toLowerCase().contains(query);
         return matchesName || matchesCode || matchesCities;
-      }
-      return true;
-    }).toList();
+      }).toList();
+    }
+    return result;
   }
 
   Future<void> _connectTo(String code) async {
