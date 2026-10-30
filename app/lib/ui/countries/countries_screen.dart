@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
-import 'country_manager.dart';
-import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
-import '../components/filter_chip_button.dart';
+import '../../core/app_preferences.dart';
 import '../components/liquid_glass_card.dart';
+import '../components/liquid_glass_atmosphere.dart';
+import '../components/filter_chip_button.dart';
+import '../components/top_dock_toast.dart';
+import 'country_manager.dart';
 import 'country_item_row.dart';
 import 'country_details_sheet.dart';
 
@@ -23,12 +24,15 @@ class CountriesScreen extends StatefulWidget {
   State<CountriesScreen> createState() => _CountriesScreenState();
 }
 
-class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProviderStateMixin {
-  String _selectedFilter = 'All';
-  String _searchQuery = '';
+class _CountriesScreenState extends State<CountriesScreen>
+    with TickerProviderStateMixin {
+  String _selectedFilter = 'All'; // 'All', 'Secure Core', 'P2P', 'Tor'
   bool _isSearchOpen = false;
+  String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   late AnimationController _spinController;
+  late AnimationController _searchAnimController;
+  late Animation<double> _searchExpandAnimation;
 
   @override
   void initState() {
@@ -37,12 +41,24 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
+
+    _searchAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 320),
+    );
+
+    _searchExpandAnimation = CurvedAnimation(
+      parent: _searchAnimController,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _spinController.dispose();
+    _searchAnimController.dispose();
     super.dispose();
   }
 
@@ -50,16 +66,34 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
     if (_spinController.isAnimating) return;
     _spinController.forward(from: 0.0);
     await CountryManager.instance.refresh();
+    final fastest = CountryManager.instance.getFastestCountry();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Server ping & loads refreshed in real-time.'),
-          backgroundColor: ThemeManager.instance.isDarkMode ? ProtonColors.surfaceDark : Colors.white,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          duration: const Duration(seconds: 2),
-        ),
+      TopDockToast.show(
+        context,
+        title: 'Country Latencies Synchronized',
+        message: 'Fastest: ${fastest.name} (${fastest.pingMs} ms) · All loads updated',
+        icon: Icons.refresh_rounded,
+        iconColor: const Color(0xFF00E676),
       );
+    }
+  }
+
+  void _toggleSearch() {
+    if (_isSearchOpen) {
+      _searchAnimController.reverse().then((_) {
+        if (mounted) {
+          setState(() {
+            _isSearchOpen = false;
+            _searchQuery = '';
+            _searchController.clear();
+          });
+        }
+      });
+    } else {
+      setState(() {
+        _isSearchOpen = true;
+      });
+      _searchAnimController.forward();
     }
   }
 
@@ -88,105 +122,128 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
 
   @override
   Widget build(BuildContext context) {
-    final activeCode = widget.controller.status?.proxy?.countryCode.toUpperCase() ?? '';
-
     return ListenableBuilder(
-      listenable: Listenable.merge([CountryManager.instance, ThemeManager.instance]),
+      listenable: Listenable.merge([widget.controller, CountryManager.instance, ThemeManager.instance]),
       builder: (context, _) {
-        final allCountries = CountryManager.instance.countries;
-        final filteredCountries = _getFilteredCountries(allCountries);
         final textPrimary = ThemeManager.instance.textPrimaryColor;
         final textSecondary = ThemeManager.instance.textSecondaryColor;
 
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: SafeArea(
-            bottom: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        final allCountries = CountryManager.instance.countries;
+        final filteredCountries = _getFilteredCountries(allCountries);
+        final activeCode = widget.controller.status?.proxy?.countryCode.toUpperCase() ??
+            AppPreferences.selectedLocation.toUpperCase();
+        final fastestCountry = CountryManager.instance.getFastestCountry();
+
+        return LiquidGlassAtmosphere(
+          isConnected: widget.controller.isConnected,
+          isConnecting: widget.controller.isConnecting,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top Bar
-                Padding(
-                  padding: const EdgeInsets.only(left: 20, right: 12, top: 12, bottom: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Countries',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
-                          color: textPrimary,
-                          letterSpacing: -0.5,
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Countries',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: textPrimary,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                      Row(
-                        children: [
-                          // Refresh Icon
-                          IconButton(
-                            icon: RotationTransition(
-                              turns: _spinController,
-                              child: Icon(
-                                Icons.refresh_rounded,
-                                color: textSecondary,
-                                size: 22,
+                        Row(
+                          children: [
+                            // Refresh Icon with rotation animation
+                            IconButton(
+                              icon: RotationTransition(
+                                turns: _spinController,
+                                child: Icon(
+                                  Icons.refresh_rounded,
+                                  color: textSecondary,
+                                  size: 22,
+                                ),
                               ),
+                              tooltip: 'Refresh Latencies & Load in Real-Time',
+                              onPressed: _handleManualRefresh,
                             ),
-                            tooltip: 'Refresh Latencies & Load in Real-Time',
-                            onPressed: _handleManualRefresh,
-                          ),
-                          // Search Icon
-                          IconButton(
-                            icon: Icon(
-                              _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
-                              color: textSecondary,
-                              size: 24,
+                            // Search Icon with morphing animation
+                            IconButton(
+                              icon: AnimatedRotation(
+                                turns: _isSearchOpen ? 0.25 : 0.0,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOutBack,
+                                child: Icon(
+                                  _isSearchOpen ? Icons.close_rounded : Icons.search_rounded,
+                                  color: _isSearchOpen ? const Color(0xFF6B42FF) : textSecondary,
+                                  size: 24,
+                                ),
+                              ),
+                              tooltip: _isSearchOpen ? 'Close Search' : 'Search Countries',
+                              onPressed: _toggleSearch,
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _isSearchOpen = !_isSearchOpen;
-                                if (!_isSearchOpen) {
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                }
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
-                // Live Frosted Liquid Glass Search Bar matching photo_3 & photo_10
-                if (_isSearchOpen)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: LiquidGlassCard(
-                      radius: 16,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-                      child: TextField(
-                        controller: _searchController,
-                        autofocus: true,
-                        style: TextStyle(color: textPrimary, fontSize: 15),
-                        decoration: InputDecoration(
-                          hintText: 'Search countries or cities...',
-                          hintStyle: TextStyle(
-                            color: textSecondary,
-                            fontSize: 14,
+                // Buttery-smooth expanding/collapsing Search Bar originating from top-right
+                SizeTransition(
+                  sizeFactor: _searchExpandAnimation,
+                  child: FadeTransition(
+                    opacity: _searchExpandAnimation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.88, end: 1.0).animate(_searchExpandAnimation),
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        child: LiquidGlassCard(
+                          radius: 16,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+                          child: TextField(
+                            controller: _searchController,
+                            autofocus: _isSearchOpen,
+                            style: TextStyle(color: textPrimary, fontSize: 15),
+                            decoration: InputDecoration(
+                              hintText: 'Search countries or cities...',
+                              hintStyle: TextStyle(
+                                color: textSecondary,
+                                fontSize: 14,
+                              ),
+                              border: InputBorder.none,
+                              prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
+                              suffixIcon: _searchQuery.isNotEmpty
+                                  ? IconButton(
+                                      icon: Icon(Icons.clear_rounded, color: textSecondary, size: 18),
+                                      onPressed: () {
+                                        setState(() {
+                                          _searchQuery = '';
+                                          _searchController.clear();
+                                        });
+                                      },
+                                    )
+                                  : null,
+                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                            ),
+                            onChanged: (val) {
+                              setState(() {
+                                _searchQuery = val.trim();
+                              });
+                            },
                           ),
-                          border: InputBorder.none,
-                          prefixIcon: Icon(Icons.search_rounded, color: textSecondary, size: 20),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        onChanged: (val) {
-                          setState(() {
-                            _searchQuery = val.trim();
-                          });
-                        },
                       ),
                     ),
                   ),
+                ),
 
                 // Filter Chips Row
                 SizedBox(
@@ -218,70 +275,66 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                       const SizedBox(width: 8),
                       FilterChipButton(
                         label: 'Tor',
-                        icon: Icons.vpn_lock_rounded,
+                        icon: Icons.vpn_lock_outlined,
                         isSelected: _selectedFilter == 'Tor',
                         onTap: () => setState(() => _selectedFilter = 'Tor'),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 10),
 
-                const SizedBox(height: 14),
-
-                // Section Count Subtitle
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                  child: Text(
-                    'All countries (${filteredCountries.length})',
-                    style: TextStyle(
-                      color: textSecondary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                // Countries List
+                // Country List View with Bottom Dock Clearance
                 Expanded(
-                  child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    switchInCurve: Curves.easeOutCubic,
-                    switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (child, animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: SlideTransition(
-                          position: Tween<Offset>(
-                            begin: const Offset(0.04, 0),
-                            end: Offset.zero,
-                          ).animate(animation),
-                          child: child,
-                        ),
-                      );
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      _handleManualRefresh();
                     },
-                    child: KeyedSubtree(
-                      key: ValueKey<String>('$_selectedFilter-$_searchQuery'),
+                    color: const Color(0xFF6B42FF),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 96),
                       child: ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.only(bottom: 120),
+                        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                        padding: const EdgeInsets.only(bottom: 20),
                         itemCount: filteredCountries.length + 1,
                         itemBuilder: (context, index) {
                           if (index == 0) {
-                            final isFastestSelected = activeCode.isEmpty || activeCode == 'FASTEST';
+                            final isFastestSelected = AppPreferences.defaultConnectionType == 'fastest' ||
+                                activeCode.isEmpty ||
+                                activeCode == 'FASTEST';
                             return CountryItemRow(
                               code: 'fastest',
                               name: 'Fastest country',
-                              subtitle: 'Connects to closest edge server',
-                              load: 25,
-                              pingMs: 18,
+                              subtitle: 'Auto-Routing (${fastestCountry.name})',
+                              load: fastestCountry.load,
+                              pingMs: fastestCountry.pingMs,
                               isFastest: true,
                               isSelected: isFastestSelected,
                               onTap: () async {
-                                await AppPreferences.setSelectedLocation('fastest');
-                                await widget.controller.setLocation('fastest');
+                                final fastest = CountryManager.instance.getFastestCountry();
+                                await AppPreferences.setDefaultConnectionType('fastest');
+                                await AppPreferences.setSelectedLocation(fastest.code);
+                                await widget.controller.setLocation(fastest.code.toLowerCase());
+                                if (widget.controller.hasAccount) {
+                                  if (widget.controller.isConnected) {
+                                    widget.controller.setOn(false);
+                                    Future.delayed(const Duration(milliseconds: 200), () {
+                                      widget.controller.setOn(true);
+                                    });
+                                  } else {
+                                    widget.controller.setOn(true);
+                                  }
+                                }
                                 widget.onCountrySelected('fastest');
+                                if (context.mounted) {
+                                  TopDockToast.show(
+                                    context,
+                                    title: 'Connected to Fastest Country',
+                                    message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
+                                    icon: Icons.bolt_rounded,
+                                    iconColor: const Color(0xFF00E676),
+                                  );
+                                }
                               },
                             );
                           }
@@ -301,7 +354,18 @@ class _CountriesScreenState extends State<CountriesScreen> with SingleTickerProv
                               await AppPreferences.setSelectedLocation(country.code);
                               await AppPreferences.setLastConnection(country.code);
                               await widget.controller.setLocation(country.code.toLowerCase());
+                              if (widget.controller.hasAccount && !widget.controller.isConnected) {
+                                widget.controller.setOn(true);
+                              }
                               widget.onCountrySelected(country.code);
+                              if (context.mounted) {
+                                TopDockToast.show(
+                                  context,
+                                  title: 'Connecting to ${country.name}',
+                                  message: '${country.pingMs} ms · Load: ${country.load}%',
+                                  icon: Icons.location_on_rounded,
+                                );
+                              }
                             },
                             onExpand: () {
                               CountryDetailsSheet.show(

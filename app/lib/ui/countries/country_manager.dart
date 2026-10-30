@@ -115,8 +115,8 @@ class CountryManager extends ChangeNotifier {
     DynamicCountry fastest = _countries.first;
     for (final c in _countries) {
       // Score based on ping + load weight
-      final score = c.pingMs + (c.load * 0.5);
-      final currentFastestScore = fastest.pingMs + (fastest.load * 0.5);
+      final score = c.pingMs + (c.load * 0.15);
+      final currentFastestScore = fastest.pingMs + (fastest.load * 0.15);
       if (score < currentFastestScore) {
         fastest = c;
       }

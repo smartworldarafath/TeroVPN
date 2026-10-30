@@ -1,4 +1,5 @@
 import '../components/liquid_glass_card.dart';
+import '../components/top_dock_toast.dart';
 import '../components/liquid_glass_atmosphere.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -6,7 +7,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/app_preferences.dart';
@@ -21,7 +21,7 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
-  static const String currentVersion = '1.1.0';
+  static const String currentVersion = '1.1.1';
 
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;
@@ -254,11 +254,12 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
         setState(() {
           _isDownloading = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Download failed: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+        TopDockToast.show(
+          context,
+          title: 'Download Failed',
+          message: '$e',
+          icon: Icons.error_outline_rounded,
+          iconColor: Colors.redAccent,
         );
       }
     }
@@ -269,20 +270,21 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     try {
       final success = await AndroidCore.installApk(_downloadedFilePath!);
       if (!success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Installation intent launched. Please confirm on Android.'),
-            backgroundColor: ProtonColors.surfaceDark,
-          ),
+        TopDockToast.show(
+          context,
+          title: 'Installing Update',
+          message: 'Installation package launched. Confirm prompt.',
+          icon: Icons.system_update_rounded,
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Unable to launch installer: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+        TopDockToast.show(
+          context,
+          title: 'Install Error',
+          message: '$e',
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.orangeAccent,
         );
       }
     }

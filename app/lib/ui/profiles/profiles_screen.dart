@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
@@ -8,6 +7,7 @@ import '../countries/country_manager.dart';
 import '../components/signin_dialog.dart';
 import 'profile_card.dart';
 import 'account_pool_card.dart';
+import '../components/top_dock_toast.dart';
 
 class ProfilesScreen extends StatefulWidget {
   final CoreController controller;
@@ -53,13 +53,11 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     }
 
     if (mounted) {
-      final isDark = ThemeManager.instance.isDarkMode;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Switched to profile: $title ($countryCode)'),
-          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-          duration: const Duration(seconds: 2),
-        ),
+      TopDockToast.show(
+        context,
+        title: 'Profile Activated',
+        message: '$title ($countryCode) ready for high speed',
+        icon: Icons.vpn_lock_rounded,
       );
     }
   }
@@ -176,12 +174,11 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                     }
                     await widget.controller.refresh(accountsToo: true);
                     if (context.mounted) {
-                      final isDark = ThemeManager.instance.isDarkMode;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Multi-Account Token Pool & bandwidth refreshed.'),
-                          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-                        ),
+                      TopDockToast.show(
+                        context,
+                        title: 'Multi-Account Token Pool',
+                        message: 'Tokens & Fastly MASQUE bandwidth synchronized',
+                        icon: Icons.sync_rounded,
                       );
                     }
                   },

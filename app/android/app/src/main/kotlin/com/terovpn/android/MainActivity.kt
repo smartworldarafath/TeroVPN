@@ -41,6 +41,46 @@ class MainActivity : FlutterActivity() {
         holdPhoneUpright(newConfig)
     }
 
+    override fun onPostResume() {
+        super.onPostResume()
+        enableHighRefreshRate()
+    }
+
+    /**
+     * Enables 120Hz / highest available display refresh rate on supported Android devices.
+     * Safely executes post-resume with zero risk of crashing on emulators or legacy devices.
+     */
+    private fun enableHighRefreshRate() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val display = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    display
+                } else {
+                    @Suppress("DEPRECATION")
+                    windowManager.defaultDisplay
+                }
+                val modes = display?.supportedModes
+                if (!modes.isNullOrEmpty()) {
+                    var bestMode = modes[0]
+                    for (mode in modes) {
+                        if (mode.refreshRate > bestMode.refreshRate) {
+                            bestMode = mode
+                        }
+                    }
+                    if (bestMode.refreshRate > 60f) {
+                        val params = window.attributes
+                        params.preferredDisplayModeId = bestMode.modeId
+                        window.attributes = params
+                    }
+                }
+            }
+        } catch (_: Throwable) {
+            // Graceful fallback
+        }
+
+
+    }
+
     /**
      * A phone stays upright (its layout is made for it); a tablet, whose
      * shorter side is 600 dp or more, turns freely. Asked again when the

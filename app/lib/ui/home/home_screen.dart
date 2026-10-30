@@ -3,6 +3,7 @@ import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../components/signin_dialog.dart';
+import '../components/top_dock_toast.dart';
 import '../countries/country_manager.dart';
 import '../components/details_sheet.dart';
 import 'world_map_atmosphere.dart';
@@ -32,9 +33,10 @@ class HomeScreen extends StatelessWidget {
         final isVpnOn = controller.isVpnOn;
         final proxy = status?.proxy;
 
-        final countryCode = proxy?.countryCode ?? 'NL';
-        final countryName = proxy?.countryName ?? 'Netherlands';
-        final cityName = proxy?.cityName ?? 'Amsterdam #12';
+        final isFastestMode = AppPreferences.defaultConnectionType == 'fastest' || AppPreferences.selectedLocation.toLowerCase() == 'fastest';
+        final countryCode = (!isConnected && !isConnecting && isFastestMode) ? 'fastest' : (proxy?.countryCode ?? AppPreferences.selectedLocation);
+        final countryName = (!isConnected && !isConnecting && isFastestMode) ? 'Fastest country' : (proxy?.countryName ?? 'Netherlands');
+        final cityName = (!isConnected && !isConnecting && isFastestMode) ? 'Auto-Routing (lowest latency)' : (proxy?.cityName ?? 'Amsterdam #12');
 
         // Dynamic 3 recent servers from live Fastly countries
         final dynamicCountries = CountryManager.instance.countries;
@@ -199,11 +201,24 @@ class HomeScreen extends StatelessWidget {
                                     SignInDialog.show(context, controller);
                                     return;
                                   }
-                                  // Connect to the fastest available server in real-time
-                                  final fastest = CountryManager.instance.getFastestCountry();
-                                  await controller.setLocation(fastest.code.toLowerCase());
-                                  await AppPreferences.setSelectedLocation(fastest.code);
-                                  controller.setOn(true);
+                                  if (AppPreferences.defaultConnectionType == 'fastest' || AppPreferences.selectedLocation.toLowerCase() == 'fastest') {
+                                    final fastest = CountryManager.instance.getFastestCountry();
+                                    await controller.setLocation(fastest.code.toLowerCase());
+                                    await AppPreferences.setSelectedLocation(fastest.code);
+                                    controller.setOn(true);
+                                    if (context.mounted) {
+                                      TopDockToast.show(
+                                        context,
+                                        title: 'Connecting to Fastest Country',
+                                        message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
+                                        icon: Icons.bolt_rounded,
+                                        iconColor: const Color(0xFF00E676),
+                                      );
+                                    }
+                                  } else {
+                                    await controller.setLocation(countryCode.toLowerCase());
+                                    controller.setOn(true);
+                                  }
                                 }
                               },
                               onChangeServer: onNavigateToCountries,

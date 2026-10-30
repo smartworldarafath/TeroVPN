@@ -435,7 +435,7 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                 _buildActionRow(
                   icon: Icons.info_outline_rounded,
                   title: 'About TeroVPN',
-                  subtitle: 'Version 1.1.0 · Legal, Support & Acknowledgements',
+                  subtitle: 'Version 1.1.1 · Legal, Support & Acknowledgements',
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D), size: 20),
                   onTap: () {
                     Navigator.of(context).push(

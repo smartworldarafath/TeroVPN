@@ -114,7 +114,7 @@ void main(List<String> args) async {
       'notices': [],
       'accounts': {'running': 1, 'configured': 2},
       'switch_threshold_percent': 10.0,
-      'version': '1.1.0',
+      'version': '1.1.1',
       'can_exit': true,
       'system_proxy': 'off',
       'system_proxy_supported': true,
@@ -179,6 +179,8 @@ class TeroVpnApp extends StatelessWidget {
           title: 'TeroVPN',
           debugShowCheckedModeBanner: false,
           theme: isDark ? ProtonTheme.darkTheme : ProtonTheme.lightTheme,
+          themeAnimationDuration: const Duration(milliseconds: 350),
+          themeAnimationCurve: Curves.easeInOutCubic,
           home: MainNavigationShell(controller: controller),
         );
       },

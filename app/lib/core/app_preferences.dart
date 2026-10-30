@@ -23,6 +23,7 @@ class AppPreferences {
   static const _keyHardwareAcceleration = 'hardware_acceleration';
   static const _keyDefaultConnectionType = 'default_connection_type';
   static const _keyLastConnection = 'last_connection';
+  static const _keyToastAnimationMode = 'toast_animation_mode';
 
   static SharedPreferences? _prefs;
 
@@ -160,4 +161,10 @@ class AppPreferences {
       _prefs?.getString(_keyLastConnection) ?? 'NL';
   static Future<void> setLastConnection(String loc) async =>
       await _prefs?.setString(_keyLastConnection, loc);
+
+  // Toast animation mode: 'auto', 'island', 'corner', 'droplet'
+  static String get toastAnimationMode =>
+      _prefs?.getString(_keyToastAnimationMode) ?? 'auto';
+  static Future<void> setToastAnimationMode(String mode) async =>
+      await _prefs?.setString(_keyToastAnimationMode, mode);
 }

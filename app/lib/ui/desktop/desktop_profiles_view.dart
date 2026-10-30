@@ -1,3 +1,4 @@
+import '../components/top_dock_toast.dart';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
@@ -53,14 +54,11 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Switched to profile: $title ($countryCode)'),
-          backgroundColor: const Color(0xFF161426),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      TopDockToast.show(
+        context,
+        title: 'Profile Activated',
+        message: '$title ($countryCode) ready for high speed',
+        icon: Icons.vpn_lock_rounded,
       );
     }
   }

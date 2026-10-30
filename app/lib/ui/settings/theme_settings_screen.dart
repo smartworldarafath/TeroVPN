@@ -1,5 +1,7 @@
 import '../components/liquid_glass_card.dart';
 import '../components/liquid_glass_atmosphere.dart';
+import '../components/top_dock_toast.dart';
+import '../../core/app_preferences.dart';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
@@ -129,6 +131,91 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                     await ThemeManager.instance.setDarkMode(false);
                   },
                 ),
+
+                const SizedBox(height: 32),
+
+                // 3. TOAST NOTIFICATION ANIMATION (DEVICE ADAPTIVE)
+                Text(
+                  'TOAST NOTIFICATION STYLE',
+                  style: TextStyle(
+                    color: secondaryColor,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                _buildToastModeCard(
+                  title: 'Auto (Hardware Detection)',
+                  subtitle: 'Automatically adapts between Dynamic Island, Corner Punch-Hole, or Water Droplet.',
+                  icon: Icons.devices_other_rounded,
+                  modeKey: 'auto',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                ),
+                const SizedBox(height: 10),
+
+                _buildToastModeCard(
+                  title: 'Dynamic Island (Center Punch-Hole)',
+                  subtitle: 'Morphs directly out of the center camera cutout and retracts into it.',
+                  icon: Icons.panorama_fish_eye_rounded,
+                  modeKey: 'island',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                ),
+                const SizedBox(height: 10),
+
+                _buildToastModeCard(
+                  title: 'Corner Punch-Hole',
+                  subtitle: 'Blossoms from corner camera position and collapses back on exit.',
+                  icon: Icons.call_to_action_rounded,
+                  modeKey: 'corner',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                ),
+                const SizedBox(height: 10),
+
+                _buildToastModeCard(
+                  title: 'Water Droplet (No Notch)',
+                  subtitle: 'Drips from top edge, hangs for 2.5s, then falls down to bottom with gravity.',
+                  icon: Icons.water_drop_rounded,
+                  modeKey: 'droplet',
+                  isDark: isDark,
+                  isLiquid: isLiquid,
+                ),
+                const SizedBox(height: 16),
+
+                // Test Toast Button
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final currentMode = AppPreferences.toastAnimationMode;
+                      ToastAnimationMode? mode;
+                      if (currentMode == 'island') mode = ToastAnimationMode.dynamicIsland;
+                      if (currentMode == 'corner') mode = ToastAnimationMode.cornerPunchHole;
+                      if (currentMode == 'droplet') mode = ToastAnimationMode.waterDroplet;
+
+                      TopDockToast.show(
+                        context,
+                        title: 'TeroVPN Dock Toast',
+                        message: 'Smooth device-adaptive toast notification (2.5s)',
+                        icon: Icons.bolt_rounded,
+                        mode: mode,
+                      );
+                    },
+                    icon: const Icon(Icons.play_circle_outline_rounded, size: 20),
+                    label: const Text('Test Toast Notification Animation'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B42FF),
+                      side: const BorderSide(color: Color(0xFF6B42FF), width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
               ],
             ),
           ),
@@ -357,6 +444,90 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
             ],
           ),
+    );
+  }
+  Widget _buildToastModeCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required String modeKey,
+    required bool isDark,
+    required bool isLiquid,
+  }) {
+    final isSelected = AppPreferences.toastAnimationMode == modeKey;
+    final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
+    final descColor = isDark ? ProtonColors.textMuted : const Color(0xFF757288);
+
+    return LiquidGlassCard(
+      radius: 18,
+      padding: const EdgeInsets.all(16),
+      customBorder: isSelected
+          ? Border.all(color: const Color(0xFF6B42FF), width: 1.6)
+          : null,
+      onTap: () async {
+        await AppPreferences.setToastAnimationMode(modeKey);
+        setState(() {});
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? const Color(0xFF6D4AFF).withValues(alpha: isDark ? 0.2 : 0.12)
+                  : (isDark ? ProtonColors.surfaceDark : const Color(0xFFF3F2F8)),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: isSelected ? const Color(0xFF6B42FF) : descColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 15,
+                    color: titleColor,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: descColor,
+                    fontSize: 11.5,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isSelected ? const Color(0xFF6B42FF) : Colors.transparent,
+              border: Border.all(
+                color: isSelected ? const Color(0xFF6B42FF) : (isDark ? ProtonColors.textMuted : const Color(0xFFD8D5E5)),
+                width: 2,
+              ),
+            ),
+            child: isSelected
+                ? const Icon(Icons.check, size: 12, color: Colors.white)
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }

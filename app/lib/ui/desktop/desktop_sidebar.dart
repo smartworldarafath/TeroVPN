@@ -126,7 +126,7 @@ class DesktopSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
             child: Text(
-              'v1.1.0 Desktop',
+              'v1.1.1 Desktop',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.white.withValues(alpha: 0.3),

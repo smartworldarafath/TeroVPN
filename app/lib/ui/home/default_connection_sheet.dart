@@ -4,6 +4,7 @@ import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
 import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
+import '../components/top_dock_toast.dart';
 import '../countries/country_manager.dart';
 
 class DefaultConnectionSheet extends StatefulWidget {
@@ -98,16 +99,58 @@ class _DefaultConnectionSheetState extends State<DefaultConnectionSheet> {
       final fastest = CountryManager.instance.getFastestCountry();
       await AppPreferences.setSelectedLocation(fastest.code);
       await widget.controller.setLocation(fastest.code.toLowerCase());
+      if (widget.controller.hasAccount) {
+        if (widget.controller.isConnected) {
+          widget.controller.setOn(false);
+          Future.delayed(const Duration(milliseconds: 250), () {
+            widget.controller.setLocation(fastest.code.toLowerCase());
+            widget.controller.setOn(true);
+          });
+        } else {
+          widget.controller.setOn(true);
+        }
+      }
       widget.onSelected('fastest');
+      if (mounted) {
+        TopDockToast.show(
+          context,
+          title: 'Connected to Fastest Country',
+          message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
+          icon: Icons.bolt_rounded,
+          iconColor: const Color(0xFF00E676),
+        );
+      }
     } else if (type == 'last') {
       final last = AppPreferences.lastConnection;
       await AppPreferences.setSelectedLocation(last);
       await widget.controller.setLocation(last.toLowerCase());
+      if (widget.controller.hasAccount && !widget.controller.isConnected) {
+        widget.controller.setOn(true);
+      }
       widget.onSelected(last);
+      if (mounted) {
+        TopDockToast.show(
+          context,
+          title: 'Selected Last Connection',
+          message: 'Server: $last',
+          icon: Icons.history_rounded,
+        );
+      }
     } else {
       await AppPreferences.setSelectedLocation(type);
       await widget.controller.setLocation(type.toLowerCase());
+      if (widget.controller.hasAccount && !widget.controller.isConnected) {
+        widget.controller.setOn(true);
+      }
       widget.onSelected(type);
+      if (mounted) {
+        TopDockToast.show(
+          context,
+          title: 'Default Location Set',
+          message: 'Connecting to $type',
+          icon: Icons.location_on_rounded,
+        );
+      }
     }
 
     if (mounted) {

@@ -4,6 +4,7 @@ import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../components/country_flag.dart';
+import '../components/top_dock_toast.dart';
 import 'country_manager.dart';
 
 class CountryDetailsSheet extends StatefulWidget {
@@ -102,10 +103,10 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
         .toList();
   }
 
-  List<Map<String, dynamic>> _generateServers(String city) {
-    final code = widget.country.code.toUpperCase();
-    final baseLoad = widget.country.load;
-    final basePing = widget.country.pingMs;
+  List<Map<String, dynamic>> _generateServers(String city, DynamicCountry currentCountry) {
+    final code = currentCountry.code.toUpperCase();
+    final baseLoad = currentCountry.load;
+    final basePing = currentCountry.pingMs;
 
     return [
       {'name': '$code#12', 'load': (baseLoad * 0.85).round().clamp(15, 95), 'ping': basePing, 'p2p': true},
@@ -195,88 +196,97 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final textPrimary = ThemeManager.instance.textPrimaryColor;
-    final textSecondary = ThemeManager.instance.textSecondaryColor;
-    final dividerColor = ThemeManager.instance.dividerColor;
-    final isDark = ThemeManager.instance.isDarkMode;
+    return ListenableBuilder(
+      listenable: CountryManager.instance,
+      builder: (context, _) {
+        final currentCountry = CountryManager.instance.countries.firstWhere(
+          (c) => c.code.toUpperCase() == widget.country.code.toUpperCase(),
+          orElse: () => widget.country,
+        );
+        final textPrimary = ThemeManager.instance.textPrimaryColor;
+        final textSecondary = ThemeManager.instance.textSecondaryColor;
+        final dividerColor = ThemeManager.instance.dividerColor;
+        final isDark = ThemeManager.instance.isDarkMode;
 
-    return Column(
-      children: [
-        // Top Handle
-        const SizedBox(height: 10),
-        Center(
-          child: Container(
-            width: 38,
-            height: 4,
-            decoration: BoxDecoration(
-              color: isDark ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFD8D5E5),
-              borderRadius: BorderRadius.circular(2),
+        return Column(
+          children: [
+            // Top Handle
+            const SizedBox(height: 10),
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white.withValues(alpha: 0.2) : const Color(0xFFD8D5E5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(height: 14),
+            const SizedBox(height: 14),
 
-        // Header View
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            children: [
-              if (_selectedCity != null)
-                IconButton(
-                  icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
-                  onPressed: () => setState(() => _selectedCity = null),
-                ),
-              CountryFlag(
-                countryCode: widget.country.code,
-                width: 36,
-                height: 25,
-                borderRadius: 4,
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.country.name,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: textPrimary,
-                      ),
+            // Header View with live country stats
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                children: [
+                  if (_selectedCity != null)
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_rounded, color: textPrimary),
+                      onPressed: () => setState(() => _selectedCity = null),
                     ),
-                    if (_selectedCity != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        _selectedCity!,
-                        style: TextStyle(fontSize: 13, color: textSecondary),
-                      ),
-                    ],
-                  ],
-                ),
+                  CountryFlag(
+                    countryCode: currentCountry.code,
+                    width: 36,
+                    height: 25,
+                    borderRadius: 4,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          currentCountry.name,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _selectedCity != null
+                              ? '$_selectedCity · ${currentCountry.pingMs} ms (Real-time)'
+                              : '${currentCountry.cities.split(",").length} Locations · ${currentCountry.pingMs} ms',
+                          style: TextStyle(fontSize: 13, color: textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: textSecondary),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: Icon(Icons.close_rounded, color: textSecondary),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 10),
-        Divider(height: 1, color: dividerColor),
+            ),
+            const SizedBox(height: 10),
+            Divider(height: 1, color: dividerColor),
 
-        // Sub View: Server Drill-down vs Cities List
-        Expanded(
-          child: _selectedCity != null
-              ? _buildServersView()
-              : _buildCitiesView(),
-        ),
-      ],
+            // Sub View: Server Drill-down vs Cities List
+            Expanded(
+              child: _selectedCity != null
+                  ? _buildServersView(currentCountry)
+                  : _buildCitiesView(currentCountry),
+            ),
+          ],
+        );
+      },
     );
   }
 
   // View 1: Cities & P2P Tabs
-  Widget _buildCitiesView() {
+  Widget _buildCitiesView(DynamicCountry currentCountry) {
     final textPrimary = ThemeManager.instance.textPrimaryColor;
     final textSecondary = ThemeManager.instance.textSecondaryColor;
     final isDark = ThemeManager.instance.isDarkMode;
@@ -390,8 +400,8 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
   }
 
   // View 2: Servers List Drill-down matching screen recording
-  Widget _buildServersView() {
-    final servers = _generateServers(_selectedCity!);
+  Widget _buildServersView(DynamicCountry currentCountry) {
+    final servers = _generateServers(_selectedCity!, currentCountry);
     final textPrimary = ThemeManager.instance.textPrimaryColor;
     final textSecondary = ThemeManager.instance.textSecondaryColor;
     final isDark = ThemeManager.instance.isDarkMode;
@@ -485,8 +495,19 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
                 await AppPreferences.setSelectedLocation(widget.country.code);
                 await AppPreferences.setLastConnection(widget.country.code);
                 await widget.controller.setLocation(widget.country.code.toLowerCase());
+                if (widget.controller.hasAccount && !widget.controller.isConnected) {
+                  widget.controller.setOn(true);
+                }
                 widget.onServerSelected(name);
-                if (mounted) Navigator.of(context).pop();
+                if (mounted) {
+                  Navigator.of(context).pop();
+                  TopDockToast.show(
+                    context,
+                    title: 'Connecting to Server',
+                    message: ' ·  ms (Load: %)',
+                    icon: Icons.dns_rounded,
+                  );
+                }
               },
               borderRadius: BorderRadius.circular(12),
               child: Padding(

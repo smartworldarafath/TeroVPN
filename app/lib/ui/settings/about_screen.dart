@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../components/liquid_glass_atmosphere.dart';
 import 'settings_row.dart';
+import '../components/top_dock_toast.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -83,7 +83,7 @@ class AboutScreen extends StatelessWidget {
 
                     // Version & Copyright
                     Text(
-                      'Version 1.1.0',
+                      'Version 1.1.1',
                       style: ProtonTypography.bodySmall.copyWith(
                         color: ThemeManager.instance.textSecondaryColor,
                         fontSize: 13,
@@ -138,11 +138,11 @@ class AboutScreen extends StatelessWidget {
                           subtitle: 'visit terovpn.com',
                           trailing: Icon(Icons.chevron_right_rounded, color: ThemeManager.instance.textMutedColor),
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Opening https://terovpn.com...'),
-                                backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-                              ),
+                            TopDockToast.show(
+                              context,
+                              title: 'Official Website',
+                              message: 'https://terovpn.com',
+                              icon: Icons.language_rounded,
                             );
                           },
                         ),
@@ -152,11 +152,11 @@ class AboutScreen extends StatelessWidget {
                           subtitle: 'Get help and send feedback',
                           trailing: Icon(Icons.chevron_right_rounded, color: ThemeManager.instance.textMutedColor),
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Support email: support@terovpn.com'),
-                                backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-                              ),
+                            TopDockToast.show(
+                              context,
+                              title: 'Contact Support',
+                              message: 'support@terovpn.com',
+                              icon: Icons.support_agent_rounded,
                             );
                           },
                         ),
@@ -166,11 +166,12 @@ class AboutScreen extends StatelessWidget {
                           subtitle: 'Show your love on the Play Store',
                           trailing: Icon(Icons.chevron_right_rounded, color: ThemeManager.instance.textMutedColor),
                           onTap: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: const Text('Thank you for rating TeroVPN!'),
-                                backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-                              ),
+                            TopDockToast.show(
+                              context,
+                              title: 'Rating & Feedback',
+                              message: 'Thank you for supporting TeroVPN!',
+                              icon: Icons.star_rounded,
+                              iconColor: Colors.amber,
                             );
                           },
                         ),

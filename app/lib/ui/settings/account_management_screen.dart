@@ -1,5 +1,6 @@
 import '../components/liquid_glass_atmosphere.dart';
 import '../components/liquid_glass_card.dart';
+import '../components/top_dock_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/proton_colors.dart';
@@ -44,13 +45,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     await widget.controller.refresh(accountsToo: true);
     if (mounted) {
       setState(() => _isRefreshing = false);
-      final isDark = ThemeManager.instance.isDarkMode;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Account quotas and bandwidth synchronized.'),
-          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-          duration: const Duration(seconds: 2),
-        ),
+      TopDockToast.show(
+        context,
+        title: 'Accounts Synchronized',
+        message: 'Account quotas and bandwidth updated in real-time',
+        icon: Icons.sync_rounded,
       );
     }
   }
@@ -58,19 +57,16 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
   Future<void> _activateAccount(Account account) async {
     await widget.controller.activate(account);
     if (mounted) {
-      final isDark = ThemeManager.instance.isDarkMode;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Activated session for ${account.email}. Other accounts paused.'),
-          backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-          duration: const Duration(seconds: 2),
-        ),
+      TopDockToast.show(
+        context,
+        title: 'Account Activated',
+        message: '${account.email} session active',
+        icon: Icons.check_circle_rounded,
       );
     }
   }
 
   Future<void> _signOutAccount(Account account) async {
-    final isDark = ThemeManager.instance.isDarkMode;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -110,11 +106,11 @@ class _AccountManagementScreenState extends State<AccountManagementScreen> {
     if (confirm == true) {
       await widget.controller.remove(account);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Signed out ${account.email}'),
-            backgroundColor: isDark ? ProtonColors.surfaceDark : const Color(0xFF1D1536),
-          ),
+        TopDockToast.show(
+          context,
+          title: 'Account Removed',
+          message: 'Signed out ${account.email}',
+          icon: Icons.logout_rounded,
         );
       }
     }

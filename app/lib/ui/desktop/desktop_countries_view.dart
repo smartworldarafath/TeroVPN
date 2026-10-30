@@ -1,3 +1,4 @@
+import '../components/top_dock_toast.dart';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
@@ -47,14 +48,13 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
     _spinController.forward(from: 0.0);
     await CountryManager.instance.refresh();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Server ping & loads refreshed in real-time.'),
-          backgroundColor: const Color(0xFF161426),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: const Duration(seconds: 2),
-        ),
+      final fastest = CountryManager.instance.getFastestCountry();
+      TopDockToast.show(
+        context,
+        title: 'Country Latencies Synchronized',
+        message: 'Fastest: ${fastest.name} (${fastest.pingMs} ms) · All loads updated',
+        icon: Icons.refresh_rounded,
+        iconColor: const Color(0xFF00E676),
       );
     }
   }

@@ -5,7 +5,7 @@ import '../../core/format.dart';
 import '../../core/core_controller.dart';
 import '../components/liquid_glass_card.dart';
 
-class AccountPoolCard extends StatelessWidget {
+class AccountPoolCard extends StatefulWidget {
   final AccountList? accounts;
   final VoidCallback onRefresh;
   final CoreController? controller;
@@ -18,9 +18,53 @@ class AccountPoolCard extends StatelessWidget {
   });
 
   @override
+  State<AccountPoolCard> createState() => _AccountPoolCardState();
+}
+
+class _AccountPoolCardState extends State<AccountPoolCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _spinController;
+  late Animation<double> _scaleAnimation;
+  bool _isRefreshing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _spinController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 750),
+    );
+
+    _scaleAnimation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95), weight: 40),
+      TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0), weight: 60),
+    ]).animate(CurvedAnimation(
+      parent: _spinController,
+      curve: Curves.easeOutCubic,
+    ));
+  }
+
+  @override
+  void dispose() {
+    _spinController.dispose();
+    super.dispose();
+  }
+
+  void _handleRefresh() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    _spinController.forward(from: 0.0);
+    widget.onRefresh();
+    await Future.delayed(const Duration(milliseconds: 750));
+    if (mounted) {
+      setState(() => _isRefreshing = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDark = ThemeManager.instance.isDarkMode;
-    final list = accounts?.accounts ?? [];
+    final list = widget.accounts?.accounts ?? [];
     final active = list.where((a) => a.active).firstOrNull ?? list.firstOrNull;
     final totalAccounts = list.length;
 
@@ -114,24 +158,35 @@ class AccountPoolCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: OutlinedButton.icon(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.sync_rounded, size: 18),
-              label: const Text('Refresh Now'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: const Color(0xFF6B42FF),
-                side: BorderSide(
-                  color: isDark
-                      ? const Color(0xFF6B42FF).withValues(alpha: 0.5)
-                      : const Color(0xFF6B42FF).withValues(alpha: 0.4),
-                  width: 1.2,
+          AnimatedBuilder(
+            animation: _spinController,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _scaleAnimation.value,
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: OutlinedButton.icon(
+                    onPressed: _handleRefresh,
+                    icon: RotationTransition(
+                      turns: _spinController,
+                      child: const Icon(Icons.sync_rounded, size: 18),
+                    ),
+                    label: Text(_isRefreshing ? 'Refreshing Tokens...' : 'Refresh Now'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF6B42FF),
+                      side: BorderSide(
+                        color: isDark
+                            ? const Color(0xFF6B42FF).withValues(alpha: 0.5)
+                            : const Color(0xFF6B42FF).withValues(alpha: 0.4),
+                        width: 1.2,
+                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
+              );
+            },
           ),
         ],
       ),

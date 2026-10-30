@@ -45,7 +45,9 @@ class LiquidGlassCard extends StatelessWidget {
       );
       final classicRadius = BorderRadius.circular(radius > 16 ? 16 : radius);
 
-      Widget body = Container(
+      Widget body = AnimatedContainer(
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOutCubic,
         margin: margin,
         padding: padding,
         decoration: BoxDecoration(
@@ -122,7 +124,9 @@ class LiquidGlassCard extends StatelessWidget {
 
     final rrectRadius = BorderRadius.circular(radius);
 
-    Widget cardContent = Container(
+    Widget cardContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOutCubic,
       padding: padding,
       decoration: BoxDecoration(
         color: baseTint,
