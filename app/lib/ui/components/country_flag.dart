@@ -18,7 +18,13 @@ class CountryFlag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final code = countryCode.trim().toLowerCase();
+    var code = countryCode.trim().toLowerCase();
+    if (code.contains('#')) {
+      code = code.split('#').first.trim();
+    }
+    if (code.length > 2 && code != 'fastest' && code != 'auto') {
+      code = code.substring(0, 2);
+    }
 
     if (code.isEmpty || code == 'fastest' || code == 'any' || code == 'auto') {
       return Container(
