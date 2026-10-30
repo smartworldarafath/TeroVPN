@@ -161,12 +161,6 @@ void main(List<String> args) async {
 
   controller.start();
 
-  // Restore saved location
-  final savedLoc = AppPreferences.selectedLocation;
-  if (savedLoc.isNotEmpty && savedLoc.toLowerCase() != 'nl') {
-    controller.setLocation(savedLoc);
-  }
-
   runApp(TeroVpnApp(controller: controller));
 }
 
