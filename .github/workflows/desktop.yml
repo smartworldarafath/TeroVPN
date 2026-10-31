@@ -122,33 +122,14 @@ jobs:
           # Copy Flutter bundle and bundled core into AppDir/usr/bin
           cp -r dist/TeroVPN-v1.1.1-Linux-x64/* AppDir/usr/bin/
           
-          # Copy desktop file and icons
+          # Copy desktop entry, icons and AppRun script
           cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/terovpn.png
           cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/.DirIcon
           cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/usr/share/icons/hicolor/256x256/apps/terovpn.png
           
-          cat << 'EOF' > AppDir/terovpn.desktop
-[Desktop Entry]
-Name=TeroVPN
-Comment=Fast, Secure & Private VPN Client
-Exec=terovpn %U
-Icon=terovpn
-Type=Application
-Categories=Network;Security;VPN;
-Terminal=false
-StartupWMClass=terovpn
-EOF
-          cp AppDir/terovpn.desktop AppDir/usr/share/applications/
-          
-          cat << 'EOF' > AppDir/AppRun
-#!/bin/sh
-SELF=$(readlink -f "$0")
-HERE=${SELF%/*}
-export PATH="${HERE}/usr/bin:${PATH}"
-export LD_LIBRARY_PATH="${HERE}/usr/bin/lib:${HERE}/usr/lib:${LD_LIBRARY_PATH}"
-cd "${HERE}/usr/bin"
-exec "${HERE}/usr/bin/terovpn" "$@"
-EOF
+          cp linux/appimage/terovpn.desktop AppDir/
+          cp linux/appimage/terovpn.desktop AppDir/usr/share/applications/
+          cp linux/appimage/AppRun AppDir/
           chmod +x AppDir/AppRun
           
           # Download official appimagetool

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=TeroVPN
+Comment=Fast, Secure & Private VPN Client
+Exec=terovpn %U
+Icon=terovpn
+Type=Application
+Categories=Network;Security;VPN;
+Terminal=false
+StartupWMClass=terovpn
