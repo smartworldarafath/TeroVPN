@@ -4,6 +4,6 @@ Comment=Fast, Secure & Private VPN Client
 Exec=terovpn %U
 Icon=terovpn
 Type=Application
-Categories=Network;Security;VPN;
+Categories=Network;Security;Settings;
 Terminal=false
 StartupWMClass=terovpn
