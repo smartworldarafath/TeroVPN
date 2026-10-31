@@ -412,6 +412,60 @@ class CoreController extends ChangeNotifier {
     }
   });
 
+  /// Configures Proton VPN protocol selection (Smart, WireGuard UDP/TCP, Stealth, OpenVPN, IKEv2).
+  Future<void> setProtocol(String protocol) async {
+    await AppPreferences.setSelectedProtocol(protocol);
+    if (!kIsWeb && _api != null) {
+      try {
+        final transport = switch (protocol) {
+          'WireGuard (UDP)' => 'h3',
+          'WireGuard (TCP)' => 'h2',
+          'Stealth (TLS Obfuscated)' => 'stealth',
+          'OpenVPN (UDP)' => 'openvpn-udp',
+          'OpenVPN (TCP)' => 'openvpn-tcp',
+          'IKEv2 (macOS Native)' => 'ikev2',
+          _ => 'auto',
+        };
+        await editSettings((config) {
+          final proxy = config['proxy'];
+          if (proxy is Map<String, Object?>) {
+            proxy['transport'] = transport;
+          }
+        });
+      } catch (_) {}
+    }
+    notifyListeners();
+  }
+
+  /// Configures Custom DNS servers in the core config.
+  Future<void> applyCustomDns(bool enabled, String primary, String secondary) async {
+    await AppPreferences.setCustomDnsEnabled(enabled);
+    await AppPreferences.setCustomDnsPrimary(primary);
+    await AppPreferences.setCustomDnsSecondary(secondary);
+    if (!kIsWeb && _api != null) {
+      try {
+        await editSettings((config) {
+          final dns = config['dns'];
+          if (dns is Map<String, Object?>) {
+            if (enabled && primary.isNotEmpty) {
+              dns['servers'] = [
+                'https://$primary/dns-query',
+                if (secondary.isNotEmpty) 'https://$secondary/dns-query',
+              ];
+            } else {
+              dns['servers'] = [
+                'https://1.1.1.1/dns-query',
+                'https://8.8.8.8/dns-query',
+                'https://9.9.9.9/dns-query',
+              ];
+            }
+          }
+        });
+      } catch (_) {}
+    }
+    notifyListeners();
+  }
+
   /// Runs a request for a page (servers, logs, routing tools) with the
   /// connection's error handling; errors reach the caller.
   Future<T> call<T>(Future<T> Function(CoreApi api) request) async {

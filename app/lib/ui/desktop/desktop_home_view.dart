@@ -7,6 +7,7 @@ import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
 import '../components/details_sheet.dart';
 import '../home/default_connection_sheet.dart';
+import '../home/proton_world_map.dart';
 import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
 
@@ -295,7 +296,16 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 10),
+                        // Proton VPN Geographic World Map View
+                        ProtonWorldMap(
+                          isConnected: isConnected,
+                          isConnecting: isConnecting,
+                          originCountryCode: 'BD',
+                          destinationCountryCode: matchedCountry.code,
+                          destinationCityName: cityName,
+                          onMapTap: widget.onNavigateToCountries,
+                        ),
+                        const SizedBox(height: 24),
 
                         // Atmospheric Glow & Padlock Ring
                         Center(

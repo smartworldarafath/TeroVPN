@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../../theme/theme_manager.dart';
+import 'dart:io' show Platform;
 import '../components/signin_dialog.dart';
 import '../settings/account_management_screen.dart';
+import '../settings/sign_in_with_phone_screen.dart';
 import '../settings/split_tunneling_screen.dart';
 import '../settings/theme_settings_screen.dart';
 import '../settings/app_update_screen.dart';
@@ -154,11 +156,56 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                     ),
                   ),
                   const SizedBox(height: 18),
-                  _protocolTile('Smart (Automatic)', 'Automatically picks fastest tunnel', isDark),
-                  const SizedBox(height: 12),
-                  _protocolTile('WireGuard MASQUE (HTTP/3)', 'Fastest speed via QUIC UDP encapsulation', isDark),
-                  const SizedBox(height: 12),
-                  _protocolTile('Fastly HTTP/2 MASQUE', 'Fallback for restricted TCP networks', isDark),
+                  _protocolTile(
+                    'Smart (Automatic)',
+                    'Automatically chooses fastest protocol and bypasses network blocks',
+                    'RECOMMENDED',
+                    isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _protocolTile(
+                    'WireGuard (UDP)',
+                    'Fastest throughput and lowest latency via modern WireGuard',
+                    'FASTEST',
+                    isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _protocolTile(
+                    'WireGuard (TCP)',
+                    'WireGuard over TCP port 443 to bypass restrictive firewalls',
+                    'STABLE',
+                    isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _protocolTile(
+                    'Stealth (TLS Obfuscated)',
+                    'Anti-censorship TLS protocol disguised as normal HTTPS traffic',
+                    'OBFUSCATED',
+                    isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _protocolTile(
+                    'OpenVPN (UDP)',
+                    'Traditional battle-tested OpenVPN protocol over UDP',
+                    'SECURE',
+                    isDark,
+                  ),
+                  const SizedBox(height: 10),
+                  _protocolTile(
+                    'OpenVPN (TCP)',
+                    'Resilient OpenVPN over TCP through restrictive networks',
+                    'RELIABLE',
+                    isDark,
+                  ),
+                  if (Platform.isMacOS) ...[
+                    const SizedBox(height: 10),
+                    _protocolTile(
+                      'IKEv2 (macOS Native)',
+                      'Native Apple network extension with seamless handoff',
+                      'MACOS',
+                      isDark,
+                    ),
+                  ],
                   const SizedBox(height: 16),
                 ],
               ),
@@ -169,7 +216,7 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
     );
   }
 
-  Widget _protocolTile(String title, String desc, bool isDark) {
+  Widget _protocolTile(String title, String desc, String badge, bool isDark) {
     final isSelected = _selectedProtocol == title;
     final itemBg = isSelected
         ? const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.18 : 0.10)
@@ -178,14 +225,14 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
+        onTap: () async {
           setState(() => _selectedProtocol = title);
-          AppPreferences.setSelectedProtocol(title);
-          Navigator.of(context).pop();
+          await widget.controller.setProtocol(title);
+          if (mounted) Navigator.of(context).pop();
         },
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: itemBg,
             borderRadius: BorderRadius.circular(16),
@@ -202,15 +249,37 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: isSelected
-                            ? const Color(0xFF6B42FF)
-                            : (isDark ? Colors.white : const Color(0xFF1D1536)),
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            title,
+                            style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: isSelected
+                                  ? const Color(0xFF6B42FF)
+                                  : (isDark ? Colors.white : const Color(0xFF1D1536)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.25 : 0.12),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            badge,
+                            style: const TextStyle(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF8B6BFF),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -364,6 +433,36 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                       },
                     ),
                   ],
+                  _buildDivider(dividerColor),
+                  _buildActionRow(
+                    icon: Icons.qr_code_scanner_rounded,
+                    title: 'Sign in with phone',
+                    subtitle: 'Scan QR code with your mobile app to instant sign-in',
+                    textPrimary: textPrimary,
+                    textSecondary: textSecondary,
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF6B42FF).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        'NEW',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF8B6BFF),
+                        ),
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SignInWithPhoneScreen(controller: widget.controller),
+                        ),
+                      );
+                    },
+                  ),
                 ],
               ),
 
@@ -506,7 +605,7 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                   _buildActionRow(
                     icon: Icons.info_outline_rounded,
                     title: 'About TeroVPN',
-                    subtitle: 'Version 1.1.1 · Legal, Support & Acknowledgements',
+                    subtitle: 'Version 1.1.2 · Legal, Support & Acknowledgements',
                     textPrimary: textPrimary,
                     textSecondary: textSecondary,
                     trailing: Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
@@ -572,13 +671,13 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                   _buildActionRow(
                     icon: Icons.tune_rounded,
                     title: 'Extra Functions',
-                    subtitle: 'IPv6 Leak, DNS Fallback, LAN Bypass & Hardware Acceleration',
+                    subtitle: 'Custom DNS, Leak Protection, LAN Bypass, Moderate NAT & MTU',
                     textPrimary: textPrimary,
                     textSecondary: textSecondary,
                     trailing: Icon(Icons.chevron_right_rounded, color: textSecondary, size: 20),
                     onTap: () {
                       Navigator.of(context).push(
-                        MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+                        MaterialPageRoute(builder: (_) => ExtraFunctionsScreen(controller: widget.controller)),
                       );
                     },
                   ),
