@@ -80,7 +80,7 @@ jobs:
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev file
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -115,10 +115,60 @@ jobs:
 
           tar -czvf dist/TeroVPN-v1.1.1-Linux-x64.tar.gz -C dist TeroVPN-v1.1.1-Linux-x64
 
-      - name: Upload Linux Artifact
+      - name: Build Linux AppImage
+        run: |
+          mkdir -p AppDir/usr/bin AppDir/usr/share/applications AppDir/usr/share/icons/hicolor/256x256/apps
+          
+          # Copy Flutter bundle and bundled core into AppDir/usr/bin
+          cp -r dist/TeroVPN-v1.1.1-Linux-x64/* AppDir/usr/bin/
+          
+          # Copy desktop file and icons
+          cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/terovpn.png
+          cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/.DirIcon
+          cp app/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png AppDir/usr/share/icons/hicolor/256x256/apps/terovpn.png
+          
+          cat << 'EOF' > AppDir/terovpn.desktop
+[Desktop Entry]
+Name=TeroVPN
+Comment=Fast, Secure & Private VPN Client
+Exec=terovpn %U
+Icon=terovpn
+Type=Application
+Categories=Network;Security;VPN;
+Terminal=false
+StartupWMClass=terovpn
+EOF
+          cp AppDir/terovpn.desktop AppDir/usr/share/applications/
+          
+          cat << 'EOF' > AppDir/AppRun
+#!/bin/sh
+SELF=$(readlink -f "$0")
+HERE=${SELF%/*}
+export PATH="${HERE}/usr/bin:${PATH}"
+export LD_LIBRARY_PATH="${HERE}/usr/bin/lib:${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+cd "${HERE}/usr/bin"
+exec "${HERE}/usr/bin/terovpn" "$@"
+EOF
+          chmod +x AppDir/AppRun
+          
+          # Download official appimagetool
+          curl -sLO https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool-x86_64.AppImage
+          
+          # Build AppImage with --appimage-extract-and-run to avoid requiring FUSE in CI
+          ARCH=x86_64 ./appimagetool-x86_64.AppImage --no-appstream --appimage-extract-and-run AppDir dist/TeroVPN-v1.1.1-Linux-x64.AppImage
+          chmod +x dist/TeroVPN-v1.1.1-Linux-x64.AppImage
+
+      - name: Upload Linux AppImage Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TeroVPN-v1.1.1-Linux-x64
+          name: TeroVPN-v1.1.1-Linux-AppImage
+          path: dist/TeroVPN-v1.1.1-Linux-x64.AppImage
+
+      - name: Upload Linux Tar Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeroVPN-v1.1.1-Linux-Tar
           path: dist/TeroVPN-v1.1.1-Linux-x64.tar.gz
 
   macos:
@@ -145,7 +195,7 @@ jobs:
         working-directory: app
         run: flutter build macos --release --dart-define=APP_VERSION=1.1.1
 
-      - name: Bundle Desktop Core & Archive
+      - name: Bundle Desktop Core, Resign & Archive
         run: |
           mkdir -p dist
           cp -r app/build/macos/Build/Products/Release/TeroVPN.app dist/
@@ -156,14 +206,32 @@ jobs:
           tar -xzf /tmp/core-macos.tar.gz -C /tmp/core-macos
           find /tmp/core-macos -type f -name "firefox-vpn-core" -exec cp {} dist/TeroVPN.app/Contents/MacOS/terovpn-core \; || true
           find /tmp/core-macos -type f -name "firefox-vpn-tun" -exec cp {} dist/TeroVPN.app/Contents/MacOS/terovpn-tun \; || true
-          chmod +x dist/TeroVPN.app/Contents/MacOS/terovpn-* || true
+          chmod +x dist/TeroVPN.app/Contents/MacOS/terovpn* || true
 
+          # Strip quarantine attributes and re-sign bundle with ad-hoc signature to satisfy Gatekeeper
+          xattr -cr dist/TeroVPN.app || true
+          codesign --force --deep --sign - dist/TeroVPN.app || true
+
+          # Create portable tar.gz
           tar -czvf dist/TeroVPN-v1.1.1-macOS.tar.gz -C dist TeroVPN.app
 
-      - name: Upload macOS Artifact
+          # Create DMG image with Applications shortcut
+          mkdir -p /tmp/dmg
+          cp -r dist/TeroVPN.app /tmp/dmg/
+          ln -s /Applications /tmp/dmg/Applications
+          hdiutil create -volname "TeroVPN" -srcfolder /tmp/dmg -ov -format UDZO "dist/TeroVPN-v1.1.1-macOS.dmg"
+          rm -rf /tmp/dmg
+
+      - name: Upload macOS DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: TeroVPN-v1.1.1-macOS
+          name: TeroVPN-v1.1.1-macOS-DMG
+          path: dist/TeroVPN-v1.1.1-macOS.dmg
+
+      - name: Upload macOS Tar Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TeroVPN-v1.1.1-macOS-Tar
           path: dist/TeroVPN-v1.1.1-macOS.tar.gz
 
   release:
@@ -188,6 +256,6 @@ jobs:
           fi
           
           gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1 || \
-            gh release create "$tag" --repo "${{ github.repository }}" --title "TeroVPN $tag - Desktop & Android Edition" --notes "Desktop release for Windows (Setup.exe & Portable), Linux, and macOS."
+            gh release create "$tag" --repo "${{ github.repository }}" --title "TeroVPN $tag - Desktop & Android Edition" --notes "Desktop release for Windows (.exe installer & portable), macOS (.dmg & .tar.gz), and Linux (.AppImage & .tar.gz)."
           
           gh release upload "$tag" release-artifacts/* --repo "${{ github.repository }}" --clobber
