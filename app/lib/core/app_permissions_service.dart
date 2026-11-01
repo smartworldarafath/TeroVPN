@@ -184,17 +184,24 @@ class AppPermissionsService extends ChangeNotifier {
       // 1. Background Service check in Registry
       if (_checkBackgroundRegistry()) {
         _granted.add(AppPermissionType.backgroundService);
+      } else {
+        _granted.remove(AppPermissionType.backgroundService);
       }
 
       // 2. Windows Defender Firewall check
       if (_checkFirewallRule()) {
         _granted.add(AppPermissionType.firewallAccess);
+      } else {
+        _granted.remove(AppPermissionType.firewallAccess);
       }
 
       // 3. Admin & Virtual Driver check
       if (_checkAdminVerifiedToken() || _checkProcessElevated()) {
         _granted.add(AppPermissionType.adminPrivileges);
         _granted.add(AppPermissionType.virtualDriver);
+      } else {
+        _granted.remove(AppPermissionType.adminPrivileges);
+        _granted.remove(AppPermissionType.virtualDriver);
       }
 
       // 4. DNS and IPv6 preferences
@@ -392,6 +399,9 @@ class AppPermissionsService extends ChangeNotifier {
   /// Triggers real Windows UAC elevation dialog and configures Firewall & Driver.
   static Future<bool> _executeElevatedWindowsSetup() async {
     try {
+      if (_checkAdminVerifiedToken() && _checkFirewallRule()) {
+        return true;
+      }
       final exePath = Platform.resolvedExecutable;
       final exeDir = File(exePath).parent.path;
       final coreDir = '$exeDir\\core';
