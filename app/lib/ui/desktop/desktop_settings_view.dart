@@ -8,7 +8,7 @@ import '../../theme/theme_manager.dart';
 
 import '../components/signin_dialog.dart';
 
-import 'desktop_qr_dialog.dart';
+import '../settings/sign_in_with_phone_screen.dart';
 
 import '../settings/account_management_screen.dart';
 
@@ -649,17 +649,17 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
                 _buildDivider(),
 
                 _buildActionRow(
-
-                  icon: Icons.qr_code_scanner_rounded,
-
-                  title: 'Sign in via QR Code',
-
+                  icon: Icons.phone_android_rounded,
+                  title: 'Sign in with phone',
                   subtitle: 'Display QR code to pair and sign in with your phone',
-
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D)),
-
-                  onTap: () => DesktopQrSignInDialog.show(context, widget.controller),
-
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => SignInWithPhoneScreen(controller: widget.controller),
+                      ),
+                    );
+                  },
                 ),
 
               ]),

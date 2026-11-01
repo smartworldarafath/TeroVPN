@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
+import '../../core/qr_auth_sync_service.dart';
 import '../../theme/theme_manager.dart';
 
 class SignInWithPhoneScreen extends StatefulWidget {
@@ -67,10 +68,9 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
     // 1.8 seconds loading animation for realistic cryptographic session generation
     await Future.delayed(const Duration(milliseconds: 1800));
 
-    final random = Random();
-    final chars = 'abcdef0123456789';
-    _sessionId = List.generate(12, (_) => chars[random.nextInt(chars.length)]).join();
-    _sessionSecret = List.generate(24, (_) => chars[random.nextInt(chars.length)]).join();
+    final session = QrAuthSyncService.createSession(deviceName: 'TeroVPN Desktop');
+    _sessionId = session.sessionId;
+    _sessionSecret = session.sessionId;
 
     _secondsRemaining = 300;
     _countdownTimer?.cancel();
@@ -80,6 +80,13 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
         setState(() => _secondsRemaining--);
       } else {
         timer.cancel();
+      }
+    });
+
+    // Listen for incoming mobile authorization
+    QrAuthSyncService.waitForAuthorization(_sessionId).then((account) {
+      if (account != null && mounted) {
+        _handleAuthorize(account.email);
       }
     });
 
