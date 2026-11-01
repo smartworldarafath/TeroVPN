@@ -22,7 +22,7 @@ class AppUpdateScreen extends StatefulWidget {
 }
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
-  static const String currentVersion = '1.1.3';
+  static const String currentVersion = '1.1.5';
 
   late bool _autoUpdateWifi;
   late bool _allowUpdateMobile;

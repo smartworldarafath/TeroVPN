@@ -574,9 +574,13 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 14),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F0B1A),
+              color: isDark ? const Color(0xFF0F0B1A) : const Color(0xFFF6F4FC),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.08)
+                    : const Color(0xFF6B42FF).withValues(alpha: 0.15),
+              ),
             ),
             child: previewWidget,
           ),

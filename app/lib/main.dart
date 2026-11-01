@@ -59,19 +59,14 @@ void main(List<String> args) async {
       SystemChrome.setSystemUIOverlayStyle(
 
         const SystemUiOverlayStyle(
-
           statusBarColor: Colors.transparent,
-
           statusBarIconBrightness: Brightness.light,
-
           statusBarBrightness: Brightness.dark,
-
           systemNavigationBarColor: Colors.transparent,
-
           systemNavigationBarIconBrightness: Brightness.light,
-
           systemNavigationBarDividerColor: Colors.transparent,
-
+          systemStatusBarContrastEnforced: false,
+          systemNavigationBarContrastEnforced: false,
         ),
 
       );
@@ -238,7 +233,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
 
       'switch_threshold_percent': 10.0,
 
-      'version': '1.1.3',
+      'version': '1.1.5',
 
       'can_exit': true,
 

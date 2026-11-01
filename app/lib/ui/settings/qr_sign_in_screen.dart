@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/android_core.dart';
@@ -31,6 +32,8 @@ class _QrSignInScreenState extends State<QrSignInScreen>
   bool _isScanning = false;
   bool _isAuthorizing = false;
   late AnimationController _laserController;
+  MobileScannerController? _scannerController;
+  bool _torchEnabled = false;
 
   QrPairingSession? _activeQrSession;
   Timer? _sessionPollTimer;
@@ -55,7 +58,32 @@ class _QrSignInScreenState extends State<QrSignInScreen>
   void dispose() {
     _laserController.dispose();
     _sessionPollTimer?.cancel();
+    _scannerController?.dispose();
     super.dispose();
+  }
+
+  void _stopScanView() {
+    _scannerController?.dispose();
+    _scannerController = null;
+    setState(() {
+      _isScanning = false;
+      _torchEnabled = false;
+    });
+  }
+
+  Future<void> _startScanView() async {
+    try {
+      await AndroidCore.requestCameraPermission();
+    } catch (_) {}
+    _scannerController?.dispose();
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      returnImage: false,
+    );
+    setState(() {
+      _isScanning = true;
+      _torchEnabled = false;
+    });
   }
 
   void _initShowQrSession() {
@@ -96,25 +124,6 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     }
   }
 
-  Future<void> _startScanView() async {
-    final granted = await AndroidCore.requestCameraPermission();
-    if (!granted) {
-      if (mounted) {
-        TopDockToast.show(
-          context,
-          title: 'Camera Permission Needed',
-          message: 'Please allow camera access to scan QR codes.',
-          icon: Icons.camera_alt_rounded,
-          iconColor: Colors.orangeAccent,
-        );
-      }
-      return;
-    }
-    setState(() {
-      _isScanning = true;
-    });
-  }
-
   Future<void> _handleScanSuccess(String scannedPayload) async {
     setState(() {
       _isScanning = false;
@@ -122,21 +131,45 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     });
 
     final activeAccount = widget.controller.activeAccount;
+    final uri = Uri.tryParse(scannedPayload);
+    final email = uri?.queryParameters['email'];
+    final token = uri?.queryParameters['token'] ?? uri?.queryParameters['sid'];
+
+    if (activeAccount == null && email != null && email.isNotEmpty) {
+      await Future.delayed(const Duration(milliseconds: 1000));
+      await widget.controller.startSignIn(email, token ?? 'authorized_qr_user');
+      await widget.controller.refresh(accountsToo: true);
+      if (mounted) {
+        setState(() => _isAuthorizing = false);
+        TopDockToast.show(
+          context,
+          title: 'Sign In Successful! 🎉',
+          message: 'Signed in as $email on this phone',
+          icon: Icons.check_circle_rounded,
+          iconColor: const Color(0xFF00E676),
+        );
+        Navigator.of(context).pop();
+      }
+      return;
+    }
+
     if (activeAccount == null) {
       setState(() => _isAuthorizing = false);
       TopDockToast.show(
         context,
         title: 'Sign In Required',
-        message: 'No active account on phone to authorize.',
+        message: 'Sign in first to authorize other devices.',
         icon: Icons.error_outline_rounded,
-        iconColor: Colors.redAccent,
+        iconColor: Colors.orangeAccent,
       );
+      if (mounted) {
+        SignInDialog.show(context, widget.controller);
+      }
       return;
     }
 
     // Extract session ID
     String sessionId = 'demo_desktop_session';
-    final uri = Uri.tryParse(scannedPayload);
     if (uri != null && uri.queryParameters.containsKey('sid')) {
       sessionId = uri.queryParameters['sid']!;
     }
@@ -556,38 +589,39 @@ class _QrSignInScreenState extends State<QrSignInScreen>
             ],
           ),
           const SizedBox(height: 20),
-          if (hasAccount)
-            ElevatedButton.icon(
-              onPressed: _startScanView,
-              icon: const Icon(Icons.crop_free_rounded, size: 22),
-              label: const Text(
-                'Scan QR Code',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+          ElevatedButton.icon(
+            onPressed: _startScanView,
+            icon: const Icon(Icons.crop_free_rounded, size: 22),
+            label: Text(
+              hasAccount ? 'Scan QR Code on Desktop' : 'Scan QR Code',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6B42FF),
+              foregroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B42FF),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                elevation: 0,
-              ),
-            )
-          else
-            ElevatedButton.icon(
+              elevation: 0,
+            ),
+          ),
+          if (!hasAccount) ...[
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
               onPressed: () => SignInDialog.show(context, widget.controller),
               icon: const Icon(Icons.login_rounded, size: 20),
               label: const Text('Sign In on Phone'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6B42FF),
-                foregroundColor: Colors.white,
-                minimumSize: const Size.fromHeight(48),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF9967FF),
+                minimumSize: const Size.fromHeight(44),
+                side: const BorderSide(color: Color(0xFF6B42FF), width: 1.2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
               ),
             ),
+          ],
         ],
       ),
     );
@@ -659,9 +693,28 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Background viewfinder overlay
+          // Live Camera Feed via CameraX MobileScanner
+          if (_scannerController != null)
+            MobileScanner(
+              controller: _scannerController!,
+              onDetect: (BarcodeCapture capture) {
+                final List<Barcode> barcodes = capture.barcodes;
+                for (final barcode in barcodes) {
+                  final code = barcode.rawValue;
+                  if (code != null && code.isNotEmpty) {
+                    _scannerController?.stop();
+                    _handleScanSuccess(code);
+                    break;
+                  }
+                }
+              },
+            )
+          else
+            Container(color: Colors.black),
+
+          // Semi-transparent dark atmospheric overlay
           Container(
-            color: Colors.black.withValues(alpha: 0.85),
+            color: Colors.black.withValues(alpha: 0.40),
           ),
 
           SafeArea(
@@ -674,27 +727,45 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                     children: [
                       IconButton(
                         icon: const Icon(Icons.close_rounded, color: Colors.white, size: 28),
-                        onPressed: () => setState(() => _isScanning = false),
+                        onPressed: _stopScanView,
                       ),
                       const Text(
                         'Align QR in Frame',
                         style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                       ),
-                      const SizedBox(width: 48),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              _torchEnabled ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                              color: _torchEnabled ? const Color(0xFF00E676) : Colors.white70,
+                              size: 24,
+                            ),
+                            onPressed: () async {
+                              await _scannerController?.toggleTorch();
+                              setState(() => _torchEnabled = !_torchEnabled);
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.flip_camera_ios_rounded, color: Colors.white70, size: 24),
+                            onPressed: () => _scannerController?.switchCamera(),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
 
                 const Spacer(),
 
-                // Scanner Target Frame
+                // Scanner Target Frame with animated laser
                 Center(
                   child: SizedBox(
-                    width: 260,
-                    height: 260,
+                    width: 270,
+                    height: 270,
                     child: Stack(
                       children: [
-                        // Viewfinder border
+                        // Viewfinder border with corner accents
                         Container(
                           decoration: BoxDecoration(
                             border: Border.all(
@@ -702,6 +773,12 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                               width: 2.5,
                             ),
                             borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF6B42FF).withValues(alpha: 0.35),
+                                blurRadius: 16,
+                              ),
+                            ],
                           ),
                         ),
 
@@ -709,21 +786,21 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                         AnimatedBuilder(
                           animation: _laserController,
                           builder: (context, _) {
-                            final topPos = _laserController.value * 230.0;
+                            final topPos = _laserController.value * 240.0;
                             return Positioned(
                               top: topPos,
                               left: 12,
                               right: 12,
                               child: Container(
-                                height: 3,
+                                height: 3.5,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF00E676),
                                   borderRadius: BorderRadius.circular(2),
                                   boxShadow: const [
                                     BoxShadow(
                                       color: Color(0xFF00E676),
-                                      blurRadius: 10,
-                                      spreadRadius: 2,
+                                      blurRadius: 12,
+                                      spreadRadius: 3,
                                     ),
                                   ],
                                 ),
@@ -742,19 +819,19 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                   child: Text(
                     'Point camera at the QR code on Desktop or another phone',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 13.5),
+                    style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                 ),
 
                 const Spacer(),
 
-                // Simulate Scan / Pair button
+                // Simulate Scan / Pair fallback button (helpful for emulators or testing)
                 Padding(
                   padding: const EdgeInsets.all(24),
                   child: ElevatedButton.icon(
                     onPressed: () => _handleScanSuccess('terovpn://pair?sid=desktop_${DateTime.now().millisecondsSinceEpoch}'),
                     icon: const Icon(Icons.flash_on_rounded),
-                    label: const Text('Confirm QR Scan & Authorize'),
+                    label: const Text('Simulate Scan (Auth Desktop)'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6B42FF),
                       foregroundColor: Colors.white,

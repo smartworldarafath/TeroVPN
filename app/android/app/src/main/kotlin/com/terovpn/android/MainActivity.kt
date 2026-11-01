@@ -38,14 +38,23 @@ class MainActivity : FlutterActivity() {
         holdPhoneUpright(resources.configuration)
         setupCutoutAndEdgeToEdge()
         super.onCreate(savedInstanceState)
+        setupCutoutAndEdgeToEdge()
     }
 
     /**
-     * Fixes screen cropping at camera cutout and ensures edge-to-edge drawing.
-     * Prevents artificial top padding so toast notifications align with real camera cutouts.
+     * Fixes screen cropping at camera cutout, removes status bar contrast scrim,
+     * and forces true edge-to-edge drawing with GPU hardware acceleration.
      */
     private fun setupCutoutAndEdgeToEdge() {
         try {
+            window.setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
+                android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
+            )
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS)
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val params = window.attributes
                 params.layoutInDisplayCutoutMode =
@@ -68,8 +77,14 @@ class MainActivity : FlutterActivity() {
         holdPhoneUpright(newConfig)
     }
 
+    override fun onResume() {
+        super.onResume()
+        setupCutoutAndEdgeToEdge()
+    }
+
     override fun onPostResume() {
         super.onPostResume()
+        setupCutoutAndEdgeToEdge()
         enableHighRefreshRate()
     }
 

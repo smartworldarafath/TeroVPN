@@ -227,23 +227,16 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           try {
 
             SystemChrome.setSystemUIOverlayStyle(
-
               SystemUiOverlayStyle(
-
                 statusBarColor: Colors.transparent,
-
                 statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-
                 statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-
                 systemNavigationBarColor: Colors.transparent,
-
                 systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-
                 systemNavigationBarDividerColor: Colors.transparent,
-
+                systemStatusBarContrastEnforced: false,
+                systemNavigationBarContrastEnforced: false,
               ),
-
             );
 
           } catch (_) {}
