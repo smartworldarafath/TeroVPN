@@ -11,6 +11,8 @@ import '../components/top_dock_toast.dart';
 import 'account_pool_card.dart';
 import 'profile_model.dart';
 import 'create_profile_wizard.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class ProfilesScreen extends StatefulWidget {
   final CoreController controller;
@@ -67,6 +69,14 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     widget.onProfileSelected(targetCountry);
 
     if (autoConnect || widget.controller.isVpnOn) {
+      if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+        if (mounted) {
+          await PermissionsSetupScreen.showAsModal(context);
+        }
+        if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+          return;
+        }
+      }
       if (!widget.controller.hasAccount) {
         if (mounted) SignInDialog.show(context, widget.controller);
         return;

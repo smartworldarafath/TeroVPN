@@ -9,6 +9,7 @@ import 'ports.dart';
 import 'tun_service.dart';
 import 'app_preferences.dart';
 import 'desktop_system_proxy_service.dart';
+import 'app_permissions_service.dart';
 
 /// Connects to the core, polls its status and accounts, and runs the
 /// user's actions. It holds no VPN logic: every decision is the core's.
@@ -306,6 +307,11 @@ class CoreController extends ChangeNotifier {
   /// Turns the proxy on or off ([turnOn] on the phone, the core's API on the
   /// computer) and waits, briefly, until the core reports it.
   Future<void> setOn(bool on) => _act(() async {
+    if (on && !AppPermissionsService.instance.areCorePermissionsGranted) {
+      switchingProxy = false;
+      notifyListeners();
+      return;
+    }
     _localVpnOn = on;
     switchingProxy = true;
     notifyListeners();

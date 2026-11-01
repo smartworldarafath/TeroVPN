@@ -38,6 +38,10 @@ class AppPreferences {
   static const _keyTunnelMtu = 'tunnel_mtu';
   static const _keyPortForwarding = 'port_forwarding';
   static const _keyCustomMtu = 'custom_mtu';
+  static const _keyPermissionsSetupCompleted = 'permissions_setup_completed_v119';
+  static const _keyGrantedPermissions = 'granted_permissions_set';
+  static const _keyChromeSplitTunnelIncluded = 'chrome_split_tunnel_included';
+  static const _keyAppDiagnosticsEnabled = 'app_diagnostics_enabled';
 
   static SharedPreferences? _prefs;
 
@@ -312,4 +316,29 @@ class AppPreferences {
 
   static String? getSavedAccountPassword(String email) => getSavedAuthPassword(email);
   static Future<void> setSavedAccountPassword(String email, String password) => setSavedAuthPassword(email, password);
+
+  // v1.1.9 Permissions & Diagnostics
+  static bool get permissionsSetupCompleted =>
+      _prefs?.getBool(_keyPermissionsSetupCompleted) ?? false;
+  static Future<void> setPermissionsSetupCompleted(bool val) async =>
+      await _prefs?.setBool(_keyPermissionsSetupCompleted, val);
+
+  static Set<String> get grantedPermissions {
+    final list = _prefs?.getStringList(_keyGrantedPermissions);
+    if (list == null) return {};
+    return list.toSet();
+  }
+  static Future<void> setGrantedPermissions(Set<String> set) async {
+    await _prefs?.setStringList(_keyGrantedPermissions, set.toList());
+  }
+
+  static bool get isChromeIncludedInTunnel =>
+      _prefs?.getBool(_keyChromeSplitTunnelIncluded) ?? true;
+  static Future<void> setChromeIncludedInTunnel(bool val) async =>
+      await _prefs?.setBool(_keyChromeSplitTunnelIncluded, val);
+
+  static bool get appDiagnosticsEnabled =>
+      _prefs?.getBool(_keyAppDiagnosticsEnabled) ?? true;
+  static Future<void> setAppDiagnosticsEnabled(bool val) async =>
+      await _prefs?.setBool(_keyAppDiagnosticsEnabled, val);
 }

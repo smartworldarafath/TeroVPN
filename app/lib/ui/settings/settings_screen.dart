@@ -29,6 +29,8 @@ import 'account_management_screen.dart';
 import 'qr_sign_in_screen.dart';
 import 'beta_features_screen.dart';
 import 'appearance_settings_screen.dart';
+import 'permissions_screen.dart';
+import '../../core/app_permissions_service.dart';
 
 
 
@@ -744,7 +746,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             title: 'About TeroVPN',
 
-                            subtitle: 'Version 1.1.8 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.1.9 · Legal, Support & Acknowledgements',
 
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
 
@@ -850,6 +852,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+                              );
+                            },
+                          ),
+                          SettingsRow(
+                            icon: Icons.security_rounded,
+                            title: 'Permissions',
+                            subtitle: 'System, virtual driver, firewall & network stack permissions',
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: AppPermissionsService.instance.areCorePermissionsGranted
+                                        ? const Color(0xFF00C896).withValues(alpha: 0.15)
+                                        : const Color(0xFFFFB800).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    '${AppPermissionsService.instance.grantedCount}/${AppPermissionsService.instance.totalCount}',
+                                    style: TextStyle(
+                                      color: AppPermissionsService.instance.areCorePermissionsGranted
+                                          ? const Color(0xFF00C896)
+                                          : const Color(0xFFFFB800),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Icon(Icons.chevron_right_rounded, color: textSecondary),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const PermissionsScreen()),
                               );
                             },
                           ),

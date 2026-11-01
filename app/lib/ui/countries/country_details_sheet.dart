@@ -6,6 +6,8 @@ import '../../core/app_preferences.dart';
 import '../components/country_flag.dart';
 import '../components/top_dock_toast.dart';
 import 'country_manager.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class CountryDetailsSheet extends StatefulWidget {
   final DynamicCountry country;
@@ -492,6 +494,12 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
             color: Colors.transparent,
             child: InkWell(
               onTap: () async {
+                if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                  await PermissionsSetupScreen.showAsModal(context);
+                  if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                    return;
+                  }
+                }
                 await AppPreferences.setSelectedLocation(widget.country.code);
                 await AppPreferences.setLastConnection(widget.country.code);
                 await widget.controller.setLocation(widget.country.code.toLowerCase());

@@ -35,10 +35,13 @@ import 'ui/onboarding/onboarding_screen.dart';
 
 import 'core/app_update_service.dart';
 import 'core/desktop_system_proxy_service.dart';
+import 'core/app_permissions_service.dart';
+import 'ui/permissions/permissions_setup_screen.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppPreferences.init();
+  await AppPermissionsService.instance.init();
   ThemeManager.instance.init();
   AppUpdateService.instance.startBackgroundChecker();
 
@@ -241,9 +244,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
       'accounts': {'running': 1, 'configured': 2},
 
       'switch_threshold_percent': 10.0,
-
-      'version': '1.1.8',
-
+      'version': '1.1.9',
       'can_exit': true,
 
       'system_proxy': 'off',
@@ -391,69 +392,50 @@ class TeroVpnApp extends StatelessWidget {
 
 
 enum AppFlowStep {
-
   splash,
-
   onboarding,
-
+  permissions,
   main,
-
 }
 
-
-
 class AppRootFlow extends StatefulWidget {
-
   final CoreController controller;
-
-
 
   const AppRootFlow({super.key, required this.controller});
 
-
-
   @override
-
   State<AppRootFlow> createState() => _AppRootFlowState();
-
 }
 
-
-
 class _AppRootFlowState extends State<AppRootFlow> {
-
   AppFlowStep _step = AppFlowStep.splash;
 
-
-
   void _onSplashFinished() {
-
     setState(() {
-
       if (!AppPreferences.onboardingCompleted) {
-
         _step = AppFlowStep.onboarding;
-
+      } else if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+        _step = AppFlowStep.permissions;
       } else {
-
         _step = AppFlowStep.main;
-
       }
-
     });
-
   }
 
-
-
   void _onOnboardingFinished() {
-
     setState(() {
-
-      _step = AppFlowStep.main;
-
+      if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+        _step = AppFlowStep.permissions;
+      } else {
+        _step = AppFlowStep.main;
+      }
     });
+  }
 
+  void _onPermissionsFinished() {
+    setState(() {
+      _step = AppFlowStep.main;
+    });
   }
 
 
@@ -514,10 +496,11 @@ class _AppRootFlowState extends State<AppRootFlow> {
 
         return OnboardingScreen(onFinished: _onOnboardingFinished);
 
+      case AppFlowStep.permissions:
+        return PermissionsSetupScreen(onFinished: _onPermissionsFinished);
+
       case AppFlowStep.main:
-
         return MainNavigationShell(controller: widget.controller);
-
     }
 
   }

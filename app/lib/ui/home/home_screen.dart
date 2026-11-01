@@ -11,6 +11,8 @@ import 'vpn_status_view.dart';
 import 'vpn_connection_card.dart';
 import 'recents_list.dart';
 import 'default_connection_sheet.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final CoreController controller;
@@ -197,6 +199,12 @@ class HomeScreen extends StatelessWidget {
                                 if (isVpnOn || isConnected || isConnecting) {
                                   controller.setOn(false);
                                 } else {
+                                  if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                    await PermissionsSetupScreen.showAsModal(context);
+                                    if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                      return;
+                                    }
+                                  }
                                   if (!controller.hasAccount) {
                                     SignInDialog.show(context, controller);
                                     return;
@@ -226,9 +234,15 @@ class HomeScreen extends StatelessWidget {
                             const SizedBox(height: 28),
                             RecentsList(
                               items: recentItems,
-                              onSelect: (item) {
+                              onSelect: (item) async {
                                 controller.setLocation(item.code);
                                 if (!isVpnOn) {
+                                  if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                    await PermissionsSetupScreen.showAsModal(context);
+                                    if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                      return;
+                                    }
+                                  }
                                   if (!controller.hasAccount) {
                                     SignInDialog.show(context, controller);
                                     return;
