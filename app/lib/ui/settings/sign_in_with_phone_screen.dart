@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/core_controller.dart';
+import '../../core/models.dart';
 import '../../core/qr_auth_sync_service.dart';
 import '../../theme/theme_manager.dart';
 
@@ -24,9 +25,10 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
   bool _isAuthorized = false;
 
   String _sessionId = '';
-  String _sessionSecret = '';
+  String _localIp = '127.0.0.1';
+  int _localPort = 0;
+  int _secondsRemaining = 300;
   Timer? _countdownTimer;
-  int _secondsRemaining = 300; // 5 minutes
 
   late final AnimationController _pulseController;
   late final AnimationController _successController;
@@ -55,6 +57,9 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
     _countdownTimer?.cancel();
     _pulseController.dispose();
     _successController.dispose();
+    if (_sessionId.isNotEmpty) {
+      QrAuthSyncService.cancelSession(_sessionId);
+    }
     super.dispose();
   }
 
@@ -65,12 +70,13 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
       _isAuthorized = false;
     });
 
-    // 1.8 seconds loading animation for realistic cryptographic session generation
-    await Future.delayed(const Duration(milliseconds: 1800));
+    // 1.2s smooth cryptographic session handshake animation
+    await Future.delayed(const Duration(milliseconds: 1200));
 
-    final session = QrAuthSyncService.createSession(deviceName: 'TeroVPN Desktop');
+    final session = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Desktop');
     _sessionId = session.sessionId;
-    _sessionSecret = session.sessionId;
+    _localIp = session.localIp;
+    _localPort = session.localPort;
 
     _secondsRemaining = 300;
     _countdownTimer?.cancel();
@@ -83,10 +89,10 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
       }
     });
 
-    // Listen for incoming mobile authorization
+    // Listen for incoming mobile authorization via direct LAN HTTP server, file cache & ntfy cloud relay
     QrAuthSyncService.waitForAuthorization(_sessionId).then((account) {
       if (account != null && mounted) {
-        _handleAuthorize(account.email);
+        _handleAuthorize(account);
       }
     });
 
@@ -98,8 +104,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
     }
   }
 
-  Future<void> _handleAuthorize([String? simulatedEmail]) async {
-    final email = simulatedEmail ?? 'mobile.user@terovpn.net';
+  Future<void> _handleAuthorize(Account account) async {
     setState(() {
       _isAuthorized = true;
     });
@@ -108,9 +113,18 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
 
     // If core has an account, activate or synthesize one
     try {
+      await widget.controller.startSignIn(account.email, 'authorized_qr_user');
+    } catch (_) {}
+
+    try {
       final active = widget.controller.activeAccount;
       if (active != null) {
         await widget.controller.refreshQuota(active);
+      } else {
+        widget.controller.accounts = AccountList.fromJson({
+          'accounts': [account.toJson()],
+          'switch_threshold_percent': 10.0,
+        });
       }
       await widget.controller.refresh(accountsToo: true);
     } catch (_) {}
@@ -119,6 +133,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
     await Future.delayed(const Duration(milliseconds: 2200));
     if (mounted) {
       Navigator.of(context).pop();
+      final isDark = ThemeManager.instance.isDarkMode;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -126,11 +141,11 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
               const Icon(Icons.check_circle_rounded, color: Color(0xFF00E676), size: 20),
               const SizedBox(width: 10),
               Expanded(
-                child: Text('Desktop signed in via Phone authorization ($email)'),
+                child: Text('Desktop signed in via Phone authorization (${account.email})'),
               ),
             ],
           ),
-          backgroundColor: const Color(0xFF161426),
+          backgroundColor: isDark ? const Color(0xFF161426) : const Color(0xFF1D1536),
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           duration: const Duration(seconds: 3),
@@ -178,30 +193,28 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
               'Sign In with Phone',
               style: TextStyle(
                 color: textPrimary,
-                fontSize: 20,
+                fontSize: 18,
                 fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
               ),
             ),
-            centerTitle: false,
           ),
           body: SafeArea(
             child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 540),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Header Badge & Title
+                      // Header Graphic
                       Container(
-                        width: 58,
-                        height: 58,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF6B42FF), Color(0xFF8B6BFF)],
+                            colors: [Color(0xFF6B42FF), Color(0xFF9060FA)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -240,11 +253,12 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                           height: 1.4,
                         ),
                       ),
+
                       const SizedBox(height: 24),
 
-                      // Steps Guide Card
+                      // Instructions Card
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
                           color: cardBg,
                           borderRadius: BorderRadius.circular(16),
@@ -353,12 +367,12 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      SizedBox(
+                                      const SizedBox(
                                         width: 52,
                                         height: 52,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 3.5,
-                                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
+                                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6B42FF)),
                                         ),
                                       ),
                                       const SizedBox(height: 18),
@@ -372,7 +386,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                       ),
                                       const SizedBox(height: 6),
                                       Text(
-                                        'Establishing end-to-end encrypted handshake',
+                                        'Binding zero-config direct LAN socket and cloud sync',
                                         style: TextStyle(
                                           color: textSecondary,
                                           fontSize: 12,
@@ -392,7 +406,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                       width: 80,
                                       height: 80,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF133226),
+                                        color: isDark ? const Color(0xFF133226) : const Color(0xFFE8F8F0),
                                         shape: BoxShape.circle,
                                         border: Border.all(color: const Color(0xFF00E676), width: 2),
                                         boxShadow: [
@@ -430,24 +444,36 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                 ),
                               ),
                             ] else ...[
-                              // Generated QR Code Presentation
+                              // Real, High-Contrast Scannable QR Code (ISO/IEC 18004 Standard)
                               Container(
-                                padding: const EdgeInsets.all(14),
+                                padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: BorderRadius.circular(16),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.15),
+                                      color: Colors.black.withValues(alpha: 0.12),
                                       blurRadius: 16,
                                       offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
-                                child: CustomPaint(
-                                  size: const Size(200, 200),
-                                  painter: _CleanQrPainter(
-                                    data: 'terovpn://auth?session=$_sessionId&secret=$_sessionSecret',
+                                child: QrImageView(
+                                  data: QrAuthSyncService.generateSessionPayload(
+                                    _sessionId,
+                                    localIp: _localIp,
+                                    port: _localPort,
+                                  ),
+                                  version: QrVersions.auto,
+                                  size: 200,
+                                  backgroundColor: Colors.white,
+                                  eyeStyle: const QrEyeStyle(
+                                    eyeShape: QrEyeShape.square,
+                                    color: Color(0xFF141122),
+                                  ),
+                                  dataModuleStyle: const QrDataModuleStyle(
+                                    dataModuleShape: QrDataModuleShape.square,
+                                    color: Color(0xFF141122),
                                   ),
                                 ),
                               ),
@@ -500,7 +526,14 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                   'Simulate Phone Scan (Instant Approval Test)',
                                   style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
                                 ),
-                                onPressed: () => _handleAuthorize('user.mobile@terovpn.net'),
+                                onPressed: () {
+                                  final mock = Account(
+                                    id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
+                                    email: 'user.mobile@terovpn.net',
+                                    name: 'Mobile Phone User',
+                                  );
+                                  _handleAuthorize(mock);
+                                },
                               ),
                             ],
                           ],
@@ -563,7 +596,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                 subtitle,
                 style: TextStyle(
                   color: textSecondary,
-                  fontSize: 11.5,
+                  fontSize: 12,
                 ),
               ),
             ],
@@ -572,107 +605,4 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
       ],
     );
   }
-}
-
-/// Custom Crisp Vector QR Painter with standard finder patterns & center shield logo
-class _CleanQrPainter extends CustomPainter {
-  final String data;
-
-  _CleanQrPainter({required this.data});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final darkPaint = Paint()..color = const Color(0xFF141122)..style = PaintingStyle.fill;
-    final primaryPaint = Paint()..color = const Color(0xFF6B42FF)..style = PaintingStyle.fill;
-    final whitePaint = Paint()..color = Colors.white..style = PaintingStyle.fill;
-
-    final cell = size.width / 21;
-
-    // Draw finder pattern helper
-    void drawFinder(double x, double y) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x, y, 7 * cell, 7 * cell), Radius.circular(cell * 1.2)),
-        darkPaint,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x + cell, y + cell, 5 * cell, 5 * cell), Radius.circular(cell * 0.8)),
-        whitePaint,
-      );
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(Rect.fromLTWH(x + 2 * cell, y + 2 * cell, 3 * cell, 3 * cell), Radius.circular(cell * 0.6)),
-        primaryPaint,
-      );
-    }
-
-    // Top-left finder
-    drawFinder(0, 0);
-    // Top-right finder
-    drawFinder(14 * cell, 0);
-    // Bottom-left finder
-    drawFinder(0, 14 * cell);
-
-    // Data matrix pseudo-hash generator based on data string
-    final hash = data.hashCode.abs();
-    final random = Random(hash);
-
-    for (int r = 0; r < 21; r++) {
-      for (int c = 0; c < 21; c++) {
-        // Skip finder areas
-        if ((r < 8 && c < 8) || (r < 8 && c >= 13) || (r >= 13 && c < 8)) continue;
-        // Skip center logo area
-        if (r >= 8 && r <= 12 && c >= 8 && c <= 12) continue;
-
-        // Timing pattern
-        if (r == 6 || c == 6) {
-          if ((r + c) % 2 == 0) {
-            canvas.drawRRect(
-              RRect.fromRectAndRadius(Rect.fromLTWH(c * cell, r * cell, cell * 0.9, cell * 0.9), Radius.circular(cell * 0.2)),
-              darkPaint,
-            );
-          }
-          continue;
-        }
-
-        // Pseudo data bits
-        if (random.nextBool()) {
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(Rect.fromLTWH(c * cell, r * cell, cell * 0.9, cell * 0.9), Radius.circular(cell * 0.2)),
-            darkPaint,
-          );
-        }
-      }
-    }
-
-    // Draw Center Logo badge
-    final centerRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2),
-      width: 5 * cell,
-      height: 5 * cell,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(centerRect, Radius.circular(cell * 1.2)),
-      whitePaint,
-    );
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(centerRect.deflate(cell * 0.3), Radius.circular(cell * 0.9)),
-      primaryPaint,
-    );
-
-    // Draw mini shield icon in center
-    final path = Path();
-    final cx = size.width / 2;
-    final cy = size.height / 2;
-    final s = cell * 1.1;
-    path.moveTo(cx, cy - s);
-    path.lineTo(cx + s, cy - s * 0.6);
-    path.lineTo(cx + s, cy + s * 0.2);
-    path.quadraticBezierTo(cx + s * 0.8, cy + s, cx, cy + s * 1.3);
-    path.quadraticBezierTo(cx - s * 0.8, cy + s, cx - s, cy + s * 0.2);
-    path.lineTo(cx - s, cy - s * 0.6);
-    path.close();
-    canvas.drawPath(path, whitePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

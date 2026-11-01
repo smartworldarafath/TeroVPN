@@ -1,7 +1,7 @@
 import 'dart:async';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/android_core.dart';
@@ -168,15 +168,26 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       return;
     }
 
-    // Extract session ID
+    // Extract session ID and optional local network endpoint
     String sessionId = 'demo_desktop_session';
     if (uri != null && uri.queryParameters.containsKey('sid')) {
       sessionId = uri.queryParameters['sid']!;
+    } else if (uri != null && uri.queryParameters.containsKey('session')) {
+      sessionId = uri.queryParameters['session']!;
     }
 
-    // 1-2s smooth authorizing simulation & sync
-    await Future.delayed(const Duration(milliseconds: 1400));
-    await QrAuthSyncService.authorizeSession(sessionId, activeAccount);
+    final ip = uri?.queryParameters['ip'];
+    final portStr = uri?.queryParameters['port'];
+    final port = portStr != null ? int.tryParse(portStr) : null;
+
+    // 1s smooth authorizing simulation & sync across LAN and global cloud relay
+    await Future.delayed(const Duration(milliseconds: 1000));
+    await QrAuthSyncService.authorizeRemoteSession(
+      sessionId: sessionId,
+      account: activeAccount,
+      ip: ip,
+      port: port,
+    );
 
     if (mounted) {
       setState(() => _isAuthorizing = false);
@@ -432,11 +443,18 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                 ),
               ],
             ),
-            child: SizedBox(
-              width: 190,
-              height: 190,
-              child: CustomPaint(
-                painter: _QrCodePainter(seed: sessionId.hashCode),
+            child: QrImageView(
+              data: QrAuthSyncService.generateSessionPayload(sessionId),
+              version: QrVersions.auto,
+              size: 190,
+              backgroundColor: Colors.white,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Color(0xFF141122),
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Color(0xFF141122),
               ),
             ),
           ),
@@ -849,94 +867,4 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       ),
     );
   }
-}
-
-/// Custom painter generating a crisp, high-tech QR code matrix with corner targets
-class _QrCodePainter extends CustomPainter {
-  final int seed;
-
-  _QrCodePainter({required this.seed});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paintDark = Paint()..color = const Color(0xFF130E26);
-    final paintAccent = Paint()..color = const Color(0xFF6B42FF);
-
-    const int gridSize = 25;
-    final cellSize = size.width / gridSize;
-
-    // Corner Finder Patterns
-    void drawFinder(double x, double y) {
-      // Outer 7x7 box
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(x * cellSize, y * cellSize, 7 * cellSize, 7 * cellSize),
-          Radius.circular(cellSize * 1.2),
-        ),
-        paintDark,
-      );
-      // Inner 5x5 cutout
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH((x + 1) * cellSize, (y + 1) * cellSize, 5 * cellSize, 5 * cellSize),
-          Radius.circular(cellSize * 0.8),
-        ),
-        Paint()..color = Colors.white,
-      );
-      // Center 3x3 dot
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH((x + 2) * cellSize, (y + 2) * cellSize, 3 * cellSize, 3 * cellSize),
-          Radius.circular(cellSize * 0.6),
-        ),
-        paintAccent,
-      );
-    }
-
-    drawFinder(0, 0);
-    drawFinder(gridSize - 7, 0);
-    drawFinder(0, gridSize - 7);
-
-    // Pseudorandom data cells derived from session seed
-    final rng = math.Random(seed);
-    for (int r = 0; r < gridSize; r++) {
-      for (int c = 0; c < gridSize; c++) {
-        // Skip corner finder regions
-        if ((r < 8 && c < 8) || (r < 8 && c >= gridSize - 8) || (r >= gridSize - 8 && c < 8)) {
-          continue;
-        }
-        // Center shield cutout
-        if (r >= 10 && r <= 14 && c >= 10 && c <= 14) {
-          continue;
-        }
-
-        if (rng.nextDouble() > 0.52) {
-          final isSpecial = (r + c) % 5 == 0;
-          canvas.drawRRect(
-            RRect.fromRectAndRadius(
-              Rect.fromLTWH(c * cellSize + 0.5, r * cellSize + 0.5, cellSize - 1, cellSize - 1),
-              Radius.circular(cellSize * 0.25),
-            ),
-            isSpecial ? paintAccent : paintDark,
-          );
-        }
-      }
-    }
-
-    // Center TeroVPN Shield Icon
-    final center = Offset(size.width / 2, size.height / 2);
-    canvas.drawCircle(center, cellSize * 2.8, Paint()..color = Colors.white);
-    canvas.drawCircle(center, cellSize * 2.4, paintAccent);
-    final textPainter = TextPainter(
-      text: const TextSpan(
-        text: '🛡️',
-        style: TextStyle(fontSize: 16),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    textPainter.paint(canvas, center - Offset(textPainter.width / 2, textPainter.height / 2));
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

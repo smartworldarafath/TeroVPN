@@ -233,7 +233,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
 
       'switch_threshold_percent': 10.0,
 
-      'version': '1.1.5',
+      'version': '1.1.7',
 
       'can_exit': true,
 
