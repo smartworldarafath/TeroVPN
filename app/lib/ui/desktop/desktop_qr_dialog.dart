@@ -40,7 +40,18 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
+    _initSessionWithLocalIp();
     _listenForAuthorization();
+  }
+
+  void _initSessionWithLocalIp() async {
+    final asyncSession = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Desktop');
+    if (mounted) {
+      setState(() {
+        _session = asyncSession;
+      });
+      _listenForAuthorization();
+    }
   }
 
   @override
@@ -53,24 +64,25 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
   void _listenForAuthorization() async {
     final account = await QrAuthSyncService.waitForAuthorization(_session.sessionId);
     if (account != null && mounted) {
-      await _executeLoginAnimation(account);
+      final session = QrAuthSyncService.getSession(_session.sessionId);
+      await _executeLoginAnimation(account, password: session?.password);
     }
   }
 
-  Future<void> _executeLoginAnimation(Account account) async {
+  Future<void> _executeLoginAnimation(Account account, {String? password}) async {
     setState(() {
       _isLoading = true;
       _loadingStep = 'Connecting to Mobile Session...';
     });
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() {
       _loadingStep = 'Transferring Fastly MASQUE Session Tokens...';
     });
 
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() {
@@ -78,15 +90,23 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
     });
 
     final email = account.email.trim();
-    String password = (account.password != null && account.password!.isNotEmpty)
-        ? account.password!
-        : (AppPreferences.getSavedAccountPassword(email) ?? '');
+    final effectivePassword = (password != null && password.isNotEmpty)
+        ? password
+        : (account.password ?? AppPreferences.getSavedAuthPassword(email) ?? '');
 
-    if (password.isEmpty && email.toLowerCase() == 'the.vertex.us@gmail.com') {
-      password = 'Google@#4048';
-      await AppPreferences.setSavedAccountPassword(email, password);
+    // 1. Immediately persist active account in AppPreferences
+    await AppPreferences.setSavedActiveAccount(account.toJson());
+    if (effectivePassword.isNotEmpty) {
+      await AppPreferences.setSavedAuthPassword(email, effectivePassword);
     }
 
+    // 2. Synthesize into controller accounts immediately
+    widget.controller.setAccounts(AccountList.fromJson({
+      'accounts': [account.toJson()],
+      'switch_threshold_percent': 10.0,
+    }));
+
+    // 3. Attempt real core activation or sign-in if password available
     bool accountActivated = false;
     try {
       final existingAccounts = widget.controller.accounts?.accounts ?? [];
@@ -104,14 +124,14 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       }
     } catch (_) {}
 
-    if (!accountActivated && password.isNotEmpty) {
+    if (!accountActivated && effectivePassword.isNotEmpty) {
       try {
-        final state = await widget.controller.startSignIn(email, password);
+        final state = await widget.controller.startSignIn(email, effectivePassword);
         if (state.step == SignInStep.done) {
           accountActivated = true;
         } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 30; i++) {
-            await Future.delayed(const Duration(milliseconds: 500));
+          for (var i = 0; i < 20; i++) {
+            await Future.delayed(const Duration(milliseconds: 300));
             try {
               final pollState = await widget.controller.signInState(state.id);
               if (pollState.step == SignInStep.done) {
@@ -126,38 +146,21 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       } catch (_) {}
     }
 
+    // 4. Ensure controller accounts stays populated
     try {
-      if (password.isNotEmpty) {
-        await AppPreferences.setSavedAccountPassword(email, password);
-      }
       if (accountActivated) {
         await widget.controller.refresh(accountsToo: true);
-        final list = widget.controller.accounts?.accounts ?? [];
-        for (final a in list) {
-          if (a.email.toLowerCase() == email.toLowerCase()) {
-            await widget.controller.activate(a);
-            await widget.controller.refreshQuota(a);
-            break;
-          }
-        }
-        await widget.controller.refresh(accountsToo: true);
-      } else {
-        final fallback = Account(
-          id: account.id,
-          email: email,
-          name: account.name,
-          password: password,
-          active: true,
-          status: 'ready',
-        );
-        widget.controller.accounts = AccountList.fromJson({
-          'accounts': [fallback.toJson()],
-          'switch_threshold_percent': 10.0,
-        });
       }
     } catch (_) {}
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    if (!widget.controller.hasAccount) {
+      widget.controller.setAccounts(AccountList.fromJson({
+        'accounts': [account.toJson()],
+        'switch_threshold_percent': 10.0,
+      }));
+    }
+
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     Navigator.of(context).pop();

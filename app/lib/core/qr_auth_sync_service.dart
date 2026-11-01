@@ -10,10 +10,11 @@ class QrPairingSession {
   final String sessionId;
   final String deviceName;
   final DateTime createdAt;
-  final String localIp;
-  final int localPort;
+  String localIp;
+  int localPort;
   bool isAuthorized;
   Account? account;
+  String? password;
 
   QrPairingSession({
     required this.sessionId,
@@ -23,6 +24,7 @@ class QrPairingSession {
     this.localPort = 0,
     this.isAuthorized = false,
     this.account,
+    this.password,
   });
 
   Map<String, dynamic> toJson() => {
@@ -33,6 +35,7 @@ class QrPairingSession {
         'localPort': localPort,
         'isAuthorized': isAuthorized,
         if (account != null) 'account': account!.toJson(),
+        if (password != null) 'password': password,
       };
 
   factory QrPairingSession.fromJson(Map<String, dynamic> json) => QrPairingSession(
@@ -43,6 +46,7 @@ class QrPairingSession {
         localPort: json['localPort'] as int? ?? 0,
         isAuthorized: json['isAuthorized'] as bool? ?? false,
         account: json['account'] != null ? Account.fromJson(json['account'] as Map<String, dynamic>) : null,
+        password: json['password'] as String?,
       );
 }
 
@@ -51,6 +55,7 @@ class QrPairingSession {
 /// Global cloud relay fallback (ntfy.sh) across mobile networks and subnets.
 class QrAuthSyncService {
   static final Map<String, QrPairingSession> _activeSessions = {};
+  static QrPairingSession? getSession(String sessionId) => _activeSessions[sessionId];
   static final Map<String, Completer<Account>> _pendingCompleters = {};
   static final Map<String, HttpServer> _activeServers = {};
   static final Map<String, Timer> _activePollTimers = {};
@@ -128,15 +133,17 @@ class QrAuthSyncService {
             final token = data['token'] as String? ?? 'auth_qr_pair';
             final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final account = Account(
-              id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-              email: email,
-              name: name,
-              password: password,
-              reasonDetail: token,
-            );
+            final account = data['account'] != null
+                ? Account.fromJson(data['account'] as Map<String, dynamic>)
+                : Account(
+                    id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
+                    email: email,
+                    name: name,
+                    password: password,
+                    reasonDetail: token,
+                  );
 
-            await authorizeSession(sid, account);
+            await authorizeSession(sid, account, password: password);
 
             request.response.statusCode = HttpStatus.ok;
             request.response.headers.contentType = ContentType.json;
@@ -183,9 +190,13 @@ class QrAuthSyncService {
     _pendingCompleters[sessionId] = Completer<Account>();
     _saveSessionToFile(session);
 
-    // Bind server in background asynchronously
+    // Bind server in background asynchronously and update IP/port
     HttpServer.bind(InternetAddress.anyIPv4, 0).then((server) async {
       _activeServers[sessionId] = server;
+      session.localPort = server.port;
+      final resolvedIp = await getLocalIpAddress();
+      session.localIp = resolvedIp;
+      _saveSessionToFile(session);
       server.listen((HttpRequest request) async {
         request.response.headers.add('Access-Control-Allow-Origin', '*');
         request.response.headers.add('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -210,15 +221,17 @@ class QrAuthSyncService {
             final token = data['token'] as String? ?? 'auth_qr_pair';
             final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final account = Account(
-              id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-              email: email,
-              name: name,
-              password: password,
-              reasonDetail: token,
-            );
+            final account = data['account'] != null
+                ? Account.fromJson(data['account'] as Map<String, dynamic>)
+                : Account(
+                    id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
+                    email: email,
+                    name: name,
+                    password: password,
+                    reasonDetail: token,
+                  );
 
-            await authorizeSession(sid, account);
+            await authorizeSession(sid, account, password: password);
 
             request.response.statusCode = HttpStatus.ok;
             request.response.headers.contentType = ContentType.json;
@@ -279,7 +292,7 @@ class QrAuthSyncService {
   /// Global cloud relay listener using ntfy.sh topic
   static void _startRelayPolling(String sessionId, Completer<Account> completer) {
     final topic = 'terovpn_auth_$sessionId';
-    final url = Uri.parse('https://ntfy.sh/$topic/json?poll=1');
+    final url = Uri.parse('https://ntfy.sh/$topic/json?poll=1&since=all');
 
     final timer = Timer.periodic(const Duration(milliseconds: 1400), (t) async {
       if (completer.isCompleted) {
@@ -307,14 +320,16 @@ class QrAuthSyncService {
 
                 if (email.isNotEmpty && !completer.isCompleted) {
                   t.cancel();
-                  final account = Account(
-                    id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-                    email: email,
-                    name: name,
-                    password: password,
-                    reasonDetail: token,
-                  );
-                  authorizeSession(sessionId, account);
+                  final account = payload['account'] != null
+                      ? Account.fromJson(payload['account'] as Map<String, dynamic>)
+                      : Account(
+                          id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
+                          email: email,
+                          name: name,
+                          password: password,
+                          reasonDetail: token,
+                        );
+                  authorizeSession(sessionId, account, password: password);
                   return;
                 }
               }
@@ -339,9 +354,7 @@ class QrAuthSyncService {
     String effectivePassword = (password != null && password.isNotEmpty)
         ? password
         : (account.password ?? AppPreferences.getSavedAccountPassword(account.email) ?? '');
-    if (effectivePassword.isEmpty && account.email.toLowerCase() == 'the.vertex.us@gmail.com') {
-      effectivePassword = 'Google@#4048';
-    }
+    
 
     final payload = {
       'sessionId': sessionId,
@@ -349,6 +362,7 @@ class QrAuthSyncService {
       'password': effectivePassword,
       'token': token ?? 'auth_qr_remote',
       'name': account.name,
+            'account': account.toJson(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
     final payloadJson = jsonEncode(payload);
@@ -379,15 +393,19 @@ class QrAuthSyncService {
       id: account.id,
       email: account.email,
       name: account.name,
-      password: effectivePassword,
+      password: effectivePassword.isNotEmpty ? effectivePassword : password,
       reasonDetail: token ?? 'auth_qr_remote',
     );
-    await authorizeSession(sessionId, localAccount);
+    await authorizeSession(sessionId, localAccount, password: localAccount.password);
     return true;
   }
 
   /// In-memory and file authorization helper
-  static Future<bool> authorizeSession(String sessionId, Account account) async {
+  static Future<bool> authorizeSession(
+    String sessionId,
+    Account account, {
+    String? password,
+  }) async {
     final session = _activeSessions[sessionId] ??
         QrPairingSession(
           sessionId: sessionId,
@@ -397,6 +415,9 @@ class QrAuthSyncService {
 
     session.isAuthorized = true;
     session.account = account;
+    if (password != null && password.isNotEmpty) {
+      session.password = password;
+    }
     _activeSessions[sessionId] = session;
 
     if (_pendingCompleters.containsKey(sessionId) &&

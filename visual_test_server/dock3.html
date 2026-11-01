@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Glassmorphic Navigation Bar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Responsive scale factor: 1 on desktop/tablet, scales down smoothly only on very small mobile screens */
+      --bar-scale: 1;
+      --spring-glide: cubic-bezier(0.25, 1.08, 0.32, 1);
+      --jelly-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --bar-scale: 0.76;
+      }
+    }
+
+    @media (max-width: 390px) {
+      :root {
+        --bar-scale: 0.66;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      /* Exact dark deep violet-black background from screenshot corners */
+      background-color: #110921;
+      background-image: 
+        radial-gradient(ellipse 680px 260px at 50% 50%, #261447 0%, #140a28 52%, #0c0519 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .scene-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: scale(var(--bar-scale));
+      transform-origin: center center;
+    }
+
+    /* Outer Purple Ambient Halo around the Pill */
+    .outer-ambient-glow {
+      position: absolute;
+      width: 492px;
+      height: 118px;
+      border-radius: 9999px;
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(96, 52, 185, 0.36) 0%,
+        rgba(64, 28, 130, 0.22) 55%,
+        transparent 78%
+      );
+      filter: blur(16px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Main Outer Pill Container - Exact 4.78 : 1 Aspect Ratio (464px x 97px) */
+    .nav-pill {
+      position: relative;
+      z-index: 10;
+      width: 464px;
+      height: 97px;
+      border-radius: 9999px;
+      /* Deep dark smoky glass base with subtle diagonal purple wave */
+      background: 
+        /* Diagonal internal purple light sweep (bottom-center to right) */
+        radial-gradient(ellipse 175px 65px at 56% 78%, rgba(74, 48, 132, 0.36) 0%, rgba(45, 28, 88, 0.14) 55%, transparent 80%),
+        /* Subtle left-bottom cool glass reflection */
+        radial-gradient(ellipse 110px 65px at 11% 68%, rgba(95, 92, 135, 0.22) 0%, transparent 72%),
+        /* Core dark obsidian-violet vertical gradient */
+        linear-gradient(180deg, #1b172a 0%, #141022 46%, #181329 76%, #231c38 100%);
+      
+      /* Multi-layered 3D thick rounded glass edge shadows & highlights */
+      box-shadow:
+        /* Deep outer drop shadow */
+        0 18px 38px -8px rgba(4, 1, 10, 0.88),
+        /* Outer purple ambient bloom */
+        0 0 28px 2px rgba(78, 38, 155, 0.28),
+        /* Crisp 1px outer glass rim */
+        0 0 0 1px rgba(195, 185, 225, 0.22),
+        /* Top continuous glass edge highlight */
+        inset 0 1.5px 2px 0 rgba(235, 230, 255, 0.28),
+        /* Top soft grey-white inner bevel */
+        inset 0 4px 8px -2px rgba(190, 185, 220, 0.16),
+        /* Bottom continuous glass rim highlight */
+        inset 0 -1.5px 2px 0 rgba(235, 230, 255, 0.26),
+        /* Bottom soft upward inner reflection */
+        inset 0 -5px 10px -2px rgba(165, 155, 205, 0.2),
+        /* Left & Right smooth curved glass wall thickness */
+        inset 8px 0 12px -6px rgba(215, 215, 245, 0.18),
+        inset -8px 0 12px -6px rgba(215, 215, 245, 0.18),
+        /* Deep inner core vignette */
+        inset 0 10px 20px -4px rgba(8, 5, 16, 0.72);
+      
+      display: grid;
+      grid-template-columns: repeat(4, 98px);
+      justify-content: center;
+      align-items: center;
+      padding: 0 36px;
+      overflow: hidden;
+    }
+
+    /* Clean, natural 1.5px specular glass border contour (no artificial corner flare blobs) */
+    .nav-pill::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      padding: 1.5px;
+      background: linear-gradient(
+        168deg,
+        rgba(255, 255, 255, 0.22) 0%,
+        rgba(200, 195, 230, 0.1) 35%,
+        rgba(200, 195, 230, 0.1) 65%,
+        rgba(255, 255, 255, 0.26) 100%
+      );
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: 6;
+    }
+
+    /* Sliding Active Indicator Assembly (98px slot width) */
+    .active-slot-slider {
+      position: absolute;
+      top: 8.5px;
+      left: 36px;
+      width: 98px;
+      height: 80px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3;
+      pointer-events: none;
+      transition: transform 0.52s var(--spring-glide);
+      will-change: transform;
+    }
+
+    /* Frosted Rounded-Square Outer Tray (92px x 80px, rx 21px) */
+    .active-tray {
+      position: relative;
+      width: 92px;
+      height: 80px;
+      border-radius: 21px;
+      background: linear-gradient(
+        180deg,
+        rgba(56, 46, 86, 0.52) 0%,
+        rgba(38, 30, 62, 0.46) 54%,
+        rgba(54, 44, 82, 0.58) 100%
+      );
+      box-shadow:
+        /* Outer shadow of the square tray on the bar */
+        0 6px 16px -2px rgba(4, 2, 12, 0.65),
+        /* Subtle 1px light border around the square tray */
+        0 0 0 1px rgba(205, 195, 235, 0.16),
+        /* Inner top highlight */
+        inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.22),
+        /* Inner bottom bright rim highlight (visible beneath "Countries" text) */
+        inset 0 -1.5px 2px 0 rgba(230, 220, 255, 0.24),
+        /* Inner bottom soft lavender glow */
+        inset 0 -8px 14px -4px rgba(135, 105, 215, 0.24);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display: flex;
+      justify-content: center;
+      padding-top: 5.5px;
+      transition: transform 0.36s var(--jelly-bounce);
+    }
+
+    /* 3D Glossy Purple Jelly Capsule (78px x 42px) */
+    .purple-capsule {
+      position: relative;
+      width: 78px;
+      height: 42px;
+      border-radius: 9999px;
+      /* Deep royal purple core with rich indigo-violet edges */
+      background: 
+        radial-gradient(ellipse 68% 62% at 50% 56%, #5623c4 0%, #3d129c 48%, #280872 82%, #1d0458 100%);
+      box-shadow:
+        /* Dark drop shadow right under the purple pill */
+        0 6px 12px -2px rgba(10, 3, 28, 0.85),
+        /* Purple bloom onto the tray */
+        0 2px 14px 1px rgba(108, 48, 225, 0.48),
+        /* Outer 1px bright violet edge */
+        0 0 0 1px rgba(175, 138, 250, 0.34),
+        /* Top crisp specular rim */
+        inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.68),
+        /* Bottom inner bright lavender reflection */
+        inset 0 -2px 3.5px 0 rgba(168, 122, 255, 0.62),
+        /* Deep 3D side curvature shading */
+        inset 8px 0 12px -5px rgba(14, 2, 44, 0.78),
+        inset -8px 0 12px -5px rgba(14, 2, 44, 0.78);
+      overflow: hidden;
+      transition: transform 0.38s var(--jelly-bounce);
+    }
+
+    /* Glossy Top-Half Glass Reflection Dome inside Purple Capsule */
+    .purple-capsule::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 7px;
+      right: 7px;
+      height: 19px;
+      border-radius: 9999px;
+      background: linear-gradient(
+        180deg,
+        rgba(245, 238, 255, 0.44) 0%,
+        rgba(195, 165, 250, 0.2) 55%,
+        rgba(145, 100, 230, 0.0) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Left & Right Inner Crescent Rim Highlights inside Purple Capsule (Exact match to photo) */
+    .purple-capsule::after {
+      content: '';
+      position: absolute;
+      inset: 2.5px;
+      border-radius: 9999px;
+      box-shadow:
+        inset 3.5px 0 4px -1.5px rgba(215, 190, 255, 0.62),
+        inset -3.5px 0 4px -1.5px rgba(215, 190, 255, 0.62);
+      pointer-events: none;
+    }
+
+    /* Subtle liquid stretch when sliding between tabs */
+    .active-slot-slider.gliding .active-tray {
+      transform: scaleX(1.045) scaleY(0.965);
+    }
+    .active-slot-slider.gliding .purple-capsule {
+      transform: scaleX(1.075) scaleY(0.93);
+    }
+
+    /* Navigation Button Item (98px wide x 80px high) */
+    .nav-item {
+      position: relative;
+      z-index: 5;
+      width: 98px;
+      height: 80px;
+      background: transparent;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* Icon Wrapper positioned at exact vertical center of the Purple Capsule */
+    .icon-wrap {
+      margin-top: 13px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.42s var(--jelly-bounce);
+    }
+
+    .nav-item:active .icon-wrap {
+      transform: scale(0.9);
+    }
+
+    .nav-item:not(.active):hover .icon-wrap {
+      transform: translateY(-1.5px);
+    }
+
+    .nav-svg {
+      width: 25px;
+      height: 25px;
+      overflow: visible;
+      transition: filter 0.35s ease, transform 0.42s var(--jelly-bounce);
+    }
+
+    .nav-item:not(.active) .nav-svg {
+      filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, 0.55));
+    }
+
+    .nav-item.active .nav-svg {
+      filter: 
+        drop-shadow(0 1.5px 3px rgba(16, 3, 48, 0.7))
+        drop-shadow(0 0 6px rgba(225, 210, 255, 0.35));
+    }
+
+    /* Smooth crossfade between inactive metallic icon and active luminous icon */
+    .icon-inactive {
+      opacity: 1;
+      transform: scale(1);
+      transform-origin: center;
+      transition: opacity 0.28s ease, transform 0.38s var(--jelly-bounce);
+    }
+
+    .icon-active {
+      opacity: 0;
+      transform: scale(0.84);
+      transform-origin: center;
+      transition: opacity 0.28s ease, transform 0.38s var(--jelly-bounce);
+    }
+
+    .nav-item.active .icon-inactive {
+      opacity: 0;
+      transform: scale(0.84);
+    }
+
+    .nav-item.active .icon-active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Text Label positioned at exact lower section of the bar */
+    .nav-text {
+      margin-top: 14px;
+      font-size: 13.5px;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      font-weight: 500;
+      color: #8f8a9e;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.35s ease;
+    }
+
+    .nav-item:not(.active):hover .nav-text {
+      color: #b5b0c4;
+    }
+
+    .nav-item.active .nav-text {
+      color: #ebe6f6;
+      text-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.75),
+        0 0 8px rgba(215, 195, 255, 0.25);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SVG Gradients & Cutout Masks -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <!-- Inactive Brushed Silver-Grey Gradient matching Home, Profiles, Settings -->
+      <linearGradient id="inactiveSilver" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#c9c5d6" />
+        <stop offset="55%" stop-color="#9e99ad" />
+        <stop offset="100%" stop-color="#807b90" />
+      </linearGradient>
+
+      <!-- Active Soft Lavender-White Gradient matching the Globe inside the Purple Pill -->
+      <linearGradient id="activeLavender" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f7f4ff" />
+        <stop offset="55%" stop-color="#dfd4f7" />
+        <stop offset="100%" stop-color="#c6b5eb" />
+      </linearGradient>
+
+      <!-- Exact Cutout Mask for the Countries Globe Icon -->
+      <mask id="exactGlobeMask">
+        <rect x="0" y="0" width="26" height="26" fill="white" />
+        <!-- North & South America dark purple negative-space landmass matching reference image -->
+        <path d="M 12.6 4.1
+                 C 10.7 4.7, 8.9 6.2, 8.8 7.9
+                 C 8.7 9.5, 11.3 10.6, 13.8 10.4
+                 C 15.1 10.3, 15.8 11.3, 15.3 12.8
+                 C 14.6 14.5, 12.2 15.8, 12.6 18.3
+                 C 12.9 19.9, 14.6 21.3, 16.8 21.1
+                 C 19.4 19.3, 21.1 16.1, 20.9 12.6
+                 C 20.4 11.1, 17.6 11.3, 17.0 9.9
+                 C 16.4 8.5, 18.3 6.9, 17.1 5.3
+                 C 15.8 4.2, 14.1 3.8, 12.6 4.1 Z" fill="black" />
+      </mask>
+    </defs>
+  </svg>
+
+  <div class="scene-wrapper">
+    <!-- Outer Purple Ambient Glow -->
+    <div class="outer-ambient-glow"></div>
+
+    <!-- Main 3D Glassmorphic Pill Bar (464px x 97px) -->
+    <nav class="nav-pill" aria-label="Primary Navigation">
+
+      <!-- Sliding Active Indicator (Starts at index 1: Countries) -->
+      <div id="activeSlider" class="active-slot-slider" style="transform: translateX(98px);">
+        <div class="active-tray">
+          <div class="purple-capsule"></div>
+        </div>
+      </div>
+
+      <!-- 1. Home -->
+      <button class="nav-item" data-index="0" aria-label="Home">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <!-- Roof overhang -->
+              <path d="M3.8 12.4L12.15 4.75C12.63 4.31 13.37 4.31 13.85 4.75L22.2 12.4" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- House walls & door -->
+              <path d="M6.6 10.3V20.0C6.6 20.66 7.14 21.2 7.8 21.2H10.9V15.4C10.9 14.85 11.35 14.4 11.9 14.4H14.1C14.65 14.4 15.1 14.85 15.1 15.4V21.2H18.2C18.86 21.2 19.4 20.66 19.4 20.0V10.3" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g class="icon-active">
+              <path d="M3.8 12.4L12.15 4.75C12.63 4.31 13.37 4.31 13.85 4.75L22.2 12.4" 
+                    stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6.6 10.3V20.0C6.6 20.66 7.14 21.2 7.8 21.2H10.9V15.4C10.9 14.85 11.35 14.4 11.9 14.4H14.1C14.65 14.4 15.1 14.85 15.1 15.4V21.2H18.2C18.86 21.2 19.4 20.66 19.4 20.0V10.3" 
+                    fill="url(#activeLavender)" fill-opacity="0.22" stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Home</span>
+      </button>
+
+      <!-- 2. Countries (Default Active) -->
+      <button class="nav-item active" data-index="1" aria-label="Countries">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <!-- Inactive Outlined Globe -->
+            <g class="icon-inactive">
+              <circle cx="13" cy="13" r="9.0" stroke="url(#inactiveSilver)" stroke-width="2.1" />
+              <path d="M12.5 4.1C10.6 4.7 8.9 6.2 8.8 7.9C8.7 9.5 11.3 10.6 13.8 10.4C15.1 10.3 15.8 11.3 15.3 12.8C14.6 14.5 12.2 15.8 12.6 18.3C12.9 19.9 14.6 21.3 16.8 21.1" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <!-- Active Solid Sculpted Globe (100% Exact match to screenshot) -->
+            <g class="icon-active">
+              <circle cx="13" cy="13" r="9.6" fill="url(#activeLavender)" mask="url(#exactGlobeMask)" />
+              <circle cx="13" cy="13" r="8.9" stroke="url(#activeLavender)" stroke-width="1.65" />
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Countries</span>
+      </button>
+
+      <!-- 3. Profiles -->
+      <button class="nav-item" data-index="2" aria-label="Profiles">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <path d="M7.6 6.2C7.6 5.26 8.36 4.5 9.3 4.5H16.7C17.64 4.5 18.4 5.26 18.4 6.2V20.6C18.4 21.3 17.62 21.72 17.03 21.35L13.45 19.12C13.17 18.95 12.83 18.95 12.55 19.12L8.97 21.35C8.38 21.72 7.6 21.3 7.6 20.6V6.2Z" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g class="icon-active">
+              <path d="M7.6 6.2C7.6 5.26 8.36 4.5 9.3 4.5H16.7C17.64 4.5 18.4 5.26 18.4 6.2V20.6C18.4 21.3 17.62 21.72 17.03 21.35L13.45 19.12C13.17 18.95 12.83 18.95 12.55 19.12L8.97 21.35C8.38 21.72 7.6 21.3 7.6 20.6V6.2Z" 
+                    fill="url(#activeLavender)" fill-opacity="0.24" stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Profiles</span>
+      </button>
+
+      <!-- 4. Settings -->
+      <button class="nav-item" data-index="3" aria-label="Settings">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <path d="M11.45 3.6H14.55L15.05 5.75C15.65 5.97 16.2 6.3 16.7 6.72L18.8 6.0L21.0 8.2L20.28 10.3C20.7 10.8 21.03 11.35 21.25 11.95L23.4 12.45V15.55L21.25 16.05C21.03 16.65 20.7 17.2 20.28 17.7L21.0 19.8L18.8 22.0L16.7 21.28C16.2 21.7 15.65 22.03 15.05 22.25L14.55 24.4H11.45L10.95 22.25C10.35 22.03 9.8 21.7 9.3 21.28L7.2 22.0L5.0 19.8L5.72 17.7C5.3 17.2 4.97 16.65 4.75 16.05L2.6 15.55V12.45L4.75 11.95C4.97 11.35 5.3 10.8 5.72 10.3L5.0 8.2L7.2 6.0L9.3 6.72C9.8 6.3 10.35 5.97 10.95 5.75L11.45 3.6Z" 
+                    stroke="url(#inactiveSilver)" stroke-width="1.95" stroke-linejoin="round" transform="translate(0, -1)"/>
+              <circle cx="13" cy="13" r="3.15" stroke="url(#inactiveSilver)" stroke-width="2.05"/>
+            </g>
+            <g class="icon-active">
+              <path d="M11.45 3.6H14.55L15.05 5.75C15.65 5.97 16.2 6.3 16.7 6.72L18.8 6.0L21.0 8.2L20.28 10.3C20.7 10.8 21.03 11.35 21.25 11.95L23.4 12.45V15.55L21.25 16.05C21.03 16.65 20.7 17.2 20.28 17.7L21.0 19.8L18.8 22.0L16.7 21.28C16.2 21.7 15.65 22.03 15.05 22.25L14.55 24.4H11.45L10.95 22.25C10.35 22.03 9.8 21.7 9.3 21.28L7.2 22.0L5.0 19.8L5.72 17.7C5.3 17.2 4.97 16.65 4.75 16.05L2.6 15.55V12.45L4.75 11.95C4.97 11.35 5.3 10.8 5.72 10.3L5.0 8.2L7.2 6.0L9.3 6.72C9.8 6.3 10.35 5.97 10.95 5.75L11.45 3.6Z" 
+                    fill="url(#activeLavender)" fill-opacity="0.22" stroke="url(#activeLavender)" stroke-width="2.05" stroke-linejoin="round" transform="translate(0, -1)"/>
+              <circle cx="13" cy="13" r="3.15" stroke="url(#activeLavender)" stroke-width="2.15"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Settings</span>
+      </button>
+
+    </nav>
+  </div>
+
+  <script>
+    const navItems = document.querySelectorAll('.nav-item');
+    const activeSlider = document.getElementById('activeSlider');
+    const SLOT_WIDTH = 98; // Exact pixel width per tab slot
+    let currentTab = 1;
+    let glideTimer = null;
+
+    function selectTab(index) {
+      if (index === currentTab) return;
+      currentTab = index;
+
+      navItems.forEach((item, i) => {
+        item.classList.toggle('active', i === index);
+      });
+
+      // Add smooth liquid stretch during movement
+      activeSlider.classList.add('gliding');
+      clearTimeout(glideTimer);
+      glideTimer = setTimeout(() => {
+        activeSlider.classList.remove('gliding');
+      }, 280);
+
+      // Translate by exact slot pixel width (98px * index)
+      activeSlider.style.transform = `translateX(${index * SLOT_WIDTH}px)`;
+    }
+
+    navItems.forEach((item) => {
+      item.addEventListener('click', () => {
+        const index = parseInt(item.getAttribute('data-index'), 10);
+        selectTab(index);
+      });
+    });
+
+    // Keyboard Left/Right Arrow support
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        selectTab((currentTab + 1) % navItems.length);
+      } else if (e.key === 'ArrowLeft') {
+        selectTab((currentTab - 1 + navItems.length) % navItems.length);
+      }
+    });
+  </script>
+</body>
+</html>

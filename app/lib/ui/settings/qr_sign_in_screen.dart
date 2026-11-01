@@ -111,10 +111,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
         ? account.password!
         : (AppPreferences.getSavedAccountPassword(email) ?? '');
 
-    if (password.isEmpty && email.toLowerCase() == 'the.vertex.us@gmail.com') {
-      password = 'Google@#4048';
-      await AppPreferences.setSavedAccountPassword(email, password);
-    }
+    
 
     bool accountActivated = false;
     try {
@@ -242,12 +239,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     final portStr = uri?.queryParameters['port'];
     final port = portStr != null ? int.tryParse(portStr) : null;
 
-    String? password = AppPreferences.getSavedAccountPassword(activeAccount.email);
-    if ((password == null || password.isEmpty) && activeAccount.email.toLowerCase() == 'the.vertex.us@gmail.com') {
-      password = 'Google@#4048';
-      await AppPreferences.setSavedAccountPassword(activeAccount.email, password);
-    }
-
+    String? password = AppPreferences.getSavedAuthPassword(activeAccount.email);
     if (password == null || password.isEmpty) {
       if (mounted) {
         setState(() => _isAuthorizing = false);
@@ -255,19 +247,19 @@ class _QrSignInScreenState extends State<QrSignInScreen>
         if (password == null || password.isEmpty) {
           return;
         }
-        await AppPreferences.setSavedAccountPassword(activeAccount.email, password);
+        await AppPreferences.setSavedAuthPassword(activeAccount.email, password);
         setState(() => _isAuthorizing = true);
       }
     }
 
     // Smooth authorizing simulation & sync across LAN and global cloud relay
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 800));
     await QrAuthSyncService.authorizeRemoteSession(
       sessionId: sessionId,
       account: activeAccount,
-      password: password,
       ip: ip,
       port: port,
+      password: password,
     );
 
     if (mounted) {

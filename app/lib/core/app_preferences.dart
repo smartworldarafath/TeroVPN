@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
@@ -273,19 +274,42 @@ class AppPreferences {
     await setCustomProfiles(list);
   }
 
-  // Saved Account Passwords for seamless cross-device QR authorization
-  static String? getSavedAccountPassword(String email) {
-    final cleanEmail = email.trim().toLowerCase();
-    final stored = _prefs?.getString('pwd_$cleanEmail');
-    if (stored != null && stored.isNotEmpty) return stored;
-    if (cleanEmail == 'the.vertex.us@gmail.com') {
-      return 'Google@#4048';
+  // Cross-device pairing & active account persistence
+  static const _keySavedActiveAccount = 'saved_active_account_json';
+  static const _keySavedAuthPassword = 'saved_auth_password_';
+
+  static Map<String, dynamic>? get savedActiveAccount {
+    final raw = _prefs?.getString(_keySavedActiveAccount);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
     }
-    return null;
   }
 
-  static Future<void> setSavedAccountPassword(String email, String password) async {
-    final cleanEmail = email.trim().toLowerCase();
+  static Future<void> setSavedActiveAccount(Map<String, dynamic> accountJson) async {
+    await _prefs?.setString(_keySavedActiveAccount, jsonEncode(accountJson));
+  }
+
+  static Future<void> clearSavedActiveAccount() async {
+    await _prefs?.remove(_keySavedActiveAccount);
+  }
+
+  static String? getSavedAuthPassword(String email) {
+    if (email.isEmpty) return null;
+    final cleanEmail = email.toLowerCase().trim();
+    return _prefs?.getString('$_keySavedAuthPassword$cleanEmail') ??
+        _prefs?.getString('pwd_$cleanEmail');
+  }
+
+  static Future<void> setSavedAuthPassword(String email, String password) async {
+    if (email.isEmpty || password.isEmpty) return;
+    final cleanEmail = email.toLowerCase().trim();
+    await _prefs?.setString('$_keySavedAuthPassword$cleanEmail', password);
     await _prefs?.setString('pwd_$cleanEmail', password);
   }
+
+  static String? getSavedAccountPassword(String email) => getSavedAuthPassword(email);
+  static Future<void> setSavedAccountPassword(String email, String password) => setSavedAuthPassword(email, password);
 }

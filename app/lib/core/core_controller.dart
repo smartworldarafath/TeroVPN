@@ -20,7 +20,15 @@ class CoreController extends ChangeNotifier {
     this.retryStoppedCore,
     this.turnOn,
     this.tunService,
-  });
+  }) {
+    final saved = AppPreferences.savedActiveAccount;
+    if (saved != null) {
+      accounts = AccountList.fromJson({
+        'accounts': [saved],
+        'switch_threshold_percent': 10.0,
+      });
+    }
+  }
 
   /// Installs and removes the TUN mode's service (Windows); null elsewhere.
   final TunService? tunService;
@@ -82,6 +90,12 @@ class CoreController extends ChangeNotifier {
 
   /// Whether at least one user account exists.
   bool get hasAccount => (accounts?.accounts.isNotEmpty == true);
+
+  /// Explicitly sets accounts and notifies UI (e.g. on QR synchronization).
+  void setAccounts(AccountList list) {
+    accounts = list;
+    notifyListeners();
+  }
 
   /// Currently active account.
   Account? get activeAccount =>
@@ -167,7 +181,26 @@ class CoreController extends ChangeNotifier {
           next.lastTest!.at!.isAfter(_test!.at!)) {
         _test = null;
       }
-      if (readAccounts) accounts = await api.accounts();
+      if (readAccounts) {
+        final fetched = await api.accounts();
+        if (fetched.accounts.isNotEmpty) {
+          accounts = fetched;
+          final active = fetched.accounts.where((a) => a.active).firstOrNull ?? fetched.accounts.firstOrNull;
+          if (active != null) {
+            AppPreferences.setSavedActiveAccount(active.toJson());
+          }
+        } else {
+          final saved = AppPreferences.savedActiveAccount;
+          if (saved != null) {
+            accounts = AccountList.fromJson({
+              'accounts': [saved],
+              'switch_threshold_percent': 10.0,
+            });
+          } else {
+            accounts = fetched;
+          }
+        }
+      }
       unavailable = null;
       _failures = 0;
     } on CoreUnavailable catch (e) {
@@ -551,7 +584,10 @@ class CoreController extends ChangeNotifier {
       _account(a.id, () => _require().refreshAccount(a.id));
 
   Future<void> remove(Account a) =>
-      _account(a.id, () => _require().removeAccount(a.id));
+      _account(a.id, () async {
+        await AppPreferences.clearSavedActiveAccount();
+        await _require().removeAccount(a.id);
+      });
 
   /// Moves [a] by [delta] places in the priority order.
   Future<void> move(Account a, int delta) {

@@ -313,29 +313,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun setDynamicAppIcon(mode: String) {
-        try {
-            val pm = packageManager
-            val defaultAlias = ComponentName(this, "com.terovpn.android.MainActivityDefault")
-            val lightAlias = ComponentName(this, "com.terovpn.android.MainActivityLight")
-            val darkAlias = ComponentName(this, "com.terovpn.android.MainActivityDark")
-
-            val targetAlias = when (mode.lowercase()) {
-                "light" -> lightAlias
-                "dark" -> darkAlias
-                else -> defaultAlias
-            }
-
-            val aliases = listOf(defaultAlias, lightAlias, darkAlias)
-            for (alias in aliases) {
-                val state = if (alias == targetAlias) {
-                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                } else {
-                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-                }
-                pm.setComponentEnabledSetting(alias, state, PackageManager.DONT_KILL_APP)
-            }
-        } catch (_: Throwable) {
-        }
+        // Dynamic switching removed as requested: always use original Light Mode app icon
     }
 
     private val worker = Executors.newSingleThreadExecutor()

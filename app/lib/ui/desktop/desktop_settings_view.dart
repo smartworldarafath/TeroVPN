@@ -15,6 +15,7 @@ import '../settings/account_management_screen.dart';
 import '../settings/split_tunneling_screen.dart';
 
 import '../settings/theme_settings_screen.dart';
+import '../settings/appearance_settings_screen.dart';
 
 import '../settings/app_update_screen.dart';
 
@@ -950,35 +951,42 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
 
 
               // ADVANCED Section
-
-              _buildSectionHeader('ADVANCED'),
-
+              // THEME & APPEARANCE Section
+              _buildSectionHeader('THEME & APPEARANCE'),
               const SizedBox(height: 8),
-
               _buildCardContainer([
-
                 _buildActionRow(
-
                   icon: Icons.palette_outlined,
-
                   title: 'Theme',
-
                   subtitle: ThemeManager.instance.currentTheme,
-
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D), size: 20),
-
                   onTap: () {
-
                     Navigator.of(context).push(
-
                       MaterialPageRoute(builder: (_) => const ThemeSettingsScreen()),
-
                     );
-
                   },
-
                 ),
+                _buildDivider(),
+                _buildActionRow(
+                  icon: Icons.auto_awesome_mosaic_rounded,
+                  title: 'Appearance',
+                  subtitle: (AppPreferences.selectedDockStyle == 'old_system' || AppPreferences.selectedDockStyle == 'proton')
+                      ? 'App Dock: Old system dock'
+                      : 'App Dock: Liquid Dock G1',
+                  trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D), size: 20),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
+                    );
+                  },
+                ),
+              ]),
+              const SizedBox(height: 24),
 
+              // ADVANCED Section
+              _buildSectionHeader('ADVANCED'),
+              const SizedBox(height: 8),
+              _buildCardContainer([
                 _buildDivider(),
 
                 _buildSwitchRow(

@@ -14,11 +14,8 @@ void main() {
 
   group('v1.1.8 QR Authorization & Account Credential Sync Tests', () {
     test('AppPreferences stores and retrieves account credentials', () async {
-      // Default fallback for test account
-      expect(
-        AppPreferences.getSavedAccountPassword('the.vertex.us@gmail.com'),
-        'Google@#4048',
-      );
+      await AppPreferences.setSavedAccountPassword('mock.user@example.com', 'DUMMY_MOCK_PASSWORD_123');
+      expect(AppPreferences.getSavedAccountPassword('mock.user@example.com'), 'DUMMY_MOCK_PASSWORD_123');
 
       // Custom account saving
       await AppPreferences.setSavedAccountPassword('test.user@custom.com', 'SecretPass#99');
@@ -31,18 +28,18 @@ void main() {
     test('Account model serializes and deserializes password field cleanly', () {
       final acc = Account(
         id: 'acc_123',
-        email: 'the.vertex.us@gmail.com',
+        email: 'mock.user@example.com',
         name: 'Vertex',
-        password: 'Google@#4048',
+        password: 'DUMMY_MOCK_PASSWORD_123',
       );
 
       final json = acc.toJson();
-      expect(json['email'], 'the.vertex.us@gmail.com');
-      expect(json['password'], 'Google@#4048');
+      expect(json['email'], 'mock.user@example.com');
+      expect(json['password'], 'DUMMY_MOCK_PASSWORD_123');
 
       final restored = Account.fromJson(json);
-      expect(restored.email, 'the.vertex.us@gmail.com');
-      expect(restored.password, 'Google@#4048');
+      expect(restored.email, 'mock.user@example.com');
+      expect(restored.password, 'DUMMY_MOCK_PASSWORD_123');
     });
 
     test('Full cross-device simulated phone scan transmits real account credentials to desktop', () async {
@@ -72,15 +69,15 @@ void main() {
       // 4. Phone initiates remote authorization with active account and password
       final phoneAccount = Account(
         id: 'mobile_acc_101',
-        email: 'the.vertex.us@gmail.com',
+        email: 'mock.user@example.com',
         name: 'the.vertex.us',
-        password: 'Google@#4048',
+        password: 'DUMMY_MOCK_PASSWORD_123',
       );
 
       final authorized = await QrAuthSyncService.authorizeRemoteSession(
         sessionId: sid,
         account: phoneAccount,
-        password: 'Google@#4048',
+        password: 'DUMMY_MOCK_PASSWORD_123',
         ip: ip,
         port: port,
       );
@@ -89,8 +86,8 @@ void main() {
       // 5. Desktop receives the authorized account with password
       final receivedAccount = await desktopAuthFuture;
       expect(receivedAccount, isNotNull);
-      expect(receivedAccount!.email, 'the.vertex.us@gmail.com');
-      expect(receivedAccount.password, 'Google@#4048');
+      expect(receivedAccount!.email, 'mock.user@example.com');
+      expect(receivedAccount.password, 'DUMMY_MOCK_PASSWORD_123');
 
       QrAuthSyncService.cancelSession(session.sessionId);
     });

@@ -117,10 +117,7 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
         ? account.password!
         : (AppPreferences.getSavedAccountPassword(email) ?? '');
 
-    if (password.isEmpty && email.toLowerCase() == 'the.vertex.us@gmail.com') {
-      password = 'Google@#4048';
-      await AppPreferences.setSavedAccountPassword(email, password);
-    }
+    
 
     // 1. Check if the account is already registered in the core
     bool accountActivated = false;
@@ -597,9 +594,9 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                 onPressed: () {
                                   final mock = Account(
                                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-                                    email: 'the.vertex.us@gmail.com',
-                                    name: 'the.vertex.us',
-                                    password: 'Google@#4048',
+                                    email: 'tester@example.com',
+                                    name: 'tester',
+                                    password: 'TEST_PLACEHOLDER_PASSWORD',
                                   );
                                   _handleAuthorize(mock);
                                 },

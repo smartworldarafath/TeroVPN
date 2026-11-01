@@ -3,6 +3,7 @@ import '../components/liquid_glass_atmosphere.dart';
 import '../components/top_dock_toast.dart';
 import '../../core/app_preferences.dart';
 import 'package:flutter/material.dart';
+import 'appearance_settings_screen.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
@@ -215,7 +216,74 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
                     ),
                   ),
                 ),
+                
                 const SizedBox(height: 32),
+
+                // 4. APPEARANCE
+                Text(
+                  'APPEARANCE',
+                  style: TextStyle(
+                    color: secondaryColor,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                LiquidGlassCard(
+                  radius: 20,
+                  padding: const EdgeInsets.all(18),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6B42FF).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: const Icon(Icons.dock_rounded, color: Color(0xFFA855F7), size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'App Dock',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: textColor,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                (AppPreferences.selectedDockStyle == 'old_system' || AppPreferences.selectedDockStyle == 'proton')
+                                    ? 'Old system dock'
+                                    : 'Liquid Dock G1 (Default)',
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  color: secondaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: secondaryColor),
+                      ],
+                    ),
+                  ),
+                ),
+const SizedBox(height: 32),
               ],
             ),
           ),
