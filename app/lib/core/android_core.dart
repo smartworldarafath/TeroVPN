@@ -145,6 +145,36 @@ class AndroidCore {
     } catch (_) {}
   }
 
+  /// Displays a real Android system notification in the notification bar
+  static Future<bool> showNotification({
+    required String title,
+    required String message,
+    bool isUpdateReady = false,
+    String? apkPath,
+  }) async {
+    try {
+      final res = await _channel.invokeMethod<bool>('showNotification', {
+        'title': title,
+        'message': message,
+        'isUpdateReady': isUpdateReady,
+        'apkPath': apkPath,
+      });
+      return res ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Gets exact hardware camera cutout metrics from Android WindowInsets
+  static Future<Map<String, dynamic>> getCutoutInfo() async {
+    try {
+      final res = await _channel.invokeMapMethod<String, dynamic>('getCutoutInfo');
+      return res ?? {};
+    } catch (_) {
+      return {};
+    }
+  }
+
   /// Triggers native Android PackageInstaller to install an APK file.
   static Future<bool> installApk(String filePath) async {
     try {

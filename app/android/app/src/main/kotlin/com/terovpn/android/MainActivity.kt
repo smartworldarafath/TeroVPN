@@ -33,7 +33,25 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         holdPhoneUpright(resources.configuration)
+        setupCutoutAndEdgeToEdge()
         super.onCreate(savedInstanceState)
+    }
+
+    /**
+     * Fixes screen cropping at camera cutout and ensures edge-to-edge drawing.
+     * Prevents artificial top padding so toast notifications align with real camera cutouts.
+     */
+    private fun setupCutoutAndEdgeToEdge() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                val params = window.attributes
+                params.layoutInDisplayCutoutMode =
+                    android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                window.attributes = params
+            }
+            androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        } catch (_: Throwable) {
+        }
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -132,6 +150,15 @@ class MainActivity : FlutterActivity() {
                         result.error("not_found", "APK file does not exist", null)
                     } else {
                         try {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                if (!packageManager.canRequestPackageInstalls()) {
+                                    val manageIntent = Intent(android.provider.Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                        data = Uri.parse("package:$packageName")
+                                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                    }
+                                    startActivity(manageIntent)
+                                }
+                            }
                             val uri = androidx.core.content.FileProvider.getUriForFile(
                                 this,
                                 "$packageName.fileprovider",
@@ -201,6 +228,34 @@ class MainActivity : FlutterActivity() {
                     )
                     if (call.argument<Boolean>("apply") == true) CoreService.reconnect(this)
                     result.success(null)
+                }
+                "showNotification" -> {
+                    val title = call.argument<String>("title") ?: "TeroVPN Update"
+                    val message = call.argument<String>("message") ?: ""
+                    val isReady = call.argument<Boolean>("isUpdateReady") ?: false
+                    val apkPath = call.argument<String>("apkPath")
+                    showSystemNotification(title, message, isReady, apkPath)
+                    result.success(true)
+                }
+                "getCutoutInfo" -> {
+                    val info = mutableMapOf<String, Any>()
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        val cutout = window.decorView.rootWindowInsets?.displayCutout
+                        if (cutout != null) {
+                            val rects = cutout.boundingRects
+                            if (rects.isNotEmpty()) {
+                                val r = rects[0]
+                                info["hasCutout"] = true
+                                info["left"] = r.left
+                                info["top"] = r.top
+                                info["right"] = r.right
+                                info["bottom"] = r.bottom
+                                info["centerX"] = r.exactCenterX().toDouble()
+                                info["centerY"] = r.exactCenterY().toDouble()
+                            }
+                        }
+                    }
+                    result.success(info)
                 }
                 "abi" -> result.success(Build.SUPPORTED_ABIS.firstOrNull() ?: "")
                 "openUrl" -> {
@@ -289,6 +344,78 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val VPN_REQUEST = 7
+        private const val UPDATE_CHANNEL_ID = "terovpn_updates"
+        private const val UPDATE_NOTIFICATION_ID = 1002
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                UPDATE_CHANNEL_ID,
+                "TeroVPN Updates",
+                android.app.NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for new TeroVPN releases and auto-updates"
+                enableLights(true)
+                lightColor = android.graphics.Color.parseColor("#6B42FF")
+                enableVibration(true)
+            }
+            val manager = getSystemService(android.app.NotificationManager::class.java)
+            manager?.createNotificationChannel(channel)
+        }
+    }
+
+    private fun showSystemNotification(title: String, message: String, isUpdateReady: Boolean, apkPath: String?) {
+        try {
+            createNotificationChannel()
+            val notifyManager = androidx.core.app.NotificationManagerCompat.from(this)
+
+            val intent = if (isUpdateReady && !apkPath.isNullOrEmpty()) {
+                val file = java.io.File(apkPath)
+                if (file.exists()) {
+                    val uri = androidx.core.content.FileProvider.getUriForFile(
+                        this,
+                        "$packageName.fileprovider",
+                        file
+                    )
+                    Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, "application/vnd.android.package-archive")
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    }
+                } else {
+                    Intent(this, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
+                }
+            } else {
+                Intent(this, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+            }
+
+            val pendingIntent = android.app.PendingIntent.getActivity(
+                this,
+                0,
+                intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) android.app.PendingIntent.FLAG_IMMUTABLE else 0)
+            )
+
+            val builder = androidx.core.app.NotificationCompat.Builder(this, UPDATE_CHANNEL_ID)
+                .setSmallIcon(R.drawable.ic_stat_logo)
+                .setContentTitle(title)
+                .setContentText(message)
+                .setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(message))
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            ) {
+                notifyManager.notify(UPDATE_NOTIFICATION_ID, builder.build())
+            }
+        } catch (_: Throwable) {
+        }
     }
 
     private fun askForNotifications() {

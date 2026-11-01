@@ -72,7 +72,7 @@ class TopDockToast {
     for (final feature in mediaQuery.displayFeatures) {
       if (feature.type == ui.DisplayFeatureType.cutout) {
         final centerDx = feature.bounds.center.dx;
-        if ((centerDx - screenWidth / 2).abs() < 45) {
+        if ((centerDx - screenWidth / 2).abs() < 55) {
           return ToastAnimationMode.dynamicIsland;
         } else {
           return ToastAnimationMode.cornerPunchHole;
@@ -82,7 +82,7 @@ class TopDockToast {
 
     // Default to dynamic island if tall status bar (standard on punch-hole devices),
     // otherwise water droplet if no notch/cutout or classic aspect
-    if (topInset >= 36) {
+    if (topInset >= 34) {
       return ToastAnimationMode.dynamicIsland;
     }
     return ToastAnimationMode.waterDroplet;
@@ -169,15 +169,32 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
     final screenWidth = mediaQuery.size.width;
     final screenHeight = mediaQuery.size.height;
 
-    final isDark = ThemeManager.instance.isDarkMode;
-    final isLiquid = ThemeManager.instance.isLiquidGlass;
+    // User requirement 6:
+    // When app is in Light Mode -> Toast shows in Dark Mode.
+    // When app is in Dark Mode -> Toast shows in Light Mode.
+    final appIsDark = ThemeManager.instance.isDarkMode;
+    final toastIsDark = !appIsDark;
 
-    final textPrimary = isDark ? Colors.white : const Color(0xFF161224);
-    final textSecondary = isDark
-        ? Colors.white.withValues(alpha: 0.70)
+    final textPrimary = toastIsDark ? Colors.white : const Color(0xFF161224);
+    final textSecondary = toastIsDark
+        ? Colors.white.withValues(alpha: 0.72)
         : const Color(0xFF5E5873);
-    final defaultIconColor =
-        widget.iconColor ?? (isDark ? const Color(0xFF00E676) : const Color(0xFF00A36C));
+    final defaultIconColor = widget.iconColor ??
+        (toastIsDark ? const Color(0xFF00E676) : const Color(0xFF00A36C));
+
+    // Detect exact cutout coordinates from display features
+    double cutoutCenterX = screenWidth / 2;
+    double cutoutCenterY = topInset > 0 ? (topInset * 0.45) : 14.0;
+    bool foundCutout = false;
+
+    for (final feature in mediaQuery.displayFeatures) {
+      if (feature.type == ui.DisplayFeatureType.cutout) {
+        cutoutCenterX = feature.bounds.center.dx;
+        cutoutCenterY = feature.bounds.center.dy;
+        foundCutout = true;
+        break;
+      }
+    }
 
     return AnimatedBuilder(
       animation: _animController,
@@ -187,7 +204,11 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
         // Target geometry for the dock pill
         const double targetWidth = 320.0;
         const double targetHeight = 52.0;
-        final double finalWidth = targetWidth.clamp(260.0, screenWidth - 32);
+        final double finalWidth = targetWidth.clamp(260.0, screenWidth - 28);
+        final double finalX = (screenWidth - finalWidth) / 2;
+
+        // Snug resting Y directly wrapping or right below camera cutout
+        final double restingY = topInset > 0 ? (topInset * 0.20).clamp(6.0, 18.0) : 8.0;
 
         double currentWidth;
         double currentHeight;
@@ -198,44 +219,45 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
         switch (widget.mode) {
           case ToastAnimationMode.dynamicIsland:
             // Expands directly out of center camera cutout
-            final centerCutoutX = screenWidth / 2;
-            final centerCutoutY = topInset > 0 ? (topInset * 0.45) : 12.0;
+            final startX = cutoutCenterX - 12.0;
+            final startY = cutoutCenterY - 8.0;
 
             if (!_isExiting) {
               // Morph from camera notch pill
               currentWidth = ui.lerpDouble(24.0, finalWidth, progress)!;
-              currentHeight = ui.lerpDouble(14.0, targetHeight, progress)!;
-              final currentY = ui.lerpDouble(centerCutoutY, topInset + 10.0, progress)!;
-              currentOffset = Offset(centerCutoutX - (currentWidth / 2), currentY);
+              currentHeight = ui.lerpDouble(16.0, targetHeight, progress)!;
+              final currentX = ui.lerpDouble(startX, finalX, progress)!;
+              final currentY = ui.lerpDouble(startY, restingY, progress)!;
+              currentOffset = Offset(currentX, currentY);
             } else {
               // Contract back into center camera notch
               final exitT = _animController.value;
               currentWidth = ui.lerpDouble(24.0, finalWidth, exitT)!;
-              currentHeight = ui.lerpDouble(14.0, targetHeight, exitT)!;
-              final currentY = ui.lerpDouble(centerCutoutY, topInset + 10.0, exitT)!;
-              currentOffset = Offset(centerCutoutX - (currentWidth / 2), currentY);
+              currentHeight = ui.lerpDouble(16.0, targetHeight, exitT)!;
+              final currentX = ui.lerpDouble(startX, finalX, exitT)!;
+              final currentY = ui.lerpDouble(startY, restingY, exitT)!;
+              currentOffset = Offset(currentX, currentY);
               opacity = exitT.clamp(0.0, 1.0);
             }
             break;
 
           case ToastAnimationMode.cornerPunchHole:
-            // Expands from corner camera position (typically top-left ~36px from left)
-            const cornerCutoutX = 36.0;
-            final cornerCutoutY = topInset > 0 ? (topInset * 0.45) : 12.0;
-            final targetX = (screenWidth - finalWidth) / 2;
+            // Expands from corner camera position
+            final startX = foundCutout ? (cutoutCenterX - 10.0) : 32.0;
+            final startY = foundCutout ? (cutoutCenterY - 10.0) : (topInset > 0 ? (topInset * 0.45) : 14.0);
 
             if (!_isExiting) {
-              currentWidth = ui.lerpDouble(18.0, finalWidth, progress)!;
-              currentHeight = ui.lerpDouble(18.0, targetHeight, progress)!;
-              final currentX = ui.lerpDouble(cornerCutoutX, targetX, progress)!;
-              final currentY = ui.lerpDouble(cornerCutoutY, topInset + 10.0, progress)!;
+              currentWidth = ui.lerpDouble(20.0, finalWidth, progress)!;
+              currentHeight = ui.lerpDouble(20.0, targetHeight, progress)!;
+              final currentX = ui.lerpDouble(startX, finalX, progress)!;
+              final currentY = ui.lerpDouble(startY, restingY, progress)!;
               currentOffset = Offset(currentX, currentY);
             } else {
               final exitT = _animController.value;
-              currentWidth = ui.lerpDouble(18.0, finalWidth, exitT)!;
-              currentHeight = ui.lerpDouble(18.0, targetHeight, exitT)!;
-              final currentX = ui.lerpDouble(cornerCutoutX, targetX, exitT)!;
-              final currentY = ui.lerpDouble(cornerCutoutY, topInset + 10.0, exitT)!;
+              currentWidth = ui.lerpDouble(20.0, finalWidth, exitT)!;
+              currentHeight = ui.lerpDouble(20.0, targetHeight, exitT)!;
+              final currentX = ui.lerpDouble(startX, finalX, exitT)!;
+              final currentY = ui.lerpDouble(startY, restingY, exitT)!;
               currentOffset = Offset(currentX, currentY);
               opacity = exitT.clamp(0.0, 1.0);
             }
@@ -247,21 +269,19 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
             // Emerges from top like a liquid water droplet, hangs for 2.5s, then falls towards bottom
             currentWidth = finalWidth;
             currentHeight = targetHeight;
-            final targetX = (screenWidth - finalWidth) / 2;
+            final dropRestingY = topInset > 0 ? (topInset + 8.0) : 14.0;
 
             if (!_isExiting) {
               // Dropping down from very top
-              final startY = -60.0;
-              final endY = topInset + 12.0;
-              final currentY = ui.lerpDouble(startY, endY, progress)!;
-              currentOffset = Offset(targetX, currentY);
+              const startY = -60.0;
+              final currentY = ui.lerpDouble(startY, dropRestingY, progress)!;
+              currentOffset = Offset(finalX, currentY);
             } else {
               // User requirement: "falls towards the bottom of the screen like a water droplet and disappear"
-              final startY = topInset + 12.0;
               final dropDistance = screenHeight * 0.55;
               final exitFallProgress = (1.0 - _animController.value); // 0 to 1
-              final currentY = startY + (dropDistance * exitFallProgress * exitFallProgress);
-              currentOffset = Offset(targetX, currentY);
+              final currentY = dropRestingY + (dropDistance * exitFallProgress * exitFallProgress);
+              currentOffset = Offset(finalX, currentY);
               opacity = (1.0 - exitFallProgress).clamp(0.0, 1.0);
               borderRadius = ui.lerpDouble(26.0, 36.0, exitFallProgress)!;
             }
@@ -270,39 +290,41 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
 
         final showContent = progress > 0.45;
 
-        return Positioned(
-          left: currentOffset.dx,
-          top: currentOffset.dy,
-          width: currentWidth,
-          height: currentHeight,
-          child: Opacity(
-            opacity: opacity.clamp(0.0, 1.0),
-            child: Material(
+        return Align(
+          alignment: Alignment.topLeft,
+          child: Transform.translate(
+            offset: currentOffset,
+            child: SizedBox(
+              width: currentWidth,
+              height: currentHeight,
+              child: Opacity(
+                opacity: opacity.clamp(0.0, 1.0),
+                child: Material(
               color: Colors.transparent,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(borderRadius),
                 child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? const Color(0xFF181427).withValues(alpha: isLiquid ? 0.88 : 0.96)
-                          : Colors.white.withValues(alpha: isLiquid ? 0.92 : 0.98),
+                      color: toastIsDark
+                          ? const Color(0xFF140F27).withValues(alpha: 0.94)
+                          : Colors.white.withValues(alpha: 0.96),
                       borderRadius: BorderRadius.circular(borderRadius),
                       border: Border.all(
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.16)
+                        color: toastIsDark
+                            ? const Color(0xFF6B42FF).withValues(alpha: 0.40)
                             : Colors.white.withValues(alpha: 0.95),
                         width: 1.2,
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: isDark
-                              ? const Color(0xFF6B42FF).withValues(alpha: 0.35)
-                              : Colors.black.withValues(alpha: 0.10),
-                          blurRadius: 18,
-                          spreadRadius: 1,
+                          color: toastIsDark
+                              ? const Color(0xFF6B42FF).withValues(alpha: 0.45)
+                              : Colors.black.withValues(alpha: 0.22),
+                          blurRadius: 22,
+                          spreadRadius: 2,
                           offset: const Offset(0, 5),
                         ),
                       ],
@@ -315,7 +337,7 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: defaultIconColor.withValues(alpha: 0.15),
+                                  color: defaultIconColor.withValues(alpha: 0.16),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Center(
@@ -370,7 +392,9 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
               ),
             ),
           ),
-        );
+        ),
+      ),
+    );
       },
     );
   }

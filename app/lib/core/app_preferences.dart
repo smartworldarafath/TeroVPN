@@ -24,6 +24,14 @@ class AppPreferences {
   static const _keyDefaultConnectionType = 'default_connection_type';
   static const _keyLastConnection = 'last_connection';
   static const _keyToastAnimationMode = 'toast_animation_mode';
+  static const _keyOnboardingCompleted = 'onboarding_completed';
+  static const _keyDesktopModeEnabled = 'desktop_mode_enabled';
+  static const _keyAlternativeRouting = 'alternative_routing';
+  static const _keyCustomDnsEnabled = 'custom_dns_enabled';
+  static const _keyCustomDnsServers = 'custom_dns_servers';
+  static const _keyModerateNat = 'moderate_nat';
+  static const _keyPortForwarding = 'port_forwarding';
+  static const _keyCustomMtu = 'custom_mtu';
 
   static SharedPreferences? _prefs;
 
@@ -167,4 +175,47 @@ class AppPreferences {
       _prefs?.getString(_keyToastAnimationMode) ?? 'auto';
   static Future<void> setToastAnimationMode(String mode) async =>
       await _prefs?.setString(_keyToastAnimationMode, mode);
+
+  // Onboarding
+  static bool get onboardingCompleted =>
+      _prefs?.getBool(_keyOnboardingCompleted) ?? false;
+  static Future<void> setOnboardingCompleted(bool val) async =>
+      await _prefs?.setBool(_keyOnboardingCompleted, val);
+
+  // Tablet Desktop Mode Toggle
+  static bool get desktopModeEnabled =>
+      _prefs?.getBool(_keyDesktopModeEnabled) ?? false;
+  static Future<void> setDesktopModeEnabled(bool val) async =>
+      await _prefs?.setBool(_keyDesktopModeEnabled, val);
+
+  // Proton VPN Advanced Features
+  static bool get alternativeRouting =>
+      _prefs?.getBool(_keyAlternativeRouting) ?? true;
+  static Future<void> setAlternativeRouting(bool val) async =>
+      await _prefs?.setBool(_keyAlternativeRouting, val);
+
+  static bool get customDnsEnabled =>
+      _prefs?.getBool(_keyCustomDnsEnabled) ?? false;
+  static Future<void> setCustomDnsEnabled(bool val) async =>
+      await _prefs?.setBool(_keyCustomDnsEnabled, val);
+
+  static String get customDnsServers =>
+      _prefs?.getString(_keyCustomDnsServers) ?? '1.1.1.1, 1.0.0.1';
+  static Future<void> setCustomDnsServers(String val) async =>
+      await _prefs?.setString(_keyCustomDnsServers, val);
+
+  static bool get moderateNat =>
+      _prefs?.getBool(_keyModerateNat) ?? false;
+  static Future<void> setModerateNat(bool val) async =>
+      await _prefs?.setBool(_keyModerateNat, val);
+
+  static bool get portForwarding =>
+      _prefs?.getBool(_keyPortForwarding) ?? false;
+  static Future<void> setPortForwarding(bool val) async =>
+      await _prefs?.setBool(_keyPortForwarding, val);
+
+  static int get customMtu =>
+      _prefs?.getInt(_keyCustomMtu) ?? 1420;
+  static Future<void> setCustomMtu(int val) async =>
+      await _prefs?.setInt(_keyCustomMtu, val);
 }
