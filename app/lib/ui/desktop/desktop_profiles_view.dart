@@ -1,7 +1,7 @@
-import '../components/top_dock_toast.dart';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
 import '../countries/country_manager.dart';
@@ -54,11 +54,15 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
     }
 
     if (mounted) {
-      TopDockToast.show(
-        context,
-        title: 'Profile Activated',
-        message: '$title ($countryCode) ready for high speed',
-        icon: Icons.vpn_lock_rounded,
+      final isDark = ThemeManager.instance.isDarkMode;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Switched to profile: $title ($countryCode)'),
+          backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
       );
     }
   }
@@ -66,9 +70,13 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([widget.controller, CountryManager.instance]),
+      listenable: Listenable.merge([widget.controller, CountryManager.instance, ThemeManager.instance]),
       builder: (context, _) {
         _lowestLatencyCountry = CountryManager.instance.getFastestCountry();
+
+        final isDark = ThemeManager.instance.isDarkMode;
+        final textPrimary = isDark ? Colors.white : const Color(0xFF1D1536);
+        final textSecondary = isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80);
 
         return SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -77,20 +85,20 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              const Text(
+              Text(
                 'Profiles',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: textPrimary,
                   fontSize: 26,
                   fontWeight: FontWeight.w800,
                   letterSpacing: -0.4,
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Pre-configured setups optimized for streaming, gaming, and privacy.',
                 style: TextStyle(
-                  color: Color(0xFF8E8B9D),
+                  color: textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w400,
                 ),
@@ -99,10 +107,10 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
               const SizedBox(height: 24),
 
               // Fast Presets Header
-              const Text(
+              Text(
                 'Fast Presets',
                 style: TextStyle(
-                  color: Color(0xFF9E9BAE),
+                  color: textSecondary,
                   fontSize: 13.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -119,6 +127,9 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                       icon: Icons.play_circle_outline_rounded,
                       flagCode: 'US',
                       countryCode: 'US',
+                      isDark: isDark,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -130,6 +141,9 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                       flagCode: _lowestLatencyCountry.code,
                       countryCode: _lowestLatencyCountry.code,
                       autoConnect: true,
+                      isDark: isDark,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
                     ),
                   ),
                 ],
@@ -146,6 +160,9 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                       icon: Icons.download_rounded,
                       flagCode: 'DE',
                       countryCode: 'DE',
+                      isDark: isDark,
+                      textPrimary: textPrimary,
+                      textSecondary: textSecondary,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -161,10 +178,10 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Account & Rotation',
                     style: TextStyle(
-                      color: Color(0xFF9E9BAE),
+                      color: textSecondary,
                       fontSize: 13.5,
                       fontWeight: FontWeight.w600,
                     ),
@@ -183,13 +200,17 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         child: Row(
-                          children: const [
-                            Icon(Icons.manage_accounts_rounded, color: Color(0xFF8B6BFF), size: 16),
-                            SizedBox(width: 6),
+                          children: [
+                            Icon(
+                              Icons.manage_accounts_rounded,
+                              color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF5B34DB),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
                             Text(
                               'Manage Accounts',
                               style: TextStyle(
-                                color: Color(0xFF8B6BFF),
+                                color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF5B34DB),
                                 fontSize: 12.5,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -217,7 +238,7 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: const Text('Multi-Account Token Pool & bandwidth refreshed.'),
-                        backgroundColor: const Color(0xFF161426),
+                        backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
@@ -240,9 +261,16 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
     required IconData icon,
     required String flagCode,
     required String countryCode,
+    required bool isDark,
+    required Color textPrimary,
+    required Color textSecondary,
     bool autoConnect = false,
   }) {
     final isActive = _activeProfileTitle == title;
+    final cardBg = isDark ? const Color(0xFF161426) : Colors.white;
+    final cardBorder = isDark
+        ? Colors.white.withValues(alpha: 0.06)
+        : const Color(0xFF5D5380).withValues(alpha: 0.10);
 
     return Material(
       color: Colors.transparent,
@@ -252,21 +280,29 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
         child: Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFF161426),
+            color: cardBg,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isActive ? const Color(0xFF6B42FF) : Colors.white.withValues(alpha: 0.06),
+              color: isActive ? const Color(0xFF6B42FF) : cardBorder,
               width: isActive ? 1.5 : 1,
             ),
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: const Color(0xFF6B42FF).withValues(alpha: 0.25),
+                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.25 : 0.15),
                       blurRadius: 18,
                       spreadRadius: 1,
                     ),
                   ]
-                : null,
+                : (isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: const Color(0xFF5D5380).withValues(alpha: 0.06),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,19 +314,23 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                     width: 36,
                     height: 36,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF261D4C),
+                      color: isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(icon, color: const Color(0xFF8B6BFF), size: 20),
+                    child: Icon(
+                      icon,
+                      color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF5B34DB),
+                      size: 20,
+                    ),
                   ),
                   if (isActive)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF133226),
+                        color: isDark ? const Color(0xFF133226) : const Color(0xFFD8F5EB),
                         borderRadius: BorderRadius.circular(8),
                         border: Border.all(
-                          color: const Color(0xFF1FE5BD).withValues(alpha: 0.5),
+                          color: const Color(0xFF00C896).withValues(alpha: 0.5),
                         ),
                       ),
                       child: const Text(
@@ -298,7 +338,7 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                         style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF1FE5BD),
+                          color: Color(0xFF00C896),
                         ),
                       ),
                     ),
@@ -307,8 +347,8 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
               const SizedBox(height: 14),
               Text(
                 title,
-                style: const TextStyle(
-                  color: Colors.white,
+                style: TextStyle(
+                  color: textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   letterSpacing: -0.2,
@@ -317,8 +357,8 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
               const SizedBox(height: 4),
               Text(
                 subtitle,
-                style: const TextStyle(
-                  color: Color(0xFF8E8B9D),
+                style: TextStyle(
+                  color: textSecondary,
                   fontSize: 12,
                   height: 1.35,
                 ),
@@ -330,8 +370,8 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
                   const SizedBox(width: 8),
                   Text(
                     countryCode,
-                    style: const TextStyle(
-                      color: Color(0xFF9E9BAE),
+                    style: TextStyle(
+                      color: textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),

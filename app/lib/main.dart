@@ -107,7 +107,7 @@ void main(List<String> args) async {
       try {
 
         dataDir = CoreLocator.dataDir(args);
-
+await CoreLocator.ensureDefaultConfig(dataDir);
         desktopProcess = CoreProcess(
 
           executable: CoreProcess.executableFrom(args),

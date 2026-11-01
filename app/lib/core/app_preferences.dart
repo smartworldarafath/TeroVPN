@@ -28,8 +28,13 @@ class AppPreferences {
   static const _keyDesktopModeEnabled = 'desktop_mode_enabled';
   static const _keyAlternativeRouting = 'alternative_routing';
   static const _keyCustomDnsEnabled = 'custom_dns_enabled';
+  static const _keyCustomDnsPrimary = 'custom_dns_primary';
+  static const _keyCustomDnsSecondary = 'custom_dns_secondary';
   static const _keyCustomDnsServers = 'custom_dns_servers';
+  static const _keyDnsLeakProtection = 'dns_leak_protection';
   static const _keyModerateNat = 'moderate_nat';
+  static const _keyAutoConnectOnLaunch = 'auto_connect_on_launch';
+  static const _keyTunnelMtu = 'tunnel_mtu';
   static const _keyPortForwarding = 'port_forwarding';
   static const _keyCustomMtu = 'custom_mtu';
 
@@ -70,7 +75,7 @@ class AppPreferences {
 
   // Protocol Selection
   static String get selectedProtocol =>
-      _prefs?.getString(_keySelectedProtocol) ?? 'WireGuard MASQUE (HTTP/3)';
+      _prefs?.getString(_keySelectedProtocol) ?? 'Smart (Automatic)';
 
   static Future<void> setSelectedProtocol(String protocol) async {
     await _prefs?.setString(_keySelectedProtocol, protocol);
@@ -189,33 +194,58 @@ class AppPreferences {
       await _prefs?.setBool(_keyDesktopModeEnabled, val);
 
   // Proton VPN Advanced Features
-  static bool get alternativeRouting =>
-      _prefs?.getBool(_keyAlternativeRouting) ?? true;
-  static Future<void> setAlternativeRouting(bool val) async =>
-      await _prefs?.setBool(_keyAlternativeRouting, val);
-
   static bool get customDnsEnabled =>
       _prefs?.getBool(_keyCustomDnsEnabled) ?? false;
   static Future<void> setCustomDnsEnabled(bool val) async =>
       await _prefs?.setBool(_keyCustomDnsEnabled, val);
+
+  static String get customDnsPrimary =>
+      _prefs?.getString(_keyCustomDnsPrimary) ?? '1.1.1.1';
+  static Future<void> setCustomDnsPrimary(String val) async =>
+      await _prefs?.setString(_keyCustomDnsPrimary, val);
+
+  static String get customDnsSecondary =>
+      _prefs?.getString(_keyCustomDnsSecondary) ?? '1.0.0.1';
+  static Future<void> setCustomDnsSecondary(String val) async =>
+      await _prefs?.setString(_keyCustomDnsSecondary, val);
 
   static String get customDnsServers =>
       _prefs?.getString(_keyCustomDnsServers) ?? '1.1.1.1, 1.0.0.1';
   static Future<void> setCustomDnsServers(String val) async =>
       await _prefs?.setString(_keyCustomDnsServers, val);
 
+  static bool get dnsLeakProtection =>
+      _prefs?.getBool(_keyDnsLeakProtection) ?? true;
+  static Future<void> setDnsLeakProtection(bool val) async =>
+      await _prefs?.setBool(_keyDnsLeakProtection, val);
+
+  static bool get alternativeRouting =>
+      _prefs?.getBool(_keyAlternativeRouting) ?? true;
+  static Future<void> setAlternativeRouting(bool val) async =>
+      await _prefs?.setBool(_keyAlternativeRouting, val);
+
   static bool get moderateNat =>
       _prefs?.getBool(_keyModerateNat) ?? false;
   static Future<void> setModerateNat(bool val) async =>
       await _prefs?.setBool(_keyModerateNat, val);
 
+  static bool get autoConnectOnLaunch =>
+      _prefs?.getBool(_keyAutoConnectOnLaunch) ?? true;
+  static Future<void> setAutoConnectOnLaunch(bool val) async =>
+      await _prefs?.setBool(_keyAutoConnectOnLaunch, val);
+
+  static int get tunnelMtu =>
+      _prefs?.getInt(_keyTunnelMtu) ?? (_prefs?.getInt(_keyCustomMtu) ?? 1420);
+  static Future<void> setTunnelMtu(int val) async {
+    await _prefs?.setInt(_keyTunnelMtu, val);
+    await _prefs?.setInt(_keyCustomMtu, val);
+  }
+
+  static int get customMtu => tunnelMtu;
+  static Future<void> setCustomMtu(int val) => setTunnelMtu(val);
+
   static bool get portForwarding =>
       _prefs?.getBool(_keyPortForwarding) ?? false;
   static Future<void> setPortForwarding(bool val) async =>
       await _prefs?.setBool(_keyPortForwarding, val);
-
-  static int get customMtu =>
-      _prefs?.getInt(_keyCustomMtu) ?? 1420;
-  static Future<void> setCustomMtu(int val) async =>
-      await _prefs?.setInt(_keyCustomMtu, val);
 }

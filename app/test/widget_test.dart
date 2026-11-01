@@ -25,7 +25,7 @@ void main() {
 
     // Complete splash animation (3.2 seconds total) to reveal MainNavigationShell
     await tester.pump(const Duration(milliseconds: 2000));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 600));
 
     expect(find.text('TeroVPN'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);

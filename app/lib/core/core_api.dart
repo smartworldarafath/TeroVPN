@@ -170,6 +170,46 @@ abstract final class CoreLocator {
     );
   }
 
+  static Future<void> ensureDefaultConfig(String dataDir) async {
+    final configFile = File('$dataDir${Platform.pathSeparator}config.json');
+    if (!configFile.existsSync()) {
+      try {
+        await configFile.parent.create(recursive: true);
+        final initialConfig = <String, Object?>{
+          'version': 2,
+          'proxy': {
+            'listen': '127.0.0.1:10810',
+            'country': 'nl',
+            'transport': 'h2',
+          },
+          'dashboard': {
+            'enabled': true,
+            'listen': '127.0.0.1:10820',
+          },
+          'system_proxy': {
+            'mode': 'set',
+          },
+        };
+        await configFile.writeAsString(
+          const JsonEncoder.withIndent('  ').convert(initialConfig),
+        );
+      } catch (_) {}
+    } else {
+      try {
+        final config = await _readConfig(dataDir);
+        if (config != null) {
+          final sysProxy = config['system_proxy'];
+          if (sysProxy is! Map || sysProxy['mode'] == 'clear') {
+            config['system_proxy'] = {'mode': 'set'};
+            await configFile.writeAsString(
+              const JsonEncoder.withIndent('  ').convert(config),
+            );
+          }
+        }
+      } catch (_) {}
+    }
+  }
+
   static Future<Map<String, Object?>?> _readConfig(String dataDir) async {
     try {
       final j = jsonDecode(

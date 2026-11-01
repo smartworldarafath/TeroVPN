@@ -1,7 +1,7 @@
-import '../components/top_dock_toast.dart';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
 import '../components/signin_dialog.dart';
 import '../countries/country_manager.dart';
@@ -48,13 +48,15 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
     _spinController.forward(from: 0.0);
     await CountryManager.instance.refresh();
     if (mounted) {
-      final fastest = CountryManager.instance.getFastestCountry();
-      TopDockToast.show(
-        context,
-        title: 'Country Latencies Synchronized',
-        message: 'Fastest: ${fastest.name} (${fastest.pingMs} ms) · All loads updated',
-        icon: Icons.refresh_rounded,
-        iconColor: const Color(0xFF00E676),
+      final isDark = ThemeManager.instance.isDarkMode;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Server ping & loads refreshed in real-time.'),
+          backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -98,8 +100,26 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([CountryManager.instance, widget.controller]),
+      listenable: Listenable.merge([CountryManager.instance, widget.controller, ThemeManager.instance]),
       builder: (context, _) {
+        final isDark = ThemeManager.instance.isDarkMode;
+        final isLiquid = ThemeManager.instance.isLiquidGlass;
+
+        final textPrimary = isDark ? Colors.white : const Color(0xFF1D1536);
+        final textSecondary = isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80);
+
+        final searchBg = isDark
+            ? const Color(0xFF141222)
+            : Colors.white;
+
+        final cardBg = isDark
+            ? const Color(0xFF161426)
+            : (isLiquid ? Colors.white.withValues(alpha: 0.90) : Colors.white);
+
+        final cardBorder = isDark
+            ? Colors.white.withValues(alpha: 0.06)
+            : const Color(0xFF5D5380).withValues(alpha: 0.10);
+
         final allCountries = CountryManager.instance.countries;
         final filteredCountries = _getFilteredCountries(allCountries);
         final fastest = CountryManager.instance.getFastestCountry();
@@ -113,10 +133,10 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
               // Top Bar: Title + Search + Refresh
               Row(
                 children: [
-                  const Text(
+                  Text(
                     'Countries',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: textPrimary,
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.4,
@@ -125,32 +145,37 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                   const Spacer(),
                   // Search Box
                   Container(
-                    width: 250,
+                    width: 220,
                     height: 38,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF141222),
+                      color: searchBg,
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: cardBorder,
                         width: 1,
                       ),
+                      boxShadow: isDark
+                          ? null
+                          : [
+                              BoxShadow(
+                                color: const Color(0xFF5D5380).withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.search_rounded,
-                          color: Color(0xFF757286),
-                          size: 18,
-                        ),
+                        Icon(Icons.search_rounded, color: textSecondary, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
-                            decoration: const InputDecoration(
+                            style: TextStyle(color: textPrimary, fontSize: 13),
+                            decoration: InputDecoration(
                               hintText: 'Search countries...',
-                              hintStyle: TextStyle(color: Color(0xFF757286), fontSize: 13),
+                              hintStyle: TextStyle(color: textSecondary, fontSize: 13),
                               border: InputBorder.none,
                               isDense: true,
                               contentPadding: EdgeInsets.zero,
@@ -164,7 +189,7 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                               _searchController.clear();
                               setState(() => _searchQuery = '');
                             },
-                            child: const Icon(Icons.close_rounded, color: Color(0xFF757286), size: 16),
+                            child: Icon(Icons.close_rounded, color: textSecondary, size: 16),
                           ),
                       ],
                     ),
@@ -182,16 +207,25 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141222),
+                            color: searchBg,
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.08),
+                              color: cardBorder,
                               width: 1,
                             ),
+                            boxShadow: isDark
+                                ? null
+                                : [
+                                    BoxShadow(
+                                      color: const Color(0xFF5D5380).withValues(alpha: 0.05),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.refresh_rounded,
-                            color: Color(0xFF8E8B9D),
+                            color: textSecondary,
                             size: 20,
                           ),
                         ),
@@ -206,13 +240,13 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
               // Filter Chips
               Row(
                 children: [
-                  _buildFilterChip('All', null),
+                  _buildFilterChip('All', null, isDark),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Secure Core', Icons.shield_outlined),
+                  _buildFilterChip('Secure Core', Icons.shield_outlined, isDark),
                   const SizedBox(width: 8),
-                  _buildFilterChip('P2P', Icons.compare_arrows_rounded),
+                  _buildFilterChip('P2P', Icons.compare_arrows_rounded, isDark),
                   const SizedBox(width: 8),
-                  _buildFilterChip('Tor', Icons.public_rounded),
+                  _buildFilterChip('Tor', Icons.public_rounded, isDark),
                 ],
               ),
 
@@ -221,8 +255,8 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
               // Subtitle
               Text(
                 'All countries (${allCountries.length})',
-                style: const TextStyle(
-                  color: Color(0xFF8E8B9D),
+                style: TextStyle(
+                  color: textSecondary,
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -234,7 +268,7 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF161426),
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: const Color(0xFF6B42FF),
@@ -242,7 +276,7 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF6B42FF).withValues(alpha: 0.2),
+                      color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.2 : 0.12),
                       blurRadius: 14,
                       spreadRadius: 1,
                     ),
@@ -251,34 +285,38 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                 child: Row(
                   children: [
                     Container(
-                      width: 38,
-                      height: 38,
+                      width: 40,
+                      height: 40,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF133226),
-                        borderRadius: BorderRadius.circular(10),
+                        color: isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Center(
-                        child: Icon(Icons.bolt_rounded, color: Color(0xFF1FE5BD), size: 22),
+                        child: Icon(
+                          Icons.bolt_rounded,
+                          color: Color(0xFF8B6BFF),
+                          size: 24,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             'Fastest country',
                             style: TextStyle(
-                              color: Colors.white,
+                              color: textPrimary,
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          SizedBox(height: 2),
+                          const SizedBox(height: 2),
                           Text(
-                            'Connects to closest edge server',
+                            'Connects to closest edge server (${fastest.name})',
                             style: TextStyle(
-                              color: Color(0xFF8E8B9D),
+                              color: textSecondary,
                               fontSize: 11.5,
                             ),
                           ),
@@ -292,15 +330,15 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                           width: 6,
                           height: 6,
                           decoration: const BoxDecoration(
-                            color: Color(0xFF2CFFCC),
+                            color: Color(0xFF00C896),
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${fastest.load}% load',
-                          style: const TextStyle(
-                            color: Color(0xFF9E9BAE),
+                          style: TextStyle(
+                            color: textSecondary,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -314,15 +352,15 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF261D4C),
+                                color: isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Connect',
                                 style: TextStyle(
-                                  color: Color(0xFF8B6BFF),
+                                  color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF5B34DB),
                                   fontSize: 12,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
                             ),
@@ -378,14 +416,23 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                           curve: Curves.easeOutCubic,
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF161426),
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(14),
                             border: Border.all(
                               color: isSelected
                                   ? const Color(0xFF6B42FF)
-                                  : Colors.white.withValues(alpha: 0.05),
+                                  : cardBorder,
                               width: 1,
                             ),
+                            boxShadow: isDark
+                                ? null
+                                : [
+                                    BoxShadow(
+                                      color: const Color(0xFF5D5380).withValues(alpha: 0.04),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                           ),
                           child: Row(
                             children: [
@@ -398,8 +445,8 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                                   children: [
                                     Text(
                                       item.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                      style: TextStyle(
+                                        color: textPrimary,
                                         fontSize: 13.5,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -409,8 +456,8 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                                     const SizedBox(height: 2),
                                     Text(
                                       item.cities,
-                                      style: const TextStyle(
-                                        color: Color(0xFF8E8B9D),
+                                      style: TextStyle(
+                                        color: textSecondary,
                                         fontSize: 11,
                                       ),
                                       maxLines: 1,
@@ -426,15 +473,15 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                                     width: 5,
                                     height: 5,
                                     decoration: const BoxDecoration(
-                                      color: Color(0xFF2CFFCC),
+                                      color: Color(0xFF00C896),
                                       shape: BoxShape.circle,
                                     ),
                                   ),
                                   const SizedBox(width: 5),
                                   Text(
                                     '${item.load}% load',
-                                    style: const TextStyle(
-                                      color: Color(0xFF8E8B9D),
+                                    style: TextStyle(
+                                      color: textSecondary,
                                       fontSize: 11.5,
                                     ),
                                   ),
@@ -447,24 +494,24 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: const Color(0xFF261D4C),
+                                          color: isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8),
                                           borderRadius: BorderRadius.circular(8),
                                         ),
-                                        child: const Text(
+                                        child: Text(
                                           'Connect',
                                           style: TextStyle(
-                                            color: Color(0xFF8B6BFF),
+                                            color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF5B34DB),
                                             fontSize: 11.5,
-                                            fontWeight: FontWeight.w600,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  const Icon(
+                                  Icon(
                                     Icons.chevron_right_rounded,
-                                    color: Color(0xFF757286),
+                                    color: textSecondary,
                                     size: 18,
                                   ),
                                 ],
@@ -484,8 +531,19 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
     );
   }
 
-  Widget _buildFilterChip(String label, IconData? icon) {
+  Widget _buildFilterChip(String label, IconData? icon, bool isDark) {
     final isSelected = _selectedFilter == label;
+    final chipBg = isSelected
+        ? const Color(0xFF6B42FF)
+        : (isDark ? const Color(0xFF161426) : Colors.white);
+
+    final chipBorder = isSelected
+        ? const Color(0xFF6B42FF)
+        : (isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFF5D5380).withValues(alpha: 0.12));
+
+    final textColor = isSelected
+        ? Colors.white
+        : (isDark ? const Color(0xFF9E9BAE) : const Color(0xFF6E6B80));
 
     return GestureDetector(
       onTap: () => setState(() => _selectedFilter = label),
@@ -493,16 +551,21 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF2563EB)
-              : const Color(0xFF161426),
+          color: chipBg,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF3B82F6)
-                : Colors.white.withValues(alpha: 0.08),
+            color: chipBorder,
             width: 1,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.3 : 0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -510,7 +573,7 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
             if (icon != null) ...[
               Icon(
                 icon,
-                color: isSelected ? Colors.white : const Color(0xFF9E9BAE),
+                color: textColor,
                 size: 14,
               ),
               const SizedBox(width: 6),
@@ -518,7 +581,7 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : const Color(0xFF9E9BAE),
+                color: textColor,
                 fontSize: 12.5,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
               ),
