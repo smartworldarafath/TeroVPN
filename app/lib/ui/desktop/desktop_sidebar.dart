@@ -39,47 +39,52 @@ class DesktopSidebar extends StatelessWidget {
 final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
         final infoIconColor = isDark ? const Color(0xFF7E7B8E) : const Color(0xFF8C899E);
 
-        return Container(
-          width: 220,
-          decoration: BoxDecoration(
-            color: sidebarBg,
-            border: Border(
-              right: BorderSide(
-                color: borderColor,
-                width: 1,
+        return RepaintBoundary(
+          child: Container(
+            width: 220,
+            decoration: BoxDecoration(
+              color: sidebarBg,
+              border: Border(
+                right: BorderSide(
+                  color: borderColor,
+                  width: 1,
+                ),
               ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Brand Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF6B42FF),
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.4 : 0.25),
-                            blurRadius: 10,
-                            offset: const Offset(0, 2),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Brand Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6B42FF),
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.4 : 0.25),
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.asset(
+                            isDark
+                                ? 'assets/branding/app_icon_dark.png'
+                                : 'assets/branding/app_icon_light.png',
+                            width: 34,
+                            height: 34,
+                            fit: BoxFit.cover,
                           ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Icon(
-                          Icons.shield_rounded,
-                          color: Colors.white,
-                          size: 20,
                         ),
                       ),
-                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -197,7 +202,7 @@ final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Text(
-                  'v1.1.3 Desktop',
+                  'v1.1.5 Desktop',
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF9E9BAE),
@@ -208,7 +213,8 @@ final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
               ),
             ],
           ),
-        );
+        ),
+      );
       },
     );
   }

@@ -64,11 +64,12 @@ class _AnimatedConnectButtonState extends State<AnimatedConnectButton> with Sing
     final isStarting = widget.isConnecting;
     final isDark = ThemeManager.instance.isDarkMode;
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
+    return RepaintBoundary(
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
         onTap: _handleTap,
         child: ScaleTransition(
           scale: _scaleAnimation,
@@ -178,8 +179,9 @@ class _AnimatedConnectButtonState extends State<AnimatedConnectButton> with Sing
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class DesktopHomeView extends StatefulWidget {
@@ -297,13 +299,15 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // Proton VPN Geographic World Map View
-                        ProtonWorldMap(
-                          isConnected: isConnected,
-                          isConnecting: isConnecting,
-                          originCountryCode: 'BD',
-                          destinationCountryCode: matchedCountry.code,
-                          destinationCityName: cityName,
-                          onMapTap: widget.onNavigateToCountries,
+                        RepaintBoundary(
+                          child: ProtonWorldMap(
+                            isConnected: isConnected,
+                            isConnecting: isConnecting,
+                            originCountryCode: 'BD',
+                            destinationCountryCode: matchedCountry.code,
+                            destinationCityName: cityName,
+                            onMapTap: widget.onNavigateToCountries,
+                          ),
                         ),
                         const SizedBox(height: 24),
 

@@ -244,38 +244,18 @@ class AboutScreen extends StatelessWidget {
 
 
 
-                        child: const Center(
-
-
-
-                          child: Icon(
-
-
-
-                            Icons.shield_rounded,
-
-
-
-                            color: Colors.white,
-
-
-
-                            size: 52,
-
-
-
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: Image.asset(
+                            isDark
+                                ? 'assets/branding/app_icon_dark.png'
+                                : 'assets/branding/app_icon_light.png',
+                            width: 90,
+                            height: 90,
+                            fit: BoxFit.cover,
                           ),
-
-
-
                         ),
-
-
-
                       ),
-
-
-
                     ),
 
 

@@ -874,28 +874,37 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
 
               const SizedBox(height: 22),
 
+              // BETA FEATURES Section
+              _buildSectionHeader('BETA FEATURES'),
+              const SizedBox(height: 8),
+              _buildCardContainer([
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'No beta features currently available.',
+                      style: TextStyle(
+                        color: isDark ? const Color(0xFF6E6B80) : const Color(0xFF9E9BAE),
+                        fontSize: 12.5,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+                ),
+              ]),
 
+              const SizedBox(height: 22),
 
               // ABOUT & UPDATES Section
-
               _buildSectionHeader('ABOUT & UPDATES'),
-
               const SizedBox(height: 8),
-
               _buildCardContainer([
-
                 _buildActionRow(
-
                   icon: Icons.info_outline_rounded,
-
                   title: 'About TeroVPN',
-
-                  subtitle: 'Version 1.1.3 · Legal, Support & Acknowledgements',
-
+                  subtitle: 'Version 1.1.5 · Legal, Support & Acknowledgements',
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D), size: 20),
-
                   onTap: () {
-
                     Navigator.of(context).push(
 
                       MaterialPageRoute(builder: (_) => const AboutScreen()),
