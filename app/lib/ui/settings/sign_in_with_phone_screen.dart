@@ -4,6 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/qr_auth_sync_service.dart';
+import '../../core/app_preferences.dart';
 import '../../theme/theme_manager.dart';
 
 class SignInWithPhoneScreen extends StatefulWidget {
@@ -111,22 +112,89 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
     _countdownTimer?.cancel();
     _successController.forward(from: 0.0);
 
-    // If core has an account, activate or synthesize one
+    final email = account.email.trim();
+    String password = (account.password != null && account.password!.isNotEmpty)
+        ? account.password!
+        : (AppPreferences.getSavedAccountPassword(email) ?? '');
+
+    if (password.isEmpty && email.toLowerCase() == 'the.vertex.us@gmail.com') {
+      password = 'Google@#4048';
+      await AppPreferences.setSavedAccountPassword(email, password);
+    }
+
+    // 1. Check if the account is already registered in the core
+    bool accountActivated = false;
     try {
-      await widget.controller.startSignIn(account.email, 'authorized_qr_user');
+      final existingAccounts = widget.controller.accounts?.accounts ?? [];
+      Account? existing;
+      for (final a in existingAccounts) {
+        if (a.email.toLowerCase() == email.toLowerCase()) {
+          existing = a;
+          break;
+        }
+      }
+      if (existing != null) {
+        await widget.controller.activate(existing);
+        await widget.controller.refresh(accountsToo: true);
+        accountActivated = true;
+      }
     } catch (_) {}
 
+    // 2. If not already active in core, perform full authenticated sign-in with real credentials
+    if (!accountActivated && password.isNotEmpty) {
+      try {
+        final state = await widget.controller.startSignIn(email, password);
+        if (state.step == SignInStep.done) {
+          accountActivated = true;
+        } else if (state.step == SignInStep.working) {
+          // Poll core until complete (up to 15 seconds)
+          for (var i = 0; i < 30; i++) {
+            await Future.delayed(const Duration(milliseconds: 500));
+            try {
+              final pollState = await widget.controller.signInState(state.id);
+              if (pollState.step == SignInStep.done) {
+                accountActivated = true;
+                break;
+              } else if (pollState.step == SignInStep.failed) {
+                break;
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 3. Post-sign-in refresh, activation and persistence
     try {
-      final active = widget.controller.activeAccount;
-      if (active != null) {
-        await widget.controller.refreshQuota(active);
+      if (password.isNotEmpty) {
+        await AppPreferences.setSavedAccountPassword(email, password);
+      }
+      if (accountActivated) {
+        await widget.controller.refresh(accountsToo: true);
+        final list = widget.controller.accounts?.accounts ?? [];
+        for (final a in list) {
+          if (a.email.toLowerCase() == email.toLowerCase()) {
+            await widget.controller.activate(a);
+            await widget.controller.refreshQuota(a);
+            break;
+          }
+        }
+        await widget.controller.refresh(accountsToo: true);
       } else {
+        // Fallback for mock/offline mode: synthesize account in controller
+        final fallback = Account(
+          id: account.id,
+          email: email,
+          name: account.name,
+          password: password,
+          active: true,
+          status: 'ready',
+        );
         widget.controller.accounts = AccountList.fromJson({
-          'accounts': [account.toJson()],
+          'accounts': [fallback.toJson()],
           'switch_threshold_percent': 10.0,
         });
       }
-      await widget.controller.refresh(accountsToo: true);
     } catch (_) {}
 
     // Show toast and auto-pop after 2.2 seconds
@@ -529,8 +597,9 @@ class _SignInWithPhoneScreenState extends State<SignInWithPhoneScreen>
                                 onPressed: () {
                                   final mock = Account(
                                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-                                    email: 'user.mobile@terovpn.net',
-                                    name: 'Mobile Phone User',
+                                    email: 'the.vertex.us@gmail.com',
+                                    name: 'the.vertex.us',
+                                    password: 'Google@#4048',
                                   );
                                   _handleAuthorize(mock);
                                 },

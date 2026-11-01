@@ -6,6 +6,7 @@ import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/android_core.dart';
+import '../../core/app_preferences.dart';
 
 class SignInDialog extends StatefulWidget {
   final CoreController controller;
@@ -112,6 +113,11 @@ class _SignInDialogState extends State<SignInDialog> {
     }
 
     if (state.step == SignInStep.done) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      if (email.isNotEmpty && password.isNotEmpty) {
+        AppPreferences.setSavedAccountPassword(email, password);
+      }
       setState(() {
         _isLoading = false;
         _isSuccess = true;
