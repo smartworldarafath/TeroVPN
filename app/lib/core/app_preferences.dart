@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
@@ -271,5 +272,37 @@ class AppPreferences {
     final list = customProfiles.toList();
     list.add(jsonStr);
     await setCustomProfiles(list);
+  }
+
+  // Cross-device pairing & active account persistence
+  static const _keySavedActiveAccount = 'saved_active_account_json';
+  static const _keySavedAuthPassword = 'saved_auth_password_';
+
+  static Map<String, dynamic>? get savedActiveAccount {
+    final raw = _prefs?.getString(_keySavedActiveAccount);
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return jsonDecode(raw) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> setSavedActiveAccount(Map<String, dynamic> accountJson) async {
+    await _prefs?.setString(_keySavedActiveAccount, jsonEncode(accountJson));
+  }
+
+  static Future<void> clearSavedActiveAccount() async {
+    await _prefs?.remove(_keySavedActiveAccount);
+  }
+
+  static String? getSavedAuthPassword(String email) {
+    if (email.isEmpty) return null;
+    return _prefs?.getString('$_keySavedAuthPassword${email.toLowerCase().trim()}');
+  }
+
+  static Future<void> setSavedAuthPassword(String email, String password) async {
+    if (email.isEmpty || password.isEmpty) return;
+    await _prefs?.setString('$_keySavedAuthPassword${email.toLowerCase().trim()}', password);
   }
 }

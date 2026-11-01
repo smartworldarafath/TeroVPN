@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/android_core.dart';
+import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/qr_auth_sync_service.dart';
@@ -180,13 +181,16 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     final portStr = uri?.queryParameters['port'];
     final port = portStr != null ? int.tryParse(portStr) : null;
 
+    final savedPassword = AppPreferences.getSavedAuthPassword(activeAccount.email);
+
     // 1s smooth authorizing simulation & sync across LAN and global cloud relay
-    await Future.delayed(const Duration(milliseconds: 1000));
+    await Future.delayed(const Duration(milliseconds: 800));
     await QrAuthSyncService.authorizeRemoteSession(
       sessionId: sessionId,
       account: activeAccount,
       ip: ip,
       port: port,
+      password: savedPassword,
     );
 
     if (mounted) {

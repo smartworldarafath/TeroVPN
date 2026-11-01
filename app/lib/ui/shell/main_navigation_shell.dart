@@ -35,6 +35,7 @@ import '../desktop/desktop_settings_view.dart';
 import 'proton_dock.dart';
 import 'dock1_jelly_bar.dart';
 import 'dock2_lens_bar.dart';
+import 'dock3_capsule_bar.dart';
 
 
 
@@ -428,32 +429,29 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               ),
 
               Positioned(
-
-                left: 20,
-
-                right: 20,
-
-                bottom: MediaQuery.of(context).padding.bottom + 14,
-
+                left: 0,
+                right: 0,
+                bottom: MediaQuery.of(context).padding.bottom + 8,
                 child: _buildDynamicDock(context),
-
               ),
-
             ],
-
           ),
-
         );
-
       },
-
     );
-
   }
 
   Widget _buildDynamicDock(BuildContext context) {
     final dockStyle = AppPreferences.selectedDockStyle;
-    if (dockStyle == 'dock1') {
+    if (dockStyle == 'old_system' || dockStyle == 'proton') {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: ProtonDock(
+          currentIndex: _currentIndex,
+          onTabSelected: _onTabSelected,
+        ),
+      );
+    } else if (dockStyle == 'dock1') {
       return Dock1JellyBar(
         currentIndex: _currentIndex,
         onTabSelected: _onTabSelected,
@@ -464,7 +462,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         onTabSelected: _onTabSelected,
       );
     }
-    return ProtonDock(
+    // Default is Liquid Dock G1 (3D Obsidian Jelly Bar from dock style 03.html)
+    return Dock3CapsuleBar(
       currentIndex: _currentIndex,
       onTabSelected: _onTabSelected,
     );

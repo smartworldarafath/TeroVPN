@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../core/app_preferences.dart';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
@@ -116,6 +117,11 @@ class _SignInDialogState extends State<SignInDialog> {
         _isLoading = false;
         _isSuccess = true;
       });
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      if (email.isNotEmpty && password.isNotEmpty) {
+        AppPreferences.setSavedAuthPassword(email, password);
+      }
       widget.controller.refresh(accountsToo: true);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) Navigator.of(context).pop(true);

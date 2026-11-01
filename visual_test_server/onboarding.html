@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>TeroVPN Premium Onboarding</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #070312;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    /* 6.9-inch Flagship Screen Viewport (440x956 / 19.5:9) */
+    .viewport-6-9 {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      max-width: 440px;
+      max-height: 956px;
+      background: linear-gradient(180deg, #522196 0%, #37116d 58%, #210746 100%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: 0 25px 75px rgba(0, 0, 0, 0.75);
+      touch-action: none;
+      cursor: grab;
+      isolation: isolate;
+    }
+
+    .viewport-6-9:active {
+      cursor: grabbing;
+    }
+
+    @media (min-width: 460px) {
+      .viewport-6-9 {
+        height: 94vh;
+        aspect-ratio: 440 / 956;
+        border-radius: 36px;
+      }
+    }
+
+    /* Ambient Violet Aurora Orbs in the Bottom Realm */
+    .violet-aurora-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 1;
+      overflow: hidden;
+    }
+
+    .aurora-orb-1 {
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      bottom: 8%;
+      left: -80px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.35) 0%, rgba(168, 85, 247, 0) 70%);
+      filter: blur(28px);
+      transition: transform 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .aurora-orb-2 {
+      position: absolute;
+      width: 300px;
+      height: 300px;
+      bottom: -40px;
+      right: -70px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(124, 58, 237, 0.4) 0%, rgba(124, 58, 237, 0) 70%);
+      filter: blur(25px);
+      transition: transform 0.85s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .liquid-svg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 4; pointer-events: none; display: block; }
+
+    /* Top Navigation Bar */
+    .top-nav-bar {
+      position: relative;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 26px 26px 0;
+      height: 68px;
+    }
+
+    .back-chevron-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #6d28d9;
+      background: rgba(124, 58, 237, 0.08);
+      border: 1px solid rgba(124, 58, 237, 0.16);
+      cursor: pointer;
+      transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .back-chevron-btn:hover {
+      background: rgba(124, 58, 237, 0.15);
+      transform: scale(1.06);
+    }
+
+    .back-chevron-btn:active {
+      transform: scale(0.93);
+    }
+
+    .back-chevron-btn.hidden-btn {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(-10px) scale(0.85);
+    }
+
+    /* Soft Liquid Glass SKIP Button */
+    .skip-glass-pill {
+      position: relative;
+      padding: 7px 20px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #ffffff;
+      background: linear-gradient(135deg, rgba(147, 51, 234, 0.85) 0%, rgba(109, 40, 217, 0.92) 100%);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      box-shadow:
+        0 8px 20px rgba(109, 40, 217, 0.32),
+        inset 0 1.5px 2px rgba(255, 255, 255, 0.65),
+        inset 0 -2px 4px rgba(59, 7, 100, 0.4);
+      cursor: pointer;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .skip-glass-pill:hover {
+      transform: translateY(-1px) scale(1.04);
+      box-shadow:
+        0 10px 24px rgba(109, 40, 217, 0.42),
+        inset 0 1.5px 3px rgba(255, 255, 255, 0.8);
+    }
+
+    .skip-glass-pill:active {
+      transform: scale(0.95);
+    }
+
+    /* ==========================================================================
+       UPPER ILLUSTRATION STAGE (SILK-SMOOTH PARALLAX, NO JERK)
+       ========================================================================== */
+    .illustrations-stage {
+      position: absolute;
+      inset: 0;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .illust-slide {
+      position: absolute;
+      left: 0;
+      right: 0;
+      margin: 0 auto;
+      top: calc(28% - 126px);
+      width: 88%;
+      max-width: 350px;
+      height: 310px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(36px, 0, 0);
+      will-change: transform, opacity;
+      
+    }
+
+    /* Screen 2 is the colour-swapped layout: violet on top, white on the bottom */
+    #illust-1 { top: calc(67% - 155px); }
+
+    .illust-slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0);
+    }
+
+    .illust-slide.prev-slide {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(-36px, 0, 0);
+    }
+
+    .illust-slide svg { width: 100%; height: 100%; overflow: visible; }
+
+    .floating-item {
+      animation: floatGentle 4.2s ease-in-out infinite;
+    }
+
+    .floating-item-delayed {
+      animation: floatGentle 4.8s ease-in-out 1.2s infinite;
+    }
+
+    @keyframes floatGentle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+
+    /* ==========================================================================
+       BOTTOM VIOLET CONTENT SECTION & FLUID TYPOGRAPHY
+       ========================================================================== */
+    .bottom-purple-section {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      text-align: center;
+      color: #ffffff;
+    }
+
+    .text-slider-viewport {
+      position: absolute;
+      inset: 0;
+    }
+
+    #bottomControls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: absolute;
+      left: 34px;
+      right: 34px;
+      bottom: 44px;
+      pointer-events: auto;
+    }
+
+    .text-slide {
+      position: absolute;
+      left: 34px;
+      right: 34px;
+      top: calc(56% + 20px);
+      height: 165px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(30px, 0, 0);
+      will-change: transform, opacity;
+      
+    }
+
+    #text-1 { top: calc(12% + 4px); }
+
+    .text-slide.active {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translate3d(0, 0, 0);
+    }
+
+    .text-slide.prev-slide {
+      opacity: 0;
+      pointer-events: none;
+      transform: translate3d(-30px, 0, 0);
+    }
+
+    .slide-title {
+      font-size: 25px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #ffffff;
+      margin-bottom: 16px;
+      text-shadow: 0 4px 18px rgba(18, 4, 45, 0.35);
+    }
+
+    .slide-desc {
+      font-size: 14.5px;
+      font-weight: 400;
+      line-height: 1.58;
+      color: rgba(243, 232, 255, 0.88);
+      max-width: 330px;
+      margin: 0 auto;
+    }
+
+    /* ==========================================================================
+       PAGINATION DOTS
+       ========================================================================== */
+    .dots-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .dot-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.28);
+      cursor: pointer;
+      transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    .dot-indicator.active {
+      width: 10px;
+      height: 10px;
+      background: #ffffff;
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.85);
+      transform: scale(1.1);
+    }
+
+    /* ==========================================================================
+       SOFT LIQUID GLASS CTA BUTTON (Continue, Continue, Get in)
+       ========================================================================== */
+    .liquid-glass-btn {
+      position: relative;
+      min-width: 185px;
+      height: 50px;
+      padding: 0 36px;
+      border-radius: 999px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: #ffffff;
+      background: linear-gradient(
+        135deg,
+        rgba(168, 85, 247, 0.55) 0%,
+        rgba(139, 92, 246, 0.38) 50%,
+        rgba(124, 58, 237, 0.62) 100%
+      );
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1.2px solid rgba(255, 255, 255, 0.48);
+      box-shadow:
+        0 14px 32px rgba(17, 4, 41, 0.45),
+        0 4px 12px rgba(168, 85, 247, 0.32),
+        inset 0 2px 3px rgba(255, 255, 255, 0.68),
+        inset 0 -3px 6px rgba(76, 29, 149, 0.48);
+      cursor: pointer;
+      overflow: hidden;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition:
+        transform 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+        box-shadow 0.35s cubic-bezier(0.25, 1, 0.5, 1),
+        background 0.35s ease;
+    }
+
+    /* Top Specular Liquid Glass Dome Highlight */
+    .liquid-glass-btn::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 12%;
+      right: 12%;
+      height: 44%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0.02) 100%);
+      pointer-events: none;
+    }
+
+    /* Animated Shimmer Sweep Across Liquid Glass */
+    .liquid-glass-btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -120%;
+      width: 65%;
+      height: 100%;
+      background: linear-gradient(
+        105deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.38) 50%,
+        transparent 100%
+      );
+      transform: skewX(-22deg);
+      animation: liquidGlassShimmer 4.2s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes liquidGlassShimmer {
+      0%, 60% { left: -120%; }
+      100% { left: 160%; }
+    }
+
+    .liquid-glass-btn:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow:
+        0 18px 36px rgba(17, 4, 41, 0.55),
+        0 6px 18px rgba(168, 85, 247, 0.48),
+        inset 0 2px 4px rgba(255, 255, 255, 0.85),
+        inset 0 -3px 6px rgba(76, 29, 149, 0.55);
+    }
+
+    .liquid-glass-btn:active {
+      transform: translateY(1px) scale(0.96);
+    }
+
+    .btn-label-text {
+      position: relative;
+      z-index: 2;
+      text-shadow: 0 1px 4px rgba(30, 7, 68, 0.45);
+    }
+
+    .btn-label-text.pop-text {
+      animation: btnTextBounce 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+    }
+
+    @keyframes btnTextBounce {
+      0% { transform: translateY(5px); opacity: 0.4; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+
+    /* ==========================================================================
+       SWAPPED-COLOUR SCREEN (screen 2): controls sit on white, back button on violet
+       ========================================================================== */
+    .inv .dot-indicator { background: rgba(91, 33, 182, 0.22); }
+    .inv .dot-indicator.active {
+      background: #6d28d9;
+      box-shadow: 0 0 12px rgba(109, 40, 217, 0.55);
+    }
+    .inv .liquid-glass-btn {
+      background: linear-gradient(135deg, #a366f8 0%, #7c3aed 55%, #5b21b6 100%);
+      border-color: rgba(255, 255, 255, 0.6);
+      box-shadow:
+        0 14px 28px rgba(91, 33, 182, 0.35),
+        0 4px 10px rgba(124, 58, 237, 0.3),
+        inset 0 2px 3px rgba(255, 255, 255, 0.6),
+        inset 0 -3px 6px rgba(46, 16, 101, 0.45);
+    }
+    .inv .back-chevron-btn {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 6.9-INCH FLAGSHIP MOBILE SCREEN CONTAINER -->
+  <main class="viewport-6-9" id="onboardingApp">
+
+    <!-- Ambient Violet Aurora Orbs in the Bottom Realm -->
+    <div class="violet-aurora-layer">
+      <div class="aurora-orb-1" id="auroraOrb1"></div>
+      <div class="aurora-orb-2" id="auroraOrb2"></div>
+    </div>
+
+    <!-- LIQUID LAYER: white region is redrawn every frame (JS) -> water-drop shape, 900ms -->
+    <svg class="liquid-svg" viewBox="0 0 440 956" preserveAspectRatio="none">
+      <defs>
+        <linearGradient id="gW" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="520">
+          <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff"/>
+        </linearGradient>
+        <linearGradient id="gR" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="440" y2="0">
+          <stop offset="0" stop-color="#c084fc" stop-opacity="0.25"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0.95"/><stop offset="1" stop-color="#c084fc" stop-opacity="0.25"/>
+        </linearGradient>
+        <path id="eA" d="M 0,465 Q 220,575 440,465"/>
+        <path id="eB" d="M 0,465 Q 220,575 440,465"/>
+        <path id="eX1" d=""/>
+        <path id="eX2" d=""/>
+        <mask id="mX" maskUnits="userSpaceOnUse" x="-60" y="-700" width="560" height="2400">
+          <rect x="-60" y="-700" width="560" height="2400" fill="#fff"/>
+          <path id="holeX" fill="#000" d=""/>
+        </mask>
+      </defs>
+      <g id="grpA">
+        <g id="shA" transform="translate(0 16)" fill="none" stroke="#13052c" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#eA" stroke-width="56" stroke-opacity="0.05"/><use href="#eA" stroke-width="26" stroke-opacity="0.09"/>
+        </g>
+        <path id="areaA" fill="url(#gW)" d="M 0,0 L 440,0 L 440,465 Q 220,575 0,465 Z"/>
+        <use id="rimA" href="#eA" fill="none" stroke="url(#gR)" stroke-width="3.5"/>
+      </g>
+      <g id="grpB" style="display:none">
+        <g id="shB" transform="translate(0 16)" fill="none" stroke="#13052c" stroke-linecap="round" stroke-linejoin="round">
+          <use href="#eB" stroke-width="56" stroke-opacity="0.05"/><use href="#eB" stroke-width="26" stroke-opacity="0.09"/>
+        </g>
+        <path id="areaB" fill="url(#gW)" d=""/>
+        <use id="rimB" href="#eB" fill="none" stroke="url(#gR)" stroke-width="3.5"/>
+      </g>
+      <!-- COLOUR-EXCHANGE LAYER: white slab drops, violet slab climbs through it (mirrored for the way back) -->
+      <g id="grpX" style="display:none"><g id="xInner">
+        <g transform="translate(0 16)" fill="none" stroke="#13052c" stroke-linecap="round" stroke-linejoin="round">
+          <use id="sX1a" href="#eX1" stroke-width="56" stroke-opacity="0.05"/><use id="sX1b" href="#eX1" stroke-width="26" stroke-opacity="0.09"/>
+        </g>
+        <g transform="translate(0 -16)" fill="none" stroke="#13052c" stroke-linecap="round" stroke-linejoin="round">
+          <use id="sX2a" href="#eX2" stroke-width="56" stroke-opacity="0.05"/><use id="sX2b" href="#eX2" stroke-width="26" stroke-opacity="0.09"/>
+        </g>
+        <path id="areaX" fill="url(#gW)" mask="url(#mX)" d=""/>
+        <use id="rimX1" href="#eX1" fill="none" stroke="url(#gR)" stroke-width="3.5"/>
+        <use id="rimX2" href="#eX2" fill="none" stroke="url(#gR)" stroke-width="3.5"/>
+      </g></g>
+    </svg>
+
+    <!-- Top Navigation Bar -->
+    <header class="top-nav-bar">
+      <button class="back-chevron-btn hidden-btn" id="backBtn" onclick="prevSlide()" aria-label="Previous Slide">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+
+      <button class="skip-glass-pill" onclick="goToSlide(2)">
+        SKIP
+      </button>
+    </header>
+
+    <!-- ======================================================================
+         3 VECTOR ILLUSTRATIONS MATCHING REFERENCE IMAGE
+         ====================================================================== -->
+    <section class="illustrations-stage">
+
+      <!-- SLIDE 1 ILLUSTRATION: Isometric Laptop, Shield with Keyhole, Key & Character -->
+      <div class="illust-slide active" id="illust-0">
+        <svg viewBox="0 0 340 290" class="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="shieldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#9333ea" />
+              <stop offset="100%" stop-color="#5b21b6" />
+            </linearGradient>
+            <linearGradient id="screenGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#6d28d9" />
+              <stop offset="100%" stop-color="#4c1d95" />
+            </linearGradient>
+          </defs>
+
+          <!-- Soft Floor Platform Ellipse -->
+          <ellipse cx="170" cy="215" rx="132" ry="48" fill="#f3f0f9" />
+          <ellipse cx="170" cy="212" rx="118" ry="40" fill="#faf8fc" />
+
+          <!-- Subtle Decorative Leaves Behind Laptop -->
+          <path d="M72 156 C52 146, 48 125, 65 122 C75 120, 82 138, 72 156 Z" fill="#7c3aed" opacity="0.85" />
+          <path d="M62 170 C44 168, 38 152, 52 146 C62 142, 68 158, 62 170 Z" fill="#a855f7" opacity="0.65" />
+
+          <!-- Isometric Laptop Base & Screen -->
+          <g transform="translate(10, -5)">
+            <!-- Laptop Lid / Screen Backing -->
+            <polygon points="75,65 182,22 182,122 75,165" fill="#1e293b" />
+            <!-- Purple Screen Inner -->
+            <polygon points="81,70 176,31 176,116 81,155" fill="url(#screenGrad1)" />
+            <!-- User Avatar & Password Bar on Laptop Screen -->
+            <circle cx="128" cy="76" r="10" fill="#ffffff" />
+            <path d="M114 98 C114 89, 142 89, 142 98 Z" fill="#ffffff" />
+            <rect x="103" y="106" width="50" height="8" rx="4" fill="#ffffff" opacity="0.92" />
+            <circle cx="111" cy="110" r="1.7" fill="#5b21b6" />
+            <circle cx="118" cy="110" r="1.7" fill="#5b21b6" />
+            <circle cx="125" cy="110" r="1.7" fill="#5b21b6" />
+            <circle cx="132" cy="110" r="1.7" fill="#5b21b6" />
+            <circle cx="139" cy="110" r="1.7" fill="#5b21b6" />
+            <circle cx="146" cy="110" r="1.7" fill="#5b21b6" />
+
+            <!-- Laptop Keyboard Deck -->
+            <polygon points="75,165 182,122 238,154 131,197" fill="#334155" />
+            <polygon points="75,165 131,197 131,203 75,171" fill="#1e293b" />
+            <polygon points="131,197 238,154 238,160 131,203" fill="#0f172a" />
+
+            <!-- Keyboard Keys Grid Effect -->
+            <polygon points="88,163 176,128 205,145 117,180" fill="#1e293b" />
+            <!-- Trackpad -->
+            <polygon points="145,173 168,164 180,171 157,180" fill="#475569" />
+          </g>
+
+          <!-- Floating Purple Shield with Keyhole -->
+          <g class="floating-item" transform="translate(168, 92)">
+            <path d="M32 0 L64 14 V46 C64 74 32 94 32 94 C32 94 0 74 0 46 V14 Z" fill="url(#shieldGrad1)" filter="drop-shadow(0 12px 18px rgba(91,33,182,0.32))" />
+            <path d="M32 5 L58 17 V45 C58 68 32 86 32 86" fill="none" stroke="#c084fc" stroke-width="1.5" opacity="0.6" />
+            <!-- Keyhole inside shield -->
+            <circle cx="32" cy="40" r="8" fill="#1e1b4b" />
+            <polygon points="28,44 36,44 38,60 26,60" fill="#1e1b4b" />
+          </g>
+
+          <!-- Character Standing Next to Shield -->
+          <g transform="translate(230, 118)">
+            <!-- Shadow -->
+            <ellipse cx="18" cy="96" rx="14" ry="5" fill="#cbd5e1" />
+            <!-- Legs -->
+            <path d="M13 54 L11 92" stroke="#1e293b" stroke-width="5.5" stroke-linecap="round" />
+            <path d="M22 54 L25 90" stroke="#334155" stroke-width="5.5" stroke-linecap="round" />
+            <!-- Purple Shirt -->
+            <path d="M8 24 C8 19, 27 19, 27 24 L29 55 L6 55 Z" fill="#7c3aed" />
+            <!-- Arm gesturing to shield -->
+            <path d="M9 28 L-10 38" stroke="#f5d0fe" stroke-width="4.5" stroke-linecap="round" />
+            <!-- Head & Hair -->
+            <circle cx="17" cy="11" r="7.5" fill="#fde68a" />
+            <path d="M11 8 C11 2, 24 2, 24 10 C24 13, 21 15, 21 15 L12 12 Z" fill="#0f172a" />
+          </g>
+
+          <!-- Foreground Purple Key Icon -->
+          <g class="floating-item-delayed" transform="translate(105, 205) rotate(-18)">
+            <circle cx="14" cy="14" r="11" fill="none" stroke="#7c3aed" stroke-width="5" />
+            <path d="M24 14 L52 14 M42 14 L42 22 M50 14 L50 22" stroke="#7c3aed" stroke-width="4.5" stroke-linecap="round" />
+          </g>
+        </svg>
+      </div>
+
+      <!-- SLIDE 2 ILLUSTRATION: Online Freedom - Person Cross-Legged with Purple Laptop & Rocket -->
+      <div class="illust-slide" id="illust-1">
+        <svg viewBox="0 0 340 290" class="w-full h-full overflow-visible">
+          <!-- Soft Background UI Cards, Clock & Gears -->
+          <circle cx="145" cy="54" r="22" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" />
+          <path d="M145 42 V54 L153 58" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round" />
+
+          <rect x="64" y="88" width="52" height="34" rx="5" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+          <line x1="72" y1="98" x2="104" y2="98" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+          <line x1="72" y1="108" x2="94" y2="108" stroke="#e2e8f0" stroke-width="3" stroke-linecap="round" />
+
+          <rect x="208" y="72" width="68" height="48" rx="6" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+          <rect x="216" y="82" width="52" height="10" rx="2" fill="#f1f5f9" />
+          <rect x="216" y="98" width="34" height="12" rx="2" fill="#f1f5f9" />
+
+          <!-- Bar Chart Icon on Right -->
+          <rect x="242" y="142" width="5" height="14" rx="1.5" fill="#1e293b" />
+          <rect x="251" y="135" width="5" height="21" rx="1.5" fill="#1e293b" />
+          <rect x="260" y="126" width="5" height="30" rx="1.5" fill="#7c3aed" />
+
+          <!-- Dashed Trajectory Line & Launching Rocket -->
+          <path d="M156 142 C142 108, 168 85, 184 62" fill="none" stroke="#94a3b8" stroke-width="1.6" stroke-dasharray="4 4" />
+          <g class="floating-item" transform="translate(178, 36) rotate(35)">
+            <path d="M12 0 C20 10, 20 26, 12 34 C4 26, 4 10, 12 0 Z" fill="#1e293b" />
+            <circle cx="12" cy="15" r="4" fill="#a855f7" />
+            <path d="M5 24 L0 32 L7 29 Z" fill="#7c3aed" />
+            <path d="M19 24 L24 32 L17 29 Z" fill="#7c3aed" />
+            <path d="M9 34 L12 43 L15 34 Z" fill="#c084fc" />
+          </g>
+
+          <!-- Decorative Leaves on Left -->
+          <path d="M96 226 C78 205, 80 175, 92 162 C102 178, 104 205, 96 226 Z" fill="none" stroke="#475569" stroke-width="1.5" />
+          <path d="M108 228 C102 204, 112 184, 124 176 C128 192, 120 214, 108 228 Z" fill="#6d28d9" />
+
+          <!-- Floor Shadow -->
+          <ellipse cx="176" cy="232" rx="98" ry="12" fill="#f1f5f9" />
+
+          <!-- Character Sitting Cross-Legged with Purple Laptop -->
+          <g transform="translate(124, 96)">
+            <!-- Hair & Head -->
+            <circle cx="52" cy="18" r="16" fill="#1e293b" />
+            <circle cx="64" cy="12" r="9" fill="#1e293b" />
+            <circle cx="40" cy="20" r="9" fill="#1e293b" />
+            <circle cx="52" cy="22" r="10" fill="#fde68a" />
+            <!-- Dark Dotted Sweater -->
+            <path d="M30 42 C34 34, 70 34, 76 42 L86 86 L22 86 Z" fill="#1e1b4b" />
+            <circle cx="45" cy="52" r="1.5" fill="#a855f7" />
+            <circle cx="58" cy="48" r="1.5" fill="#a855f7" />
+            <circle cx="68" cy="58" r="1.5" fill="#a855f7" />
+            <circle cx="40" cy="66" r="1.5" fill="#a855f7" />
+            <circle cx="62" cy="70" r="1.5" fill="#a855f7" />
+
+            <!-- Crossed Legs -->
+            <path d="M12 104 C12 90, 52 88, 68 104 C82 88, 102 92, 102 106 C102 120, 74 126, 54 126 C32 126, 12 118, 12 104 Z" fill="#1e293b" />
+            <!-- Shoes -->
+            <rect x="2" y="108" width="18" height="9" rx="4.5" fill="#e2e8f0" />
+            <rect x="92" y="108" width="18" height="9" rx="4.5" fill="#e2e8f0" />
+
+            <!-- Open Purple Laptop on Lap -->
+            <rect x="18" y="64" width="46" height="30" rx="4" transform="skewX(-10)" fill="#9333ea" stroke="#f3e8ff" stroke-width="1.5" />
+            <circle cx="34" cy="79" r="3.5" fill="#ffffff" />
+            <rect x="20" y="92" width="54" height="5" rx="2.5" fill="#6b21a8" />
+          </g>
+        </svg>
+      </div>
+
+      <!-- SLIDE 3 ILLUSTRATION: Privacy & Security - Monitor, Giant Check Shield, Locks & Clouds -->
+      <div class="illust-slide" id="illust-2">
+        <svg viewBox="0 0 340 290" class="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id="bigShieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7c3aed" />
+              <stop offset="100%" stop-color="#3b0764" />
+            </linearGradient>
+          </defs>
+
+          <!-- Dashed Cyber Connection Lines -->
+          <rect x="52" y="74" width="236" height="130" rx="12" fill="none" stroke="#cbd5e1" stroke-width="1.4" stroke-dasharray="4 4" />
+
+          <!-- Top Folder & Lock Badge -->
+          <g class="floating-item-delayed" transform="translate(222, 42)">
+            <path d="M0 8 C0 5, 3 3, 6 3 L18 3 L23 8 L44 8 C47 8, 49 10, 49 13 L49 36 C49 39, 47 41, 44 41 L5 41 C2 41, 0 39, 0 36 Z" fill="#1e293b" />
+            <rect x="8" y="15" width="33" height="20" rx="4" fill="#a855f7" />
+            <circle cx="24.5" cy="23" r="3" fill="#ffffff" />
+            <path d="M21.5 23 V19 C21.5 17, 27.5 17, 27.5 19 V23" fill="none" stroke="#ffffff" stroke-width="2" />
+          </g>
+
+          <!-- Desktop Monitor Behind Shield -->
+          <rect x="82" y="82" width="166" height="108" rx="8" fill="#1e1b4b" />
+          <rect x="90" y="90" width="150" height="88" rx="4" fill="#7c3aed" />
+          <!-- Browser Content Inside Monitor -->
+          <rect x="98" y="98" width="56" height="72" rx="3" fill="#ffffff" opacity="0.92" />
+          <rect x="162" y="98" width="70" height="44" rx="3" fill="#f3e8ff" opacity="0.9" />
+          <rect x="162" y="148" width="70" height="22" rx="3" fill="#ddd6fe" opacity="0.85" />
+          <!-- Monitor Stand -->
+          <polygon points="152,190 178,190 184,214 146,214" fill="#6d28d9" />
+          <rect x="132" y="214" width="66" height="6" rx="3" fill="#4c1d95" />
+
+          <!-- Center Giant Security Shield with Glowing Checkmark -->
+          <g class="floating-item" transform="translate(125, 56)">
+            <path d="M42 0 L84 16 V56 C84 92 42 116 42 116 C42 116 0 92 0 56 V16 Z" fill="url(#bigShieldGrad)" filter="drop-shadow(0 14px 22px rgba(59,7,100,0.38))" />
+            <circle cx="42" cy="54" r="23" fill="#7c3aed" stroke="#c084fc" stroke-width="2" />
+            <path d="M32 54 L39 61 L54 46" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+          </g>
+
+          <!-- Left & Right Characters Collaborating -->
+          <!-- Left Character -->
+          <g transform="translate(68, 128)">
+            <circle cx="20" cy="12" r="7" fill="#fde68a" />
+            <path d="M14 9 C14 3, 25 3, 25 9 Z" fill="#1e293b" />
+            <path d="M10 24 C10 19, 30 19, 30 24 L32 54 L8 54 Z" fill="#ddd6fe" />
+            <path d="M13 54 L11 90 M27 54 L29 90" stroke="#1e293b" stroke-width="5.5" stroke-linecap="round" />
+          </g>
+
+          <!-- Right Character Holding Gear -->
+          <g transform="translate(216, 128)">
+            <circle cx="20" cy="12" r="7" fill="#fde68a" />
+            <path d="M14 9 C14 3, 25 3, 25 9 Z" fill="#1e293b" />
+            <path d="M10 24 C10 19, 30 19, 30 24 L32 54 L8 54 Z" fill="#ede9fe" />
+            <path d="M13 54 L11 90 M27 54 L29 90" stroke="#1e293b" stroke-width="5.5" stroke-linecap="round" />
+            <circle cx="6" cy="40" r="11" fill="none" stroke="#9333ea" stroke-width="5" stroke-dasharray="5 3" />
+          </g>
+
+          <!-- Foreground Clouds & Padlock -->
+          <path d="M102 224 C102 215, 114 212, 120 218 C126 210, 142 212, 144 222 C152 222, 154 232, 146 234 L104 234 C96 234, 96 224, 102 224 Z" fill="#9333ea" />
+          <g transform="translate(254, 180)">
+            <rect x="0" y="10" width="22" height="18" rx="4" fill="#7c3aed" />
+            <path d="M5 10 V6 C5 2, 17 2, 17 6 V10" fill="none" stroke="#7c3aed" stroke-width="2.5" />
+            <circle cx="11" cy="19" r="2.2" fill="#ffffff" />
+          </g>
+        </svg>
+      </div>
+
+    </section>
+
+    <!-- ======================================================================
+         BOTTOM VIOLET CONTENT SECTION (EXACT REFERENCE TEXTS + LIQUID GLASS CTA)
+         ====================================================================== -->
+    <section class="bottom-purple-section">
+
+      <!-- Slide Texts Viewport -->
+      <div class="text-slider-viewport">
+        <!-- Slide 1 Text (Exact Reference Copy) -->
+        <div class="text-slide active" id="text-0">
+          <h1 class="slide-title">Be Safe</h1>
+          <p class="slide-desc">
+            You can browse the internet in the most secure possible way. We let you anonymously browse the internet and protect your private information.
+          </p>
+        </div>
+
+        <!-- Slide 2 Text (Exact Reference Copy) -->
+        <div class="text-slide" id="text-1">
+          <h1 class="slide-title">Online Freedom</h1>
+          <p class="slide-desc">
+            Bypass censorship and get unlimited access to all of your favourite websites and apps without any fear being monitored by someone.
+          </p>
+        </div>
+
+        <!-- Slide 3 Text (Exact Reference Copy) -->
+        <div class="text-slide" id="text-2">
+          <h1 class="slide-title">Privacy and Security</h1>
+          <p class="slide-desc">
+            Using Wi-fi and open connections puts your information at risk. We will keep your sensitive information away from hackers and ISPs.
+          </p>
+        </div>
+      </div>
+
+      <!-- Pagination Dots + Soft Liquid Glass CTA Button (No Bottom Navigation Bar) -->
+      <div class="w-full flex flex-col items-center" id="bottomControls">
+        <!-- 3 Pagination Dots -->
+        <div class="dots-row">
+          <div class="dot-indicator active" id="dot-0" onclick="goToSlide(0)"></div>
+          <div class="dot-indicator" id="dot-1" onclick="goToSlide(1)"></div>
+          <div class="dot-indicator" id="dot-2" onclick="goToSlide(2)"></div>
+        </div>
+
+        <!-- Soft Liquid Glass Button (Continue -> Continue -> Get in) -->
+        <button class="liquid-glass-btn" id="ctaBtn" onclick="nextSlide()">
+          <span class="btn-label-text" id="ctaBtnText">Continue</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    const W = 440, H = 956, N = 40, DUR = 900, TOTAL = 3;
+    const LABELS = ['Continue', 'Continue', 'Get in'];
+    const REST_AREA = 'M 0,0 L 440,0 L 440,465 Q 220,575 0,465 Z';
+    const REST_EDGE = 'M 0,465 Q 220,575 440,465';
+    const $ = (id) => document.getElementById(id);
+    const app = $('onboardingApp'), backBtn = $('backBtn'), ctaText = $('ctaBtnText'), controls = $('bottomControls');
+    const illust = [0, 1, 2].map(i => $('illust-' + i));
+    const texts = [0, 1, 2].map(i => $('text-' + i));
+    const dots = [0, 1, 2].map(i => $('dot-' + i));
+    const orbA = $('auroraOrb1'), orbB = $('auroraOrb2');
+
+    // ---------- math helpers ----------
+    const clamp = (v) => Math.max(0, Math.min(1, v));
+    const seg = (p, a, b) => clamp((p - a) / (b - a));
+    const smooth = (x) => x * x * (3 - 2 * x);
+    const easeIO = (x) => x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+    const easeIn = (x) => x * x;
+
+    // sample points across the width + bell shape (center leads = water drop)
+    const XS = [], G = [], YR = [];
+    for (let i = 0; i <= N; i++) {
+      const x = i * W / N;
+      XS.push(x);
+      G.push(Math.exp(-0.5 * Math.pow((x - 220) / 95, 2)));
+      YR.push(465 + 220 * (x / W) * (1 - x / W)); // resting arch curve
+    }
+    const YD = YR.map(y => H - y); // mirrored (dome) curve for the colour-swapped screen
+    const ARCH = XS.map((x, i) => [x, YR[i]]);
+    const FLAT = XS.map(x => [x, -60]);
+
+    // smooth path through points (Catmull-Rom -> Bezier)
+    function curve(p) {
+      let d = '';
+      for (let i = 0; i < p.length - 1; i++) {
+        const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+        d += 'C' + (b[0] + (c[0] - a[0]) / 6).toFixed(1) + ' ' + (b[1] + (c[1] - a[1]) / 6).toFixed(1) + ' ' +
+             (c[0] - (e[0] - b[0]) / 6).toFixed(1) + ' ' + (c[1] - (e[1] - b[1]) / 6).toFixed(1) + ' ' +
+             c[0].toFixed(1) + ' ' + c[1].toFixed(1);
+      }
+      return d;
+    }
+    const line = (p) => 'M' + p[0][0] + ' ' + p[0][1].toFixed(1) + curve(p);
+    function band(top, bot) {
+      const b = bot.slice().reverse();
+      return 'M-20 ' + top[0][1].toFixed(1) + 'L0 ' + top[0][1].toFixed(1) + curve(top) +
+        'L460 ' + top[N][1].toFixed(1) + 'L460 ' + b[0][1].toFixed(1) + 'L440 ' + b[0][1].toFixed(1) + curve(b) +
+        'L-20 ' + b[N][1].toFixed(1) + 'Z';
+    }
+    function setBand(k, top, bot) {
+      let thick = 0;
+      for (let i = 0; i <= N; i++) thick = Math.max(thick, bot[i][1] - top[i][1]);
+      $('area' + k).setAttribute('d', band(top, bot));
+      $('e' + k).setAttribute('d', line(bot));
+      const o = smooth(clamp(thick / 90)); // no shadow/rim when the white band is gone
+      $('sh' + k).style.opacity = o;
+      $('rim' + k).style.opacity = o;
+    }
+    const restLiquid = (screen) => {
+      if (screen === 1) { // violet top / white bottom
+        $('grpA').style.display = 'none'; $('grpB').style.display = 'none'; $('grpX').style.display = '';
+        liquidX(1, false);
+        return;
+      }
+      $('grpX').style.display = 'none'; $('grpA').style.display = '';
+      $('areaA').setAttribute('d', REST_AREA); $('eA').setAttribute('d', REST_EDGE);
+      $('shA').style.opacity = 1; $('rimA').style.opacity = 1; $('grpB').style.display = 'none';
+    };
+
+    /**
+     * COLOUR EXCHANGE (900ms). Same geometry both ways, the way back is just mirrored top<->bottom.
+     *  forward (to screen 2): white slab drops DOWN and floods, a violet slab climbs UP through it and
+     *      settles on top -> violet on top, white on the bottom.
+     *  mirrored (screen 2 -> next): violet drops DOWN from the top, white climbs UP from the bottom.
+     */
+    function liquidX(p, mirror) {
+      const pA = seg(p, 0, 0.55), pB = seg(p, 0.26, 1), pC = seg(p, 0.4, 1);
+      const eA = easeIO(pA), eB = easeIO(pB), eC = easeIO(pC);
+      const sA = Math.sin(Math.PI * pA), sB = Math.sin(Math.PI * pB), sC = Math.sin(Math.PI * pC);
+      const top = XS.map(x => [x, -60]);
+      const wb = [], ht = [], hb = [], l1 = [], l2 = [];
+      let t1 = 0, t2 = 0;
+      for (let i = 0; i <= N; i++) {
+        const w = YR[i] + eA * (H - 465 + 140) + sA * 230 * G[i];              // white drop (bottom edge)
+        const a = (H + 120) - eB * (H + 120 + 250) - sB * 170 * G[i];          // violet slab, leading edge
+        const b = YD[i] + (1 - eC) * (H + 160) - sC * 120 * G[i];              // violet slab, trailing edge
+        wb.push([XS[i], w]); ht.push([XS[i], a]); hb.push([XS[i], b]);
+        const u = Math.min(w, a), v = Math.max(-60, b);
+        l1.push([XS[i], u]); l2.push([XS[i], v]);
+        t1 = Math.max(t1, u + 60); t2 = Math.max(t2, w - v);
+      }
+      $('areaX').setAttribute('d', band(top, wb));
+      $('holeX').setAttribute('d', band(ht, hb));
+      $('eX1').setAttribute('d', line(l1));
+      $('eX2').setAttribute('d', line(l2));
+      const o1 = smooth(clamp(t1 / 90)), o2 = smooth(clamp(t2 / 90));
+      ['sX1a', 'sX1b', 'rimX1'].forEach(k => $(k).style.opacity = o1);
+      ['sX2a', 'sX2b', 'rimX2'].forEach(k => $(k).style.opacity = o2);
+      $('xInner').setAttribute('transform', mirror ? 'translate(0 ' + H + ') scale(1 -1)' : '');
+    }
+
+    /**
+     * Liquid transition (900ms total, time based so it stays 900ms on any device)
+     *  type W (1<->2): white drops down like a water drop and floods the screen, then the violet bottom rises up.
+     *  type V (2<->3): violet drops down from the top and floods, then the white arch rises up from the bottom.
+     */
+    function liquid(p, type) {
+      const pA = seg(p, 0, 0.62), pB = seg(p, 0.38, 1);
+      const eA = easeIO(pA), eB = easeIO(pB);
+      const sA = Math.sin(Math.PI * pA), sB = Math.sin(Math.PI * pB);
+      if (type === 'W') {
+        $('grpB').style.display = 'none';
+        const bot = XS.map((x, i) => {
+          const front = YR[i] + eA * (H - 465 + 140) + sA * 230 * G[i];   // white drop going down
+          const rise = YR[i] + (1 - eB) * (H - 465 + 90) - sB * 170 * G[i]; // violet coming up
+          return [x, Math.min(front, rise)];
+        });
+        setBand('A', FLAT, bot);
+      } else {
+        $('grpB').style.display = '';
+        const top1 = XS.map((x, i) => [x, Math.min(-90 + eA * (H + 330) + sA * 230 * G[i], YR[i])]); // violet drop eats the arch
+        setBand('A', top1, ARCH);
+        const T = (1 - eB) * (H + 160); // white arch rising from the bottom
+        setBand('B', XS.map((x, i) => [x, -140 + T - sB * 170 * G[i]]), XS.map((x, i) => [x, YR[i] + T]));
+      }
+    }
+
+    // ---------- content (illustrations + text) ----------
+    const setS = (el, o, t) => { el.style.opacity = o; el.style.transform = t; };
+    function content(p, type, from, to, ky) {
+      const V = type === 'V';
+      const o = seg(p, 0, V ? 0.32 : 0.42);
+      setS(illust[from], 1 - smooth(o), `translate3d(0,${easeIn(o) * (V ? 150 : 110)}px,0) scale(${1 - 0.05 * o})`);
+      if (V) {
+        const T = (1 - easeIO(seg(p, 0.38, 1))) * (H + 160) * ky; // rides on the rising white arch
+        setS(illust[to], 1, `translate3d(0,${T}px,0)`);
+      } else {
+        const q = seg(p, 0.4, 0.92);
+        setS(illust[to], smooth(q), `translate3d(0,${(1 - easeOut(q)) * 60}px,0)`);
+      }
+      const t0 = seg(p, 0, 0.28), a = V ? 0.74 : 0.58;
+      const t1 = seg(p, a, 1), c1 = seg(p, a + 0.06, 1);
+      setS(texts[from], 1 - smooth(t0), `translate3d(0,${easeIn(t0) * 26}px,0)`);
+      setS(texts[to], smooth(t1), `translate3d(0,${(1 - easeOut(t1)) * 34}px,0)`);
+      controls.style.opacity = p < 0.5 ? 1 - smooth(t0) : smooth(c1);
+    }
+
+    // content for the colour exchange: white parts always travel the same way as the white slab,
+    // violet parts always travel the same way as the violet slab
+    function contentX(p, fwd, from, to) {
+      const o = seg(p, 0, 0.32), t0 = seg(p, 0, 0.28);
+      const ill = fwd ? 1 : -1;                       // white: forward = down, back = up
+      const txt = fwd ? -1 : 1;                       // violet: forward = up, back = down
+      setS(illust[from], 1 - smooth(o), `translate3d(0,${easeIn(o) * 120 * ill}px,0) scale(${1 - 0.05 * o})`);
+      const q = seg(p, 0.62, 1);
+      setS(illust[to], smooth(q), `translate3d(0,${-(1 - easeOut(q)) * 70 * ill}px,0)`);
+      const t1 = seg(p, 0.62, 1), c1 = seg(p, 0.68, 1);
+      setS(texts[from], 1 - smooth(t0), `translate3d(0,${easeIn(t0) * 34 * txt}px,0)`);
+      setS(texts[to], smooth(t1), `translate3d(0,${-(1 - easeOut(t1)) * 34 * txt}px,0)`);
+      controls.style.opacity = p < 0.5 ? 1 - smooth(t0) : smooth(c1);
+    }
+
+    // ---------- state ----------
+    let cur = 0, busy = false;
+    function setDots(i) {
+      dots.forEach((d, k) => d.classList.toggle('active', k === i));
+      ctaText.textContent = LABELS[i];
+    }
+    function setActive(i) {
+      for (let k = 0; k < TOTAL; k++) {
+        illust[k].classList.toggle('active', k === i);
+        texts[k].classList.toggle('active', k === i);
+      }
+      setDots(i);
+    }
+    function moveOrbs(i) {
+      const h = app.clientHeight || 900; // screen 2 has violet on top, so the glow moves up there
+      const o = [[0, 0, 0, 0], [65, -(0.72 * h - 170), -55, -(0.5 * h)], [120, -10, -110, -35]][i];
+      orbA.style.transform = `translate3d(${o[0]}px,${o[1]}px,0) scale(${1 + i * 0.08})`;
+      orbB.style.transform = `translate3d(${o[2]}px,${o[3]}px,0) scale(${1 + i * 0.06})`;
+    }
+    function finish(to) {
+      [...illust, ...texts].forEach(e => { e.style.opacity = ''; e.style.transform = ''; });
+      controls.style.opacity = '';
+      setActive(to);
+      app.classList.toggle('inv', to === 1);
+      restLiquid(to);
+      busy = false;
+    }
+    function go(to) {
+      if (busy || to === cur || to < 0 || to >= TOTAL) return;
+      // F: into screen 2 (white down / violet up)   R: out of screen 2 (violet down / white up)   V: 1<->3 skip
+      const from = cur, kind = to === 1 ? 'F' : (from === 1 ? 'R' : 'V'), ky = app.clientHeight / H;
+      cur = to; busy = true;
+      backBtn.classList.toggle('hidden-btn', to === 0);
+      moveOrbs(to);
+      if (kind === 'V') { $('grpX').style.display = 'none'; $('grpA').style.display = ''; }
+      else { $('grpA').style.display = 'none'; $('grpB').style.display = 'none'; $('grpX').style.display = ''; }
+      const frame = (p) => {
+        if (kind === 'V') { liquid(p, 'V'); content(p, 'V', from, to, ky); }
+        else { liquidX(p, kind === 'R'); contentX(p, kind === 'F', from, to); }
+      };
+      frame(0);
+      let t0 = null, swapped = false;
+      const tick = (ts) => {
+        if (t0 === null) t0 = ts;
+        const p = clamp((ts - t0) / DUR);
+        frame(p);
+        if (!swapped && p >= 0.5) { swapped = true; setDots(to); app.classList.toggle('inv', to === 1); }
+        if (p < 1) requestAnimationFrame(tick); else finish(to);
+      };
+      requestAnimationFrame(tick);
+    }
+    function nextSlide() { go(cur < TOTAL - 1 ? cur + 1 : 0); }
+    function prevSlide() { go(cur - 1); }
+    function goToSlide(i) { go(i); }
+
+    // ---------- swipe left / right ----------
+    let d = null;
+    function drag(px, instant) {
+      [illust[cur], texts[cur]].forEach(el => {
+        if (px === null) {
+          el.style.transition = instant ? '' : 'transform .45s cubic-bezier(.22,1,.36,1)';
+          el.style.transform = '';
+          if (!instant) setTimeout(() => { el.style.transition = ''; }, 470);
+        } else {
+          el.style.transition = 'none';
+          el.style.transform = `translate3d(${px}px,0,0)`;
+        }
+      });
+    }
+    app.addEventListener('pointerdown', (e) => {
+      if (busy || e.target.closest('button,.dot-indicator')) return;
+      d = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), dx: 0, dy: 0 };
+      try { app.setPointerCapture(e.pointerId); } catch (_) {}
+    });
+    app.addEventListener('pointermove', (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      d.dx = e.clientX - d.x; d.dy = e.clientY - d.y;
+      if (Math.abs(d.dx) > Math.abs(d.dy)) {
+        const edge = (d.dx < 0 && cur === TOTAL - 1) || (d.dx > 0 && cur === 0);
+        drag(d.dx * (edge ? 0.08 : 0.22));
+      }
+    });
+    const endDrag = (e) => {
+      if (!d || e.pointerId !== d.id) return;
+      const { dx, dy, t } = d; d = null;
+      const v = Math.abs(dx) / (performance.now() - t + 1);
+      const ok = Math.abs(dx) > Math.abs(dy) * 1.2 && (Math.abs(dx) > 50 || (Math.abs(dx) > 24 && v > 0.45));
+      const target = dx < 0 ? cur + 1 : cur - 1;
+      const can = ok && target >= 0 && target < TOTAL;
+      drag(null, can);
+      if (can) go(target);
+    };
+    app.addEventListener('pointerup', endDrag);
+    app.addEventListener('pointercancel', endDrag);
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') go(cur + 1);
+      if (e.key === 'ArrowLeft') go(cur - 1);
+    });
+  </script>
+</body>
+</html>

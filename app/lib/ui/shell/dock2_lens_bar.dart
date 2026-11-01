@@ -4,11 +4,12 @@ import '../../theme/theme_manager.dart';
 
 /// 100% Faithful Implementation of "00003.html" (Liquid Glass Lens Navigation Bar)
 /// Features:
-/// - Exact 464px x 97px baseline dimensions with responsive scaling.
+/// - 464px x 97px baseline dimensions with responsive fitted scaling.
+/// - Deep obsidian violet glass body with purple ambient halo.
 /// - Elevated refractive optical lens with dual curved specular reflection meniscus.
 /// - Interactive Hold & Drag Left/Right gesture physics with rubber-banding, velocity-based stretch/compress, and inertia flick release.
 /// - Real-time hovered tab tracking and smooth spring transitions.
-/// - Full Light Mode and Dark Mode support.
+/// - Never overflows or cuts off Settings on any screen size.
 class Dock2LensBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
@@ -30,15 +31,16 @@ class _Dock2LensBarState extends State<Dock2LensBar>
   static const double _kSlotWidth = 98.0;
   static const int _kTotalTabs = 4;
   static const double _kMinX = 0.0;
-  static const double _kMaxX = (_kTotalTabs - 1) * _kSlotWidth;
+  static const double _kMaxX = (_kTotalTabs - 1) * _kSlotWidth; // 294.0
 
   late int _activeTab;
   int _hoveredTab = 0;
   bool _isHolding = false;
   bool _isDragging = false;
+  bool _isGliding = false;
 
   double _sliderX = 0.0;
-  double _dragStartX = 0.0;
+  double _dragStartLocalX = 0.0;
   double _dragStartSliderX = 0.0;
   double _velocity = 0.0;
   double _lastX = 0.0;
@@ -50,23 +52,23 @@ class _Dock2LensBarState extends State<Dock2LensBar>
   static const List<_Dock2TabItem> _tabs = [
     _Dock2TabItem(
       label: 'Home',
-      iconData: Icons.shield_rounded,
-      inactiveIconData: Icons.shield_outlined,
+      iconData: Icons.home_rounded,
+      inactiveIconData: Icons.home_outlined,
     ),
     _Dock2TabItem(
       label: 'Countries',
-      iconData: Icons.language_rounded,
-      inactiveIconData: Icons.language_outlined,
+      iconData: Icons.public_rounded,
+      inactiveIconData: Icons.public_outlined,
     ),
     _Dock2TabItem(
       label: 'Profiles',
-      iconData: Icons.layers_rounded,
-      inactiveIconData: Icons.layers_outlined,
+      iconData: Icons.bookmark_rounded,
+      inactiveIconData: Icons.bookmark_border_rounded,
     ),
     _Dock2TabItem(
       label: 'Settings',
-      iconData: Icons.tune_rounded,
-      inactiveIconData: Icons.tune_outlined,
+      iconData: Icons.settings_rounded,
+      inactiveIconData: Icons.settings_outlined,
     ),
   ];
 
@@ -79,14 +81,14 @@ class _Dock2LensBarState extends State<Dock2LensBar>
 
     _springController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 460),
+      duration: const Duration(milliseconds: 380),
     );
   }
 
   @override
   void didUpdateWidget(covariant Dock2LensBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.currentIndex != oldWidget.currentIndex && !_isDragging) {
+    if (widget.currentIndex != oldWidget.currentIndex && !_isDragging && !_isHolding) {
       _animateToTab(widget.currentIndex);
     }
   }
@@ -105,6 +107,7 @@ class _Dock2LensBarState extends State<Dock2LensBar>
     setState(() {
       _activeTab = target;
       _hoveredTab = target;
+      _isGliding = true;
     });
 
     _springAnimation = Tween<double>(begin: start, end: end).animate(
@@ -118,36 +121,34 @@ class _Dock2LensBarState extends State<Dock2LensBar>
         });
       });
 
-    _springController.forward(from: 0.0);
+    _springController.forward(from: 0.0).then((_) {
+      if (mounted) {
+        setState(() => _isGliding = false);
+      }
+    });
   }
 
-  void _onPointerDown(PointerDownEvent e, double scale, double barLeft) {
+  void _onPointerDown(PointerDownEvent e) {
     _springController.stop();
-    _dragStartX = e.position.dx;
+    _isGliding = false;
+    _dragStartLocalX = e.localPosition.dx;
+    _dragStartSliderX = _activeTab * _kSlotWidth;
+    _sliderX = _dragStartSliderX;
+    _lastX = _sliderX;
     _lastDragTime = DateTime.now().millisecondsSinceEpoch;
     _velocity = 0.0;
     _isDragging = false;
 
-    final effectiveScale = scale > 0 ? scale : 1.0;
-    final localX = (e.position.dx - barLeft) / effectiveScale - 36.0;
-    final tappedSlot = (localX / _kSlotWidth).floor().clamp(0, _kTotalTabs - 1);
-
-    _sliderX = tappedSlot * _kSlotWidth;
-    _dragStartSliderX = _sliderX;
-    _lastX = _sliderX;
-    _activeTab = tappedSlot;
-    _hoveredTab = tappedSlot;
-
     setState(() {
       _isHolding = true;
+      _hoveredTab = _activeTab;
     });
   }
 
-  void _onPointerMove(PointerMoveEvent e, double scale) {
+  void _onPointerMove(PointerMoveEvent e) {
     if (!_isHolding) return;
 
-    final effectiveScale = scale > 0 ? scale : 1.0;
-    final deltaX = (e.position.dx - _dragStartX) / effectiveScale;
+    final deltaX = e.localPosition.dx - _dragStartLocalX;
     if (deltaX.abs() > 3.0) {
       _isDragging = true;
     }
@@ -157,7 +158,6 @@ class _Dock2LensBarState extends State<Dock2LensBar>
 
     double nextX = _dragStartSliderX + deltaX;
 
-    // Rubber-band resistance at boundaries
     if (nextX < _kMinX) {
       nextX = _kMinX - math.pow((_kMinX - nextX).abs(), 0.70) * 1.8;
     } else if (nextX > _kMaxX) {
@@ -176,7 +176,7 @@ class _Dock2LensBarState extends State<Dock2LensBar>
     });
   }
 
-  void _onPointerUp(PointerUpEvent e, double scale, double barLeft) {
+  void _onPointerUp(PointerUpEvent e) {
     if (!_isHolding) return;
 
     final wasDragging = _isDragging;
@@ -187,12 +187,10 @@ class _Dock2LensBarState extends State<Dock2LensBar>
 
     int targetTab;
     if (wasDragging) {
-      // Momentum projection on flick release
       final projectedX = _sliderX + _velocity * 85.0;
       targetTab = (projectedX / _kSlotWidth).round().clamp(0, _kTotalTabs - 1);
     } else {
-      final effectiveScale = scale > 0 ? scale : 1.0;
-      final localX = (e.position.dx - barLeft) / effectiveScale - 36.0;
+      final localX = (e.localPosition.dx - 36.0).clamp(0.0, _kSlotWidth * _kTotalTabs);
       targetTab = (localX / _kSlotWidth).floor().clamp(0, _kTotalTabs - 1);
     }
 
@@ -218,41 +216,39 @@ class _Dock2LensBarState extends State<Dock2LensBar>
 
         return RepaintBoundary(
           child: LayoutBuilder(
-            builder: (context, constraints) {
-              final maxWidth = constraints.maxWidth;
-              final scale = math.min(1.0, (maxWidth - 16) / 464.0);
-              const barWidth = 464.0;
-              final scaledWidth = barWidth * scale;
-              final barLeft = (maxWidth - scaledWidth) / 2.0;
+        builder: (context, constraints) {
+          final availableWidth = constraints.maxWidth;
+          final scale = math.min(1.0, (availableWidth - 24.0) / 464.0);
+          final scaledWidth = 464.0 * scale;
+          final scaledHeight = 136.0 * scale;
 
-              return SizedBox(
-                height: 124, // ample height for protruding lens
-                child: Center(
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (e) => _onPointerDown(e, scale, barLeft),
-                    onPointerMove: (e) => _onPointerMove(e, scale),
-                    onPointerUp: (e) => _onPointerUp(e, scale, barLeft),
-                    onPointerCancel: (_) => _onPointerCancel(),
-                    child: Transform.scale(
-                      scale: scale,
-                      child: SizedBox(
-                        width: barWidth,
-                        height: 124,
-                        child: Stack(
-                          clipBehavior: Clip.none,
-                          alignment: Alignment.center,
-                          children: [
-                          // 1. Ambient Halo
+          return SizedBox(
+            width: availableWidth,
+            height: 136.0,
+            child: Center(
+              child: SizedBox(
+                width: scaledWidth,
+                height: scaledHeight,
+                child: FittedBox(
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  clipBehavior: Clip.none,
+                  child: SizedBox(
+                    width: 464.0,
+                    height: 136.0,
+                    child: Listener(
+                      behavior: HitTestBehavior.opaque,
+                      onPointerDown: _onPointerDown,
+                      onPointerMove: _onPointerMove,
+                      onPointerUp: _onPointerUp,
+                      onPointerCancel: (_) => _onPointerCancel(),
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        alignment: Alignment.center,
+                        children: [
                           _buildAmbientHalo(isDark),
-
-                          // 2. Main Pill Bar (464px x 97px)
                           _buildMainPill(isDark),
-
-                          // 3. Sliding Liquid Glass Lens Assembly
                           _buildLensSlider(isDark),
-
-                          // 4. Tabs Layer
                           _buildTabsLayer(isDark),
                         ],
                       ),
@@ -260,10 +256,11 @@ class _Dock2LensBarState extends State<Dock2LensBar>
                   ),
                 ),
               ),
-            );
-            },
-          ),
-        );
+            ),
+          );
+        },
+      ),
+    );
       },
     );
   }
@@ -278,18 +275,12 @@ class _Dock2LensBarState extends State<Dock2LensBar>
             borderRadius: BorderRadius.circular(999),
             gradient: RadialGradient(
               center: Alignment.center,
-              radius: 0.9,
-              colors: isDark
-                  ? [
-                      const Color(0xFF6E46DC).withValues(alpha: 0.40),
-                      const Color(0xFF4A1E9E).withValues(alpha: 0.20),
-                      Colors.transparent,
-                    ]
-                  : [
-                      const Color(0xFF7C3AED).withValues(alpha: 0.28),
-                      const Color(0xFF9333EA).withValues(alpha: 0.12),
-                      Colors.transparent,
-                    ],
+              radius: 0.85,
+              colors: [
+                const Color(0xFF6E46DC).withValues(alpha: 0.40),
+                const Color(0xFF4A1E9E).withValues(alpha: 0.20),
+                Colors.transparent,
+              ],
               stops: const [0.0, 0.55, 1.0],
             ),
           ),
@@ -304,37 +295,29 @@ class _Dock2LensBarState extends State<Dock2LensBar>
       height: 97,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: isDark
-              ? [
-                  const Color(0xFF1B142E).withValues(alpha: 0.90),
-                  const Color(0xFF0F0B1A).withValues(alpha: 0.95),
-                  const Color(0xFF150F24).withValues(alpha: 0.92),
-                ]
-              : [
-                  Colors.white.withValues(alpha: 0.94),
-                  const Color(0xFFF1ECFA).withValues(alpha: 0.90),
-                  const Color(0xFFF8F5FF).withValues(alpha: 0.96),
-                ],
+          colors: [
+            Color(0xDC1E182E),
+            Color(0xEB120D1E),
+            Color(0xE0181226),
+          ],
         ),
         border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.25)
-              : const Color(0xFF7C3AED).withValues(alpha: 0.25),
+          color: Colors.white.withValues(alpha: 0.18),
           width: 1.2,
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.80) : const Color(0xFF281050).withValues(alpha: 0.18),
-            blurRadius: 36,
-            offset: const Offset(0, 18),
+            color: Color(0xBF030108),
+            blurRadius: 44,
+            offset: Offset(0, 24),
           ),
           BoxShadow(
-            color: isDark ? const Color(0xFF6E46DC).withValues(alpha: 0.32) : const Color(0xFF7C3AED).withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 4),
+            color: Color(0x406E46DC),
+            blurRadius: 24,
+            offset: Offset(0, 4),
           ),
         ],
       ),
@@ -342,9 +325,9 @@ class _Dock2LensBarState extends State<Dock2LensBar>
         children: [
           Positioned(
             top: 0,
-            left: 24,
-            right: 24,
-            height: 42,
+            left: 20,
+            right: 20,
+            height: 46,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(999)),
@@ -352,8 +335,8 @@ class _Dock2LensBarState extends State<Dock2LensBar>
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.white.withValues(alpha: isDark ? 0.20 : 0.45),
-                    Colors.white.withValues(alpha: isDark ? 0.02 : 0.06),
+                    Colors.white.withValues(alpha: 0.14),
+                    Colors.white.withValues(alpha: 0.02),
                     Colors.transparent,
                   ],
                 ),
@@ -367,108 +350,145 @@ class _Dock2LensBarState extends State<Dock2LensBar>
 
   Widget _buildLensSlider(bool isDark) {
     final speed = math.min(2.2, _velocity.abs());
-    final stretchX = 1.0 + speed * 0.065;
-    final compressY = 1.0 / math.sqrt(stretchX);
+    final stretchX = _isGliding ? 1.08 : (1.0 + speed * 0.065);
+    final compressY = _isGliding ? 0.94 : (1.0 / math.sqrt(stretchX));
+    final skewAngle = math.max(-7.0, math.min(7.0, _velocity * 3.8));
 
     final currentTabX = _sliderX;
     final lensCenterLeft = 36.0 + currentTabX + (_kSlotWidth / 2.0);
 
-    // Idle size: 104px x 90px. Hold size: 140px x 130px (protruding!)
-    final lensWidth = _isHolding ? 140.0 : 104.0;
-    final lensHeight = _isHolding ? 130.0 : 90.0;
-    final borderRadius = _isHolding ? 46.0 : 26.0;
+    final lensWidth = _isHolding ? 138.0 : 92.0;
+    final lensHeight = _isHolding ? 128.0 : 80.0;
+    final borderRadius = _isHolding ? 44.0 : 21.0;
 
     return Positioned(
       left: lensCenterLeft - (lensWidth / 2.0),
-      top: 48.5 - (lensHeight / 2.0),
+      top: 68.0 - (lensHeight / 2.0),
       child: IgnorePointer(
-        child: Transform.scale(
-          scaleX: stretchX,
-          scaleY: compressY,
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.diagonal3Values(stretchX, compressY, 1.0)
+            ..setEntry(0, 1, math.tan(skewAngle * math.pi / 180)),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 320),
-            curve: const Cubic(0.18, 0.9, 0.28, 1.3),
+            curve: const Cubic(0.22, 1.28, 0.32, 1.0),
             width: lensWidth,
             height: lensHeight,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(borderRadius),
-              gradient: RadialGradient(
-                center: Alignment.center,
-                radius: 0.95,
-                colors: isDark
-                    ? [
-                        const Color(0xFF2E1C58).withValues(alpha: _isHolding ? 0.85 : 0.65),
-                        const Color(0xFF1D113B).withValues(alpha: _isHolding ? 0.92 : 0.75),
-                        const Color(0xFF5B34B5).withValues(alpha: 0.35),
-                        const Color(0xFFFFFFFF).withValues(alpha: 0.45),
-                      ]
-                    : [
-                        Colors.white.withValues(alpha: 0.95),
-                        const Color(0xFFEADBFF).withValues(alpha: 0.82),
-                        const Color(0xFFC4A2FF).withValues(alpha: 0.40),
-                        const Color(0xFF7C3AED).withValues(alpha: 0.50),
+              gradient: _isHolding
+                  ? const RadialGradient(
+                      center: Alignment.center,
+                      radius: 0.9,
+                      colors: [
+                        Color(0xE01A1230),
+                        Color(0xD0241846),
+                        Color(0x558064CC),
+                        Color(0x60F5EFFF),
                       ],
-                stops: const [0.0, 0.55, 0.82, 1.0],
-              ),
+                      stops: [0.0, 0.54, 0.84, 1.0],
+                    )
+                  : const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0x755E4C90),
+                        Color(0x653A2C60),
+                        Color(0x85503E80),
+                      ],
+                    ),
               border: Border.all(
-                color: Colors.white.withValues(alpha: _isHolding ? 0.85 : 0.55),
-                width: _isHolding ? 1.6 : 1.2,
+                color: _isHolding
+                    ? Colors.white.withValues(alpha: 0.78)
+                    : Colors.white.withValues(alpha: 0.20),
+                width: _isHolding ? 1.4 : 1.0,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: isDark ? Colors.black.withValues(alpha: 0.70) : const Color(0xFF381468).withValues(alpha: 0.22),
-                  blurRadius: _isHolding ? 38 : 20,
-                  offset: Offset(0, _isHolding ? 12 : 6),
+                  color: Colors.black.withValues(alpha: _isHolding ? 0.80 : 0.55),
+                  blurRadius: _isHolding ? 48 : 18,
+                  offset: Offset(0, _isHolding ? 26 : 8),
                 ),
-                BoxShadow(
-                  color: const Color(0xFF7C3AED).withValues(alpha: _isHolding ? 0.55 : 0.35),
-                  blurRadius: 24,
-                  spreadRadius: 1,
-                ),
+                if (_isHolding)
+                  const BoxShadow(
+                    color: Color(0x607C3AED),
+                    blurRadius: 26,
+                    offset: Offset(0, 6),
+                  ),
               ],
             ),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Top Refractive Meniscus
-                Positioned(
-                  top: 4,
-                  left: 18,
-                  right: 18,
-                  height: 18,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.white.withValues(alpha: 0.90),
-                          Colors.white.withValues(alpha: 0.25),
-                          Colors.transparent,
-                        ],
-                      ),
+                if (_isHolding)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _Dock2MeniscusPainter(),
                     ),
                   ),
-                ),
-                // Bottom Refractive Meniscus
-                Positioned(
-                  bottom: 4,
-                  left: 18,
-                  right: 18,
-                  height: 18,
-                  child: Container(
+
+                // Purple capsule: in idle state 78x42, on hold expands to 86x48 with intense purple glow
+                Align(
+                  alignment: Alignment.topCenter,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 260),
+                    curve: const Cubic(0.22, 1.25, 0.32, 1.0),
+                    margin: EdgeInsets.only(top: _isHolding ? 3.5 : 5.5),
+                    width: _isHolding ? 86 : 78,
+                    height: _isHolding ? 48 : 42,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      gradient: LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
+                      borderRadius: BorderRadius.circular(999),
+                      gradient: const RadialGradient(
+                        center: Alignment(0, -0.30),
+                        radius: 0.75,
                         colors: [
-                          Colors.white.withValues(alpha: 0.85),
-                          Colors.white.withValues(alpha: 0.20),
-                          Colors.transparent,
+                          Color(0xFF7C3AED),
+                          Color(0xFF6D28D9),
+                          Color(0xFF4C1D95),
+                          Color(0xFF2E1065),
                         ],
+                        stops: [0.0, 0.42, 0.78, 1.0],
                       ),
+                      border: Border.all(
+                        color: const Color(0xFFDCC3FF).withValues(alpha: _isHolding ? 0.65 : 0.40),
+                        width: 1.0,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF8B5CF6).withValues(alpha: _isHolding ? 0.65 : 0.45),
+                          blurRadius: _isHolding ? 28 : 18,
+                          spreadRadius: _isHolding ? 4 : 2,
+                        ),
+                        BoxShadow(
+                          color: const Color(0xBF080218),
+                          blurRadius: _isHolding ? 22 : 16,
+                          offset: Offset(0, _isHolding ? 10 : 8),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: 1.5,
+                          left: 6,
+                          right: 6,
+                          height: 19,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(999),
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.white.withValues(alpha: 0.60),
+                                  const Color(0xFFF0E1FF).withValues(alpha: 0.25),
+                                  Colors.transparent,
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -483,89 +503,153 @@ class _Dock2LensBarState extends State<Dock2LensBar>
   Widget _buildTabsLayer(bool isDark) {
     return Positioned(
       left: 36,
-      top: 8.5,
+      top: 28.0,
       width: _kSlotWidth * _kTotalTabs,
       height: 80,
-      child: Row(
-        children: List.generate(_kTotalTabs, (index) {
-          final tab = _tabs[index];
-          final isActive = _isHolding ? (_hoveredTab == index) : (_activeTab == index);
+      child: IgnorePointer(
+        child: Row(
+          children: List.generate(_kTotalTabs, (index) {
+            final tab = _tabs[index];
+            final isActive = _isHolding ? (_hoveredTab == index) : (_activeTab == index);
 
-          return SizedBox(
-            width: _kSlotWidth,
-            height: 80,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  curve: const Cubic(0.34, 1.56, 0.64, 1.0),
-                  transform: Matrix4.translationValues(
-                    0.0,
-                    _isHolding
-                        ? (isActive ? 2.0 : 12.0)
-                        : (isActive ? 1.0 : 0.0),
-                    0.0,
-                  ),
-                  child: AnimatedScale(
-                    duration: const Duration(milliseconds: 300),
-                    scale: _isHolding
-                        ? (isActive ? 1.18 : 0.88)
-                        : (isActive ? 1.05 : 1.0),
-                    child: Icon(
-                      isActive ? tab.iconData : tab.inactiveIconData,
-                      size: 26,
-                      color: isActive
-                          ? Colors.white
-                          : (isDark ? const Color(0xFFA19AB5) : const Color(0xFF6B6482)),
-                      shadows: isActive
-                          ? [
-                              Shadow(
-                                color: _isHolding ? Colors.white : const Color(0xFFC084FC),
-                                blurRadius: _isHolding ? 14 : 8,
+            return SizedBox(
+              width: _kSlotWidth,
+              height: 80,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    height: 48,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 320),
+                        curve: const Cubic(0.34, 1.56, 0.64, 1.0),
+                        transform: Matrix4.translationValues(
+                          0.0,
+                          _isHolding
+                              ? (isActive ? 3.0 : 12.0)
+                              : (isActive ? 0.0 : 0.0),
+                          0.0,
+                        ),
+                        child: AnimatedScale(
+                          duration: const Duration(milliseconds: 320),
+                          scale: _isHolding
+                              ? (isActive ? 1.18 : 0.90)
+                              : (isActive ? 1.06 : 1.0),
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (isActive && _isHolding)
+                                Container(
+                                  width: 28,
+                                  height: 28,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.white.withValues(alpha: 0.85),
+                                        blurRadius: 14,
+                                        spreadRadius: 2,
+                                      ),
+                                      BoxShadow(
+                                        color: const Color(0xFFC084FC).withValues(alpha: 0.65),
+                                        blurRadius: 22,
+                                        spreadRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              Icon(
+                                isActive ? tab.iconData : tab.inactiveIconData,
+                                size: 25,
+                                color: (isActive && _isHolding)
+                                    ? Colors.white
+                                    : (isActive ? const Color(0xFFF7F4FF) : const Color(0xFF9E99AD)),
                               ),
-                              const Shadow(
-                                color: Color(0xFF13052E),
-                                blurRadius: 4,
-                                offset: Offset(0, 1.5),
-                              ),
-                            ]
-                          : null,
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                AnimatedOpacity(
-                  duration: const Duration(milliseconds: 220),
-                  opacity: _isHolding ? (isActive ? 1.0 : 0.0) : 1.0,
-                  child: AnimatedDefaultTextStyle(
-                    duration: const Duration(milliseconds: 250),
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: isActive
-                          ? (isDark ? const Color(0xFFF3EDFF) : const Color(0xFF3B1578))
-                          : (isDark ? const Color(0xFF948EAA) : const Color(0xFF7A7292)),
-                      shadows: isActive
-                          ? [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.70 : 0.15),
-                                blurRadius: 4,
-                                offset: const Offset(0, 1),
-                              ),
-                            ]
-                          : null,
+
+                  const SizedBox(height: 4),
+
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 220),
+                    opacity: _isHolding ? (isActive ? 1.0 : 0.0) : 1.0,
+                    child: Text(
+                      tab.label,
+                      style: TextStyle(
+                        fontFamily: 'SF Pro Text',
+                        fontSize: 13.5,
+                        letterSpacing: -0.15,
+                        fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+                        color: isActive
+                            ? (_isHolding ? Colors.white : const Color(0xFFEBE6F6))
+                            : const Color(0xFF8F8A9E),
+                      ),
                     ),
-                    child: Text(tab.label),
                   ),
-                ),
-              ],
-            ),
-          );
-        }),
+                ],
+              ),
+            );
+          }),
+        ),
       ),
     );
   }
+}
+
+class _Dock2MeniscusPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    final topPath = Path()
+      ..moveTo(w * 0.14, 2)
+      ..quadraticBezierTo(w * 0.5, 19, w * 0.86, 2)
+      ..quadraticBezierTo(w * 0.5, 6, w * 0.14, 2)
+      ..close();
+
+    final topPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xD1FFFFFF),
+          Color(0x94E1E8F5),
+          Color(0x2EB4C3DC),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, 22));
+
+    canvas.drawPath(topPath, topPaint);
+
+    final botPath = Path()
+      ..moveTo(w * 0.14, h - 2)
+      ..quadraticBezierTo(w * 0.5, h - 19, w * 0.86, h - 2)
+      ..quadraticBezierTo(w * 0.5, h - 6, w * 0.14, h - 2)
+      ..close();
+
+    final botPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [
+          Color(0xD1FFFFFF),
+          Color(0x94DCE6F5),
+          Color(0x2EAFBEDC),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, h - 22, w, 22));
+
+    canvas.drawPath(botPath, botPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _Dock2MeniscusPainter oldDelegate) => false;
 }
 
 class _Dock2TabItem {

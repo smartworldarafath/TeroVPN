@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
 import '../../core/qr_auth_sync_service.dart';
 import '../../core/models.dart';
@@ -39,7 +40,18 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
+    _initSessionWithLocalIp();
     _listenForAuthorization();
+  }
+
+  void _initSessionWithLocalIp() async {
+    final asyncSession = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Desktop');
+    if (mounted) {
+      setState(() {
+        _session = asyncSession;
+      });
+      _listenForAuthorization();
+    }
   }
 
   @override
@@ -52,48 +64,70 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
   void _listenForAuthorization() async {
     final account = await QrAuthSyncService.waitForAuthorization(_session.sessionId);
     if (account != null && mounted) {
-      await _executeLoginAnimation(account);
+      final session = QrAuthSyncService.getSession(_session.sessionId);
+      await _executeLoginAnimation(account, password: session?.password);
     }
   }
 
-  Future<void> _executeLoginAnimation(Account account) async {
+  Future<void> _executeLoginAnimation(Account account, {String? password}) async {
     setState(() {
       _isLoading = true;
       _loadingStep = 'Connecting to Mobile Session...';
     });
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() {
       _loadingStep = 'Transferring Fastly MASQUE Session Tokens...';
     });
 
-    await Future.delayed(const Duration(milliseconds: 700));
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     setState(() {
       _loadingStep = 'Authenticating Desktop Environment...';
     });
 
-    try {
-      await widget.controller.startSignIn(account.email, 'authorized_qr_user');
-    } catch (_) {}
+    // 1. Immediately persist active account in AppPreferences
+    await AppPreferences.setSavedActiveAccount(account.toJson());
+    if (password != null && password.isNotEmpty) {
+      await AppPreferences.setSavedAuthPassword(account.email, password);
+    }
 
+    // 2. Synthesize into controller accounts immediately
+    widget.controller.setAccounts(AccountList.fromJson({
+      'accounts': [account.toJson()],
+      'switch_threshold_percent': 10.0,
+    }));
+
+    // 3. Attempt real core sign-in if password provided
+    if (password != null && password.isNotEmpty) {
+      try {
+        final state = await widget.controller.startSignIn(account.email, password);
+        if (state.step == SignInStep.working) {
+          for (int i = 0; i < 15; i++) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            final s = await widget.controller.signInState(state.id);
+            if (s.step != SignInStep.working) break;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 4. Ensure controller accounts stays populated
     try {
-      final active = widget.controller.activeAccount;
-      if (active != null) {
-        await widget.controller.refreshQuota(active);
-      } else {
-        widget.controller.accounts = AccountList.fromJson({
-          'accounts': [account.toJson()],
-          'switch_threshold_percent': 10.0,
-        });
-      }
       await widget.controller.refresh(accountsToo: true);
     } catch (_) {}
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    if (!widget.controller.hasAccount) {
+      widget.controller.setAccounts(AccountList.fromJson({
+        'accounts': [account.toJson()],
+        'switch_threshold_percent': 10.0,
+      }));
+    }
+
+    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
     Navigator.of(context).pop();

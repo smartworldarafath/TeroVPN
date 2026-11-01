@@ -226,6 +226,8 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                     isDark: isDark,
                   ),
 
+
+
                   const SizedBox(height: 20),
 
                   // Dock 2: Liquid Glass Lens Bar
@@ -283,20 +285,21 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 6,
                       children: [
                         Text(
                           'Experimental Lab',
                           style: TextStyle(
-                            fontSize: 17,
+                            fontSize: 15.5,
                             fontWeight: FontWeight.w700,
                             color: isDark ? Colors.white : const Color(0xFF161224),
                           ),
                         ),
-                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: const Color(0xFF9060FA).withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(6),
@@ -308,7 +311,7 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                           child: const Text(
                             'BETA 2.2',
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 9.0,
                               fontWeight: FontWeight.w800,
                               color: Color(0xFFC084FC),
                             ),
@@ -316,11 +319,11 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 3),
                     Text(
                       'Preview cutting-edge UI components',
                       style: TextStyle(
-                        fontSize: 12.5,
+                        fontSize: 12,
                         color: isDark ? const Color(0xFF8C869E) : const Color(0xFF6B667D),
                       ),
                     ),
@@ -330,6 +333,7 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
 
               // Action Switch & Reset Button Row
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // Reset Button (Clickable only if beta applied)
                   AnimatedOpacity(
@@ -339,13 +343,13 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                       onTap: _hasBetaApplied ? _openResetConfirmation : null,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 7),
-                        margin: const EdgeInsets.only(right: 10),
+                            horizontal: 8, vertical: 5),
+                        margin: const EdgeInsets.only(right: 6),
                         decoration: BoxDecoration(
                           color: _hasBetaApplied
                               ? const Color(0xFFEF4444).withValues(alpha: 0.15)
                               : Colors.transparent,
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: _hasBetaApplied
                                 ? const Color(0xFFEF4444).withValues(alpha: 0.45)
@@ -357,16 +361,16 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                           children: [
                             Icon(
                               Icons.restart_alt_rounded,
-                              size: 16,
+                              size: 15,
                               color: _hasBetaApplied
                                   ? const Color(0xFFEF4444)
                                   : Colors.grey,
                             ),
-                            const SizedBox(width: 4),
+                            const SizedBox(width: 3),
                             Text(
                               'Reset',
                               style: TextStyle(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
                                 color: _hasBetaApplied
                                     ? const Color(0xFFEF4444)

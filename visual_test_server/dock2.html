@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Glassmorphic Navigation Bar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Responsive scale factor: 1 on desktop/tablet, scales down smoothly only on very small mobile screens */
+      --bar-scale: 1;
+      --spring-glide: cubic-bezier(0.22, 1.15, 0.32, 1);
+      --jelly-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    @media (max-width: 520px) {
+      :root {
+        --bar-scale: 0.76;
+      }
+    }
+
+    @media (max-width: 390px) {
+      :root {
+        --bar-scale: 0.66;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      /* Exact dark deep violet-black background from screenshot corners */
+      background-color: #110921;
+      background-image: 
+        radial-gradient(ellipse 680px 260px at 50% 50%, #261447 0%, #140a28 52%, #0c0519 100%);
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .scene-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transform: scale(var(--bar-scale));
+      transform-origin: center center;
+    }
+
+    /* Outer Purple Ambient Halo around the Pill */
+    .outer-ambient-glow {
+      position: absolute;
+      width: 490px;
+      height: 120px;
+      border-radius: 9999px;
+      background: radial-gradient(
+        ellipse at 50% 50%,
+        rgba(90, 48, 175, 0.42) 0%,
+        rgba(60, 24, 120, 0.22) 55%,
+        transparent 75%
+      );
+      filter: blur(16px);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Main Outer Pill Container (Exact 464px x 97px) */
+    .nav-pill {
+      position: relative;
+      z-index: 10;
+      width: 464px;
+      height: 97px;
+      border-radius: 9999px;
+      /* Deep obsidian-violet glass surface */
+      background: linear-gradient(
+        180deg,
+        rgba(30, 24, 46, 0.86) 0%,
+        rgba(18, 13, 30, 0.92) 50%,
+        rgba(24, 18, 38, 0.88) 100%
+      );
+      backdrop-filter: blur(28px) saturate(140%);
+      -webkit-backdrop-filter: blur(28px) saturate(140%);
+      /* Natural 3D glass edge rim & ambient drop shadow */
+      box-shadow:
+        0 24px 44px -8px rgba(3, 1, 8, 0.75),
+        0 4px 24px 0 rgba(76, 32, 160, 0.25),
+        /* Subtle natural outer glass rim without corner flare blobs */
+        inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.35),
+        inset 0 -1.5px 1px 0 rgba(255, 255, 255, 0.22),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+        inset 0 12px 24px -6px rgba(10, 6, 20, 0.6);
+      display: grid;
+      grid-template-columns: repeat(4, 98px);
+      justify-content: center;
+      align-items: center;
+      padding: 0 36px;
+      overflow: visible;
+    }
+
+    /* Subtle top glass highlight across the upper half of the bar */
+    .nav-pill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 18px;
+      right: 18px;
+      height: 46%;
+      border-radius: 9999px 9999px 50px 50px;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.11) 0%,
+        rgba(255, 255, 255, 0.02) 60%,
+        transparent 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Sliding Active Indicator Assembly (98px slot width) */
+    .active-slot-slider {
+      position: absolute;
+      top: 8.5px;
+      left: 36px;
+      width: 98px;
+      height: 80px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 25;
+      pointer-events: none;
+      touch-action: none;
+      transition: transform 0.48s var(--spring-glide);
+      will-change: transform;
+    }
+
+    .active-slot-slider.is-dragging {
+      transition: none !important;
+    }
+
+    /* Outer Tray: Idle state (Matches reference image) */
+    .active-tray {
+      position: relative;
+      width: 92px;
+      height: 80px;
+      border-radius: 21px;
+      background: linear-gradient(
+        180deg,
+        rgba(82, 68, 126, 0.45) 0%,
+        rgba(48, 38, 80, 0.38) 52%,
+        rgba(72, 58, 112, 0.52) 100%
+      );
+      box-shadow:
+        0 8px 18px -3px rgba(4, 2, 12, 0.55),
+        0 0 0 1px rgba(255, 255, 255, 0.18),
+        inset 0 1.25px 1px 0 rgba(255, 255, 255, 0.38),
+        inset 0 -1.5px 2px 0 rgba(245, 235, 255, 0.35),
+        inset 0 -10px 18px -4px rgba(150, 115, 235, 0.32);
+      backdrop-filter: blur(14px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(160%);
+      display: flex;
+      justify-content: center;
+      padding-top: 5.5px;
+      transition: all 0.38s cubic-bezier(0.18, 0.9, 0.28, 1.3);
+      will-change: transform, width, height, border-radius;
+    }
+
+    /* 3D Glossy Purple Jelly Capsule (78px x 42px) */
+    .purple-capsule {
+      position: relative;
+      width: 78px;
+      height: 42px;
+      border-radius: 9999px;
+      background: radial-gradient(ellipse 75% 65% at 50% 35%, #7038e8 0%, #511ec4 42%, #350f96 78%, #200460 100%);
+      box-shadow:
+        0 8px 16px -2px rgba(8, 2, 24, 0.75),
+        0 0 18px 2px rgba(120, 56, 245, 0.45),
+        0 0 0 1px rgba(220, 195, 255, 0.4),
+        inset 0 1.5px 2px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -2.5px 4px 0 rgba(200, 160, 255, 0.7),
+        inset 9px 0 12px -4px rgba(18, 2, 54, 0.8),
+        inset -9px 0 12px -4px rgba(18, 2, 54, 0.8);
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.18, 0.9, 0.28, 1.3);
+      will-change: transform, width, height, border-radius, background;
+    }
+
+    /* ===== LIQUID GLASS LENS =====
+       Transparent glass that sits ABOVE the bar (sibling of the nav, so it can see the
+       bar + page behind it). The rim bends what is behind it (refraction) so the bar edge
+       flares into the lens corners, exactly like the reference. */
+    .lens-slider {
+      position: absolute;
+      top: 8.5px;
+      left: 36px;
+      width: 98px;
+      height: 80px;
+      z-index: 40;
+      pointer-events: none;
+      transition: transform 0.48s var(--spring-glide);
+      will-change: transform;
+    }
+    .nav-pill.is-holding + .lens-slider { transition: none; }
+
+    /* Outer shadow lives on its own element: shadows on the .lens itself stretch the refraction map */
+    .lens-shadow {
+      position: absolute;
+      left: calc(50% - 71px);
+      top: calc(50% - 65px);
+      width: 142px;
+      height: 130px;
+      border-radius: 36px;
+      opacity: 0;
+      transform: scale(0.72);
+      transition: opacity 0.28s ease, transform 0.46s var(--jelly-bounce);
+      box-shadow:
+        0 20px 34px -10px rgba(0, 0, 0, 0.6),
+        0 0 28px 0 rgba(110, 70, 220, 0.20);
+    }
+    .nav-pill.is-holding + .lens-slider .lens-shadow {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .lens {
+      position: absolute;
+      left: calc(50% - 71px);
+      top: calc(50% - 65px);
+      width: 142px;
+      height: 130px;
+      border-radius: 36px;
+      opacity: 0;
+      transform: scale(0.72);
+      transition: opacity 0.28s ease, transform 0.46s var(--jelly-bounce);
+      /* fallback first, refraction second (browsers without url() backdrop support keep the fallback) */
+      -webkit-backdrop-filter: blur(0.6px) brightness(1.12) saturate(1.2);
+      backdrop-filter: blur(0.6px) brightness(1.12) saturate(1.2);
+      -webkit-backdrop-filter: url(#lensRefract) brightness(1.12) saturate(1.2);
+      backdrop-filter: url(#lensRefract) brightness(1.12) saturate(1.2);
+      background:
+        linear-gradient(180deg, rgba(8, 4, 20, 0.16) 0%, rgba(8, 4, 20, 0) 38%, rgba(255, 255, 255, 0.06) 100%);
+      box-shadow:
+        inset 0 0 0 1.2px rgba(255, 255, 255, 0.42),
+        inset 0 1.6px 1px 0 rgba(255, 255, 255, 0.85),
+        inset 0 -1.4px 1px 0 rgba(255, 255, 255, 0.4),
+        inset 0 0 16px 1px rgba(255, 255, 255, 0.12);
+    }
+    .nav-pill.is-holding + .lens-slider .lens {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* HOLD STATE: the flat tray steps aside, the jelly capsule stays visible UNDER the glass */
+    .nav-pill.is-holding .active-tray {
+      background: transparent;
+      box-shadow: none;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+    .nav-pill.is-holding .purple-capsule {
+      width: 86px;
+      height: 48px;
+      transform: translateY(-2px);
+      box-shadow:
+        0 12px 24px -2px rgba(10, 2, 32, 0.9),
+        0 0 30px 6px rgba(150, 85, 255, 0.55),
+        inset 0 2px 3px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -3px 5px 0 rgba(230, 200, 255, 0.85);
+    }
+
+    /* Glossy Top-Half Glass Reflection Dome inside Purple Capsule */
+    .purple-capsule::before {
+      content: '';
+      position: absolute;
+      top: 1.5px;
+      left: 6px;
+      right: 6px;
+      height: 19px;
+      border-radius: 9999px;
+      background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(240, 225, 255, 0.25) 45%,
+        rgba(175, 130, 255, 0.0) 100%
+      );
+      pointer-events: none;
+    }
+
+    /* Left & Right Inner Crescent Rim Highlights inside Purple Capsule (Exact match to photo) */
+    .purple-capsule::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 9999px;
+      box-shadow:
+        inset 3.5px 0 4.5px -1.5px rgba(240, 225, 255, 0.72),
+        inset -3.5px 0 4.5px -1.5px rgba(240, 225, 255, 0.72);
+      pointer-events: none;
+    }
+
+    /* Subtle liquid stretch when sliding between tabs */
+    .active-slot-slider.gliding .active-tray {
+      transform: scaleX(1.045) scaleY(0.965);
+    }
+    .active-slot-slider.gliding .purple-capsule {
+      transform: scaleX(1.075) scaleY(0.93);
+    }
+
+    /* Navigation Button Item (98px wide x 80px high) */
+    .nav-item {
+      position: relative;
+      z-index: 30;
+      width: 98px;
+      height: 80px;
+      background: transparent;
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      touch-action: none;
+    }
+
+    /* Icon Wrapper positioned at exact vertical center of the Purple Capsule */
+    .icon-wrap {
+      margin-top: 13px;
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      transition: transform 0.38s var(--jelly-bounce);
+    }
+
+    .nav-pill.is-holding .nav-item.active .icon-wrap {
+      transform: scale(1.12) translateY(-2px);
+    }
+
+    .nav-pill.is-holding .nav-item.active .nav-text {
+      transform: translateY(2px) scale(1.04);
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(225, 200, 255, 0.8);
+    }
+
+    .nav-item:not(.active):hover .icon-wrap {
+      transform: translateY(-1.5px);
+    }
+
+    .nav-svg {
+      width: 25px;
+      height: 25px;
+      overflow: visible;
+      transition: filter 0.35s ease, transform 0.42s var(--jelly-bounce);
+    }
+
+    .nav-item:not(.active) .nav-svg {
+      filter: drop-shadow(0 1.5px 2px rgba(0, 0, 0, 0.55));
+    }
+
+    .nav-item.active .nav-svg {
+      filter: 
+        drop-shadow(0 1.5px 3px rgba(16, 3, 48, 0.7))
+        drop-shadow(0 0 6px rgba(225, 210, 255, 0.35));
+    }
+
+    /* Smooth crossfade between inactive metallic icon and active luminous icon */
+    .icon-inactive {
+      opacity: 1;
+      transform: scale(1);
+      transform-origin: center;
+      transition: opacity 0.28s ease, transform 0.38s var(--jelly-bounce);
+    }
+
+    .icon-active {
+      opacity: 0;
+      transform: scale(0.84);
+      transform-origin: center;
+      transition: opacity 0.28s ease, transform 0.38s var(--jelly-bounce);
+    }
+
+    .nav-item.active .icon-inactive {
+      opacity: 0;
+      transform: scale(0.84);
+    }
+
+    .nav-item.active .icon-active {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    /* Text Label positioned at exact lower section of the bar */
+    .nav-text {
+      margin-top: 14px;
+      font-size: 13.5px;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      font-weight: 500;
+      color: #8f8a9e;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      transition: color 0.3s ease, text-shadow 0.3s ease, transform 0.35s ease;
+    }
+
+    .nav-item:not(.active):hover .nav-text {
+      color: #b5b0c4;
+    }
+
+    .nav-item.active .nav-text {
+      color: #ebe6f6;
+      text-shadow: 
+        0 1px 3px rgba(0, 0, 0, 0.75),
+        0 0 8px rgba(215, 195, 255, 0.25);
+    }
+
+    /* Hold: white glowing icon + pure white label (photo look) */
+    .nav-pill.is-holding .nav-item.active .nav-svg {
+      filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.55));
+    }
+    .nav-pill.is-holding .nav-item.active .nav-text {
+      color: #ffffff;
+      text-shadow: 0 0 1px rgba(255, 255, 255, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SVG Gradients & Cutout Masks -->
+  <svg width="0" height="0" style="position:absolute">
+    <defs>
+      <!-- Inactive Brushed Silver-Grey Gradient matching Home, Profiles, Settings -->
+      <linearGradient id="inactiveSilver" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#c9c5d6" />
+        <stop offset="55%" stop-color="#9e99ad" />
+        <stop offset="100%" stop-color="#807b90" />
+      </linearGradient>
+
+      <!-- Active Soft Lavender-White Gradient matching the Globe inside the Purple Pill -->
+      <linearGradient id="activeLavender" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#f7f4ff" />
+        <stop offset="55%" stop-color="#dfd4f7" />
+        <stop offset="100%" stop-color="#c6b5eb" />
+      </linearGradient>
+
+      <!-- Exact Cutout Mask for the Countries Globe Icon -->
+      <mask id="exactGlobeMask">
+        <rect x="0" y="0" width="26" height="26" fill="white" />
+        <!-- North & South America dark purple negative-space landmass matching reference image -->
+        <path d="M 12.6 4.1
+                 C 10.7 4.7, 8.9 6.2, 8.8 7.9
+                 C 8.7 9.5, 11.3 10.6, 13.8 10.4
+                 C 15.1 10.3, 15.8 11.3, 15.3 12.8
+                 C 14.6 14.5, 12.2 15.8, 12.6 18.3
+                 C 12.9 19.9, 14.6 21.3, 16.8 21.1
+                 C 19.4 19.3, 21.1 16.1, 20.9 12.6
+                 C 20.4 11.1, 17.6 11.3, 17.0 9.9
+                 C 16.4 8.5, 18.3 6.9, 17.1 5.3
+                 C 15.8 4.2, 14.1 3.8, 12.6 4.1 Z" fill="black" />
+      </mask>
+      <!-- Lens refraction: displacement map (R=x, G=y) pushes the backdrop inward near the rim -->
+      <filter id="lensRefract" x="0" y="0" width="142" height="130" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+        <feImage href="data:image/png;base64,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" x="0" y="0" width="142" height="130" preserveAspectRatio="none" result="map"/>
+        <feDisplacementMap in="SourceGraphic" in2="map" scale="30" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+    </defs>
+  </svg>
+
+  <div class="scene-wrapper">
+    <!-- Outer Purple Ambient Glow -->
+    <div class="outer-ambient-glow"></div>
+
+    <!-- Main 3D Glassmorphic Pill Bar (464px x 97px) -->
+    <nav class="nav-pill" aria-label="Primary Navigation">
+
+      <!-- Sliding Active Indicator (Starts at index 1: Countries) -->
+      <div id="activeSlider" class="active-slot-slider" style="transform: translateX(98px);">
+        <div class="active-tray">
+          <div class="purple-capsule"></div>
+        </div>
+      </div>
+
+      <!-- 1. Home -->
+      <button class="nav-item" data-index="0" aria-label="Home">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <!-- Roof overhang -->
+              <path d="M3.8 12.4L12.15 4.75C12.63 4.31 13.37 4.31 13.85 4.75L22.2 12.4" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+              <!-- House walls & door -->
+              <path d="M6.6 10.3V20.0C6.6 20.66 7.14 21.2 7.8 21.2H10.9V15.4C10.9 14.85 11.35 14.4 11.9 14.4H14.1C14.65 14.4 15.1 14.85 15.1 15.4V21.2H18.2C18.86 21.2 19.4 20.66 19.4 20.0V10.3" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g class="icon-active">
+              <path d="M3.8 12.4L12.15 4.75C12.63 4.31 13.37 4.31 13.85 4.75L22.2 12.4" 
+                    stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6.6 10.3V20.0C6.6 20.66 7.14 21.2 7.8 21.2H10.9V15.4C10.9 14.85 11.35 14.4 11.9 14.4H14.1C14.65 14.4 15.1 14.85 15.1 15.4V21.2H18.2C18.86 21.2 19.4 20.66 19.4 20.0V10.3" 
+                    fill="url(#activeLavender)" fill-opacity="0.22" stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Home</span>
+      </button>
+
+      <!-- 2. Countries (Default Active) -->
+      <button class="nav-item active" data-index="1" aria-label="Countries">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <!-- Inactive Outlined Globe -->
+            <g class="icon-inactive">
+              <circle cx="13" cy="13" r="9.0" stroke="url(#inactiveSilver)" stroke-width="2.1" />
+              <path d="M12.5 4.1C10.6 4.7 8.9 6.2 8.8 7.9C8.7 9.5 11.3 10.6 13.8 10.4C15.1 10.3 15.8 11.3 15.3 12.8C14.6 14.5 12.2 15.8 12.6 18.3C12.9 19.9 14.6 21.3 16.8 21.1" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.0" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <!-- Active Solid Sculpted Globe (100% Exact match to screenshot) -->
+            <g class="icon-active">
+              <circle cx="13" cy="13" r="9.6" fill="url(#activeLavender)" mask="url(#exactGlobeMask)" />
+              <circle cx="13" cy="13" r="8.9" stroke="url(#activeLavender)" stroke-width="1.65" />
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Countries</span>
+      </button>
+
+      <!-- 3. Profiles -->
+      <button class="nav-item" data-index="2" aria-label="Profiles">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <path d="M7.6 6.2C7.6 5.26 8.36 4.5 9.3 4.5H16.7C17.64 4.5 18.4 5.26 18.4 6.2V20.6C18.4 21.3 17.62 21.72 17.03 21.35L13.45 19.12C13.17 18.95 12.83 18.95 12.55 19.12L8.97 21.35C8.38 21.72 7.6 21.3 7.6 20.6V6.2Z" 
+                    stroke="url(#inactiveSilver)" stroke-width="2.15" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <g class="icon-active">
+              <path d="M7.6 6.2C7.6 5.26 8.36 4.5 9.3 4.5H16.7C17.64 4.5 18.4 5.26 18.4 6.2V20.6C18.4 21.3 17.62 21.72 17.03 21.35L13.45 19.12C13.17 18.95 12.83 18.95 12.55 19.12L8.97 21.35C8.38 21.72 7.6 21.3 7.6 20.6V6.2Z" 
+                    fill="url(#activeLavender)" fill-opacity="0.24" stroke="url(#activeLavender)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Profiles</span>
+      </button>
+
+      <!-- 4. Settings -->
+      <button class="nav-item" data-index="3" aria-label="Settings">
+        <div class="icon-wrap">
+          <svg class="nav-svg" viewBox="0 0 26 26" fill="none">
+            <g class="icon-inactive">
+              <path d="M11.45 3.6H14.55L15.05 5.75C15.65 5.97 16.2 6.3 16.7 6.72L18.8 6.0L21.0 8.2L20.28 10.3C20.7 10.8 21.03 11.35 21.25 11.95L23.4 12.45V15.55L21.25 16.05C21.03 16.65 20.7 17.2 20.28 17.7L21.0 19.8L18.8 22.0L16.7 21.28C16.2 21.7 15.65 22.03 15.05 22.25L14.55 24.4H11.45L10.95 22.25C10.35 22.03 9.8 21.7 9.3 21.28L7.2 22.0L5.0 19.8L5.72 17.7C5.3 17.2 4.97 16.65 4.75 16.05L2.6 15.55V12.45L4.75 11.95C4.97 11.35 5.3 10.8 5.72 10.3L5.0 8.2L7.2 6.0L9.3 6.72C9.8 6.3 10.35 5.97 10.95 5.75L11.45 3.6Z" 
+                    stroke="url(#inactiveSilver)" stroke-width="1.95" stroke-linejoin="round" transform="translate(0, -1)"/>
+              <circle cx="13" cy="13" r="3.15" stroke="url(#inactiveSilver)" stroke-width="2.05"/>
+            </g>
+            <g class="icon-active">
+              <path d="M11.45 3.6H14.55L15.05 5.75C15.65 5.97 16.2 6.3 16.7 6.72L18.8 6.0L21.0 8.2L20.28 10.3C20.7 10.8 21.03 11.35 21.25 11.95L23.4 12.45V15.55L21.25 16.05C21.03 16.65 20.7 17.2 20.28 17.7L21.0 19.8L18.8 22.0L16.7 21.28C16.2 21.7 15.65 22.03 15.05 22.25L14.55 24.4H11.45L10.95 22.25C10.35 22.03 9.8 21.7 9.3 21.28L7.2 22.0L5.0 19.8L5.72 17.7C5.3 17.2 4.97 16.65 4.75 16.05L2.6 15.55V12.45L4.75 11.95C4.97 11.35 5.3 10.8 5.72 10.3L5.0 8.2L7.2 6.0L9.3 6.72C9.8 6.3 10.35 5.97 10.95 5.75L11.45 3.6Z" 
+                    fill="url(#activeLavender)" fill-opacity="0.22" stroke="url(#activeLavender)" stroke-width="2.05" stroke-linejoin="round" transform="translate(0, -1)"/>
+              <circle cx="13" cy="13" r="3.15" stroke="url(#activeLavender)" stroke-width="2.15"/>
+            </g>
+          </svg>
+        </div>
+        <span class="nav-text">Settings</span>
+      </button>
+
+    </nav>
+
+    <!-- Glass lens (follows the active slot while holding / dragging) -->
+    <div id="lensSlider" class="lens-slider" style="transform: translateX(98px);">
+      <div class="lens-shadow"></div>
+      <div class="lens"></div>
+    </div>
+  </div>
+
+  <script>
+    const navPill = document.querySelector('.nav-pill');
+    const navItems = document.querySelectorAll('.nav-item');
+    const activeSlider = document.getElementById('activeSlider');
+    const lensSlider = document.getElementById('lensSlider');
+    function moveSliders(x) {
+      const t = `translateX(${x}px)`;
+      activeSlider.style.transform = t;
+      lensSlider.style.transform = t;
+    }
+    const tray = activeSlider.querySelector('.active-tray');
+    const purpleCapsule = activeSlider.querySelector('.purple-capsule');
+    const SLOT_WIDTH = 98; // Exact pixel width per tab slot
+    const TOTAL_TABS = 4;
+    const MIN_X = 0;
+    const MAX_X = (TOTAL_TABS - 1) * SLOT_WIDTH;
+
+    let currentTab = 1;
+    let isHolding = false;
+    let isDragging = false;
+    let startPointerX = 0;
+    let currentX = currentTab * SLOT_WIDTH;
+    let dragOffset = 0;
+    let velocity = 0;
+    let lastDragTime = 0;
+    let lastX = 0;
+    let glideTimer = null;
+    let holdTimeout = null;
+
+    function updateActiveItems(activeIndex) {
+      navItems.forEach((item, i) => {
+        item.classList.toggle('active', i === activeIndex);
+      });
+    }
+
+    function selectTab(index, animate = true) {
+      currentTab = Math.max(0, Math.min(TOTAL_TABS - 1, index));
+      currentX = currentTab * SLOT_WIDTH;
+
+      updateActiveItems(currentTab);
+
+      if (animate) {
+        activeSlider.classList.remove('is-dragging');
+        activeSlider.classList.add('gliding');
+        clearTimeout(glideTimer);
+        glideTimer = setTimeout(() => {
+          activeSlider.classList.remove('gliding');
+        }, 320);
+      }
+
+      moveSliders(currentX);
+    }
+
+    // Direct pointer tracking on navPill so ANY hold / drag starts seamlessly
+    navPill.addEventListener('pointerdown', (e) => {
+      // Find which slot was tapped
+      const rect = navPill.getBoundingClientRect();
+      const clickX = e.clientX - rect.left - 36; // minus padding
+      const tappedSlot = Math.max(0, Math.min(TOTAL_TABS - 1, Math.floor(clickX / SLOT_WIDTH)));
+
+      startPointerX = e.clientX;
+      lastX = currentX;
+      lastDragTime = performance.now();
+      velocity = 0;
+      isDragging = false;
+      dragOffset = 0;
+
+      // Enter HOLD state immediately on press
+      isHolding = true;
+      navPill.classList.add('is-holding');
+      activeSlider.classList.add('is-dragging');
+
+      // Set pointer capture to pill
+      navPill.setPointerCapture?.(e.pointerId);
+
+      window.addEventListener('pointermove', onPointerMove, { passive: false });
+      window.addEventListener('pointerup', onPointerUp);
+      window.addEventListener('pointercancel', onPointerUp);
+    });
+
+    function onPointerMove(e) {
+      if (!isHolding) return;
+      e.preventDefault();
+
+      const deltaX = e.clientX - startPointerX;
+
+      // Start dragging once threshold passed
+      if (Math.abs(deltaX) > 4) {
+        isDragging = true;
+      }
+
+      const now = performance.now();
+      const dt = Math.max(1, now - lastDragTime);
+
+      let nextX = (currentTab * SLOT_WIDTH) + deltaX;
+
+      // Rubber-band resistance at edges
+      if (nextX < MIN_X) {
+        nextX = MIN_X - Math.pow(MIN_X - nextX, 0.72) * 2.2;
+      } else if (nextX > MAX_X) {
+        nextX = MAX_X + Math.pow(nextX - MAX_X, 0.72) * 2.2;
+      }
+
+      velocity = (nextX - lastX) / dt;
+      lastDragTime = now;
+      lastX = nextX;
+      currentX = nextX;
+
+      // Liquid stretch and lean matching the GIF
+      const leanX = Math.max(-10, Math.min(10, velocity * 6));
+      const stretch = 1 + Math.min(0.2, Math.abs(velocity) * 0.08);
+      const compress = 1 / stretch;
+
+      moveSliders(nextX);
+      tray.style.transform = `scale(${stretch * 1.05}, ${compress * 1.02}) skewX(${-leanX}deg)`;
+      purpleCapsule.style.transform = `scale(${stretch * 1.06}, ${compress}) skewX(${-leanX * 0.6}deg) translateY(-2px)`;
+
+      // Dynamically highlight closest tab under the glass bubble
+      const hoveredIndex = Math.max(0, Math.min(TOTAL_TABS - 1, Math.round(nextX / SLOT_WIDTH)));
+      updateActiveItems(hoveredIndex);
+    }
+
+    function onPointerUp(e) {
+      if (!isHolding) return;
+      
+      const wasDragging = isDragging;
+      isHolding = false;
+      isDragging = false;
+
+      navPill.classList.remove('is-holding');
+      activeSlider.classList.remove('is-dragging');
+      tray.style.transform = '';
+      purpleCapsule.style.transform = '';
+
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      window.removeEventListener('pointercancel', onPointerUp);
+
+      if (wasDragging) {
+        // Flick momentum
+        const projectedX = currentX + velocity * 90;
+        let targetIndex = Math.round(projectedX / SLOT_WIDTH);
+        targetIndex = Math.max(0, Math.min(TOTAL_TABS - 1, targetIndex));
+        selectTab(targetIndex, true);
+      } else {
+        // Quick tap: select the tab that was clicked
+        const rect = navPill.getBoundingClientRect();
+        const clickX = e.clientX - rect.left - 36;
+        const tappedSlot = Math.max(0, Math.min(TOTAL_TABS - 1, Math.floor(clickX / SLOT_WIDTH)));
+        selectTab(tappedSlot, true);
+      }
+    }
+
+    // Keyboard navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight') {
+        selectTab((currentTab + 1) % TOTAL_TABS);
+      } else if (e.key === 'ArrowLeft') {
+        selectTab((currentTab - 1 + TOTAL_TABS) % TOTAL_TABS);
+      }
+    });
+
+    // Initial setup
+    selectTab(1, false);
+  </script>
+</body>
+</html>

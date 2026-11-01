@@ -28,6 +28,7 @@ import 'account_management_screen.dart';
 
 import 'qr_sign_in_screen.dart';
 import 'beta_features_screen.dart';
+import 'appearance_settings_screen.dart';
 
 
 
@@ -743,7 +744,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             title: 'About TeroVPN',
 
-                            subtitle: 'Version 1.1.7 (Beta 2.2) · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.1.8 · Legal, Support & Acknowledgements',
 
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
 
@@ -787,126 +788,87 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
 
 
-                      // Advanced Category (Theme, Dark/Light Mode Switcher, Extra Functions)
-
+                      // Theme & Appearance Category
                       SettingsSectionCard(
-
-                        title: 'Advanced',
-
+                        title: 'Theme & Appearance',
                         children: [
-
                           SettingsRow(
-
                             icon: Icons.palette_outlined,
-
                             title: 'Theme',
-
                             subtitle: ThemeManager.instance.currentTheme,
-
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
-
                             onTap: () {
-
                               Navigator.of(context).push(
-
                                 MaterialPageRoute(builder: (_) => const ThemeSettingsScreen()),
-
                               );
-
                             },
-
                           ),
-
-                          // Dark/Light Mode Switcher
-
+                          // Appearance section (directly under Theme, contains App Dock)
                           SettingsRow(
-
-                            icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
-
-                            title: 'Dark Mode',
-
-                            subtitle: isDark ? 'Obsidian cosmic dark theme' : 'Frosted iridescent light theme',
-
-                            trailing: Switch(
-
-                              value: isDark,
-
-                              activeThumbColor: const Color(0xFF6B42FF),
-
-                              activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
-
-                              inactiveTrackColor: isDark ? null : const Color(0xFFD8D5E5),
-
-                              onChanged: (val) async {
-
-                                await ThemeManager.instance.setDarkMode(val);
-
-                              },
-
-                            ),
-
-                            onTap: () async {
-
-                              await ThemeManager.instance.setDarkMode(!isDark);
-
-                            },
-
-                          ),
-
-                          SettingsRow(
-
-                            icon: Icons.tune_rounded,
-
-                            title: 'Extra Functions',
-
-                            subtitle: 'IPv6 Leak, DNS Fallback, LAN Bypass & Hardware Acceleration',
-
+                            icon: Icons.auto_awesome_mosaic_rounded,
+                            title: 'Appearance',
+                            subtitle: (AppPreferences.selectedDockStyle == 'old_system' || AppPreferences.selectedDockStyle == 'proton')
+                                ? 'App Dock: Old system dock'
+                                : 'App Dock: Liquid Dock G1',
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
-
                             onTap: () {
-
                               Navigator.of(context).push(
-
-                                MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
-
+                                MaterialPageRoute(builder: (_) => const AppearanceSettingsScreen()),
                               );
-
                             },
-
                           ),
-
-                          SettingsRow(
-
-                            icon: Icons.science_rounded,
-
-                            title: 'Beta features',
-
-                            subtitle: AppPreferences.betaFeaturesEnabled
-
-                                ? (AppPreferences.selectedDockStyle != 'default'
-
-                                    ? 'Active (${AppPreferences.selectedDockStyle.toUpperCase()})'
-
-                                    : 'Enabled (Official Dock)')
-
-                                : 'New Dock Styles & Experimental Lab',
-
-                            trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
-
-                            onTap: () {
-
-                              Navigator.of(context).push(
-
-                                MaterialPageRoute(builder: (_) => const BetaFeaturesScreen()),
-
-                              );
-
-                            },
-
-                          ),
-
                         ],
+                      ),
 
+                      // Advanced Category (Dark/Light Mode Switcher, Extra Functions, Beta features)
+                      SettingsSectionCard(
+                        title: 'Advanced',
+                        children: [
+                          // Dark/Light Mode Switcher
+                          SettingsRow(
+                            icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                            title: 'Dark Mode',
+                            subtitle: isDark ? 'Obsidian cosmic dark theme' : 'Frosted iridescent light theme',
+                            trailing: Switch(
+                              value: isDark,
+                              activeThumbColor: const Color(0xFF6B42FF),
+                              activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.5),
+                              inactiveTrackColor: isDark ? null : const Color(0xFFD8D5E5),
+                              onChanged: (val) async {
+                                await ThemeManager.instance.setDarkMode(val);
+                              },
+                            ),
+                            onTap: () async {
+                              await ThemeManager.instance.setDarkMode(!isDark);
+                            },
+                          ),
+                          SettingsRow(
+                            icon: Icons.tune_rounded,
+                            title: 'Extra Functions',
+                            subtitle: 'IPv6 Leak, DNS Fallback, LAN Bypass & Hardware Acceleration',
+                            trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+                              );
+                            },
+                          ),
+                          SettingsRow(
+                            icon: Icons.science_rounded,
+                            title: 'Beta features',
+                            subtitle: AppPreferences.betaFeaturesEnabled
+                                ? (AppPreferences.selectedDockStyle != 'default'
+                                    ? 'Active (${AppPreferences.selectedDockStyle.toUpperCase()})'
+                                    : 'Enabled (Official Dock)')
+                                : 'New Dock Styles & Experimental Lab',
+                            trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(builder: (_) => const BetaFeaturesScreen()),
+                              );
+                            },
+                          ),
+                        ],
                       ),
 
                     ],
