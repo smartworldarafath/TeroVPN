@@ -306,7 +306,7 @@ class _BetaFeaturesScreenState extends State<BetaFeaturesScreen>
                             ),
                           ),
                           child: const Text(
-                            'BETA 1.5',
+                            'BETA 2.2',
                             style: TextStyle(
                               fontSize: 9.5,
                               fontWeight: FontWeight.w800,

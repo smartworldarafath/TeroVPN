@@ -324,7 +324,7 @@ class AboutScreen extends StatelessWidget {
 
 
 
-                      'Version 1.1.7',
+                      'Version 1.1.7 (Beta 2.2)',
 
 
 

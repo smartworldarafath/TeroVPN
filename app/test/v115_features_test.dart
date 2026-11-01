@@ -97,6 +97,6 @@ void main() {
     expect(AppUpdateService.currentVersion, '1.1.7');
     expect(AppUpdateService.isNewerVersion('v1.1.8', '1.1.7'), true);
     expect(AppUpdateService.isNewerVersion('v1.1.7', '1.1.7'), false);
-    expect(AppUpdateService.isNewerVersion('v1.1.5', '1.1.7'), false);
+    expect(AppUpdateService.isNewerVersion('v1.1.6', '1.1.7'), false);
   });
 }

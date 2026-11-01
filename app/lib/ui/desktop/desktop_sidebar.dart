@@ -202,7 +202,7 @@ final titleColor = isDark ? Colors.white : const Color(0xFF1D1536);
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 child: Text(
-                  'v1.1.7 Desktop',
+                  'v1.1.7 (Beta 2.2) Desktop',
                   style: TextStyle(
                     fontSize: 11,
                     color: isDark ? Colors.white.withValues(alpha: 0.3) : const Color(0xFF9E9BAE),
