@@ -280,4 +280,31 @@ class AndroidCore {
   /// Opens [url] in the app that handles it (such as a tg:// link).
   static Future<bool> openUrl(String url) async =>
       await _channel.invokeMethod<bool>('openUrl', {'url': url}) ?? false;
+
+
+
+  /// Checks if camera permission is granted.
+  static Future<bool> checkCameraPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('checkCamera') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requests camera permission. Returns true if granted.
+  static Future<bool> requestCameraPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestCamera') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Sets the dynamic launcher icon mode: 'default', 'light', 'dark'.
+  static Future<void> setAppIconMode(String mode) async {
+    try {
+      await _channel.invokeMethod<void>('setAppIcon', {'mode': mode});
+    } catch (_) {}
+  }
 }

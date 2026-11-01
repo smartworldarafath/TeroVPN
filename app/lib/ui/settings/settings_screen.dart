@@ -27,6 +27,7 @@ import 'extra_functions_screen.dart';
 import 'account_management_screen.dart';
 
 import 'qr_sign_in_screen.dart';
+import 'beta_features_screen.dart';
 
 
 
@@ -448,15 +449,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                           SettingsRow(
 
-                            icon: Icons.qr_code_scanner_rounded,
+                            icon: hasAccount ? Icons.qr_code_scanner_rounded : Icons.qr_code_2_rounded,
 
-                            title: 'Sign in via QR',
+                            title: hasAccount ? 'Sign in via QR' : 'Show QR for Sign In',
 
                             subtitle: hasAccount
 
                                 ? 'Scan QR on desktop to sign in instantly'
 
-                                : 'Sign in on phone to pair and authorize desktop',
+                                : 'Scan with signed-in phone to log in here',
 
                             trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
 
@@ -464,7 +465,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                               MaterialPageRoute(
 
-                                builder: (_) => QrSignInScreen(controller: widget.controller),
+                                builder: (_) => QrSignInScreen(controller: widget.controller, forceShowQr: !hasAccount),
 
                               ),
 
@@ -742,7 +743,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             title: 'About TeroVPN',
 
-                            subtitle: 'Version 1.1.3 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.1.5 (Beta 1.5) · Legal, Support & Acknowledgements',
 
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
 
@@ -867,6 +868,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               Navigator.of(context).push(
 
                                 MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+
+                              );
+
+                            },
+
+                          ),
+
+                          SettingsRow(
+
+                            icon: Icons.science_rounded,
+
+                            title: 'Beta features',
+
+                            subtitle: AppPreferences.betaFeaturesEnabled
+
+                                ? (AppPreferences.selectedDockStyle != 'default'
+
+                                    ? 'Active (${AppPreferences.selectedDockStyle.toUpperCase()})'
+
+                                    : 'Enabled (Official Dock)')
+
+                                : 'New Dock Styles & Experimental Lab',
+
+                            trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
+
+                            onTap: () {
+
+                              Navigator.of(context).push(
+
+                                MaterialPageRoute(builder: (_) => const BetaFeaturesScreen()),
 
                               );
 

@@ -31,7 +31,7 @@ class AppUpdateService extends ChangeNotifier {
   static final AppUpdateService instance = AppUpdateService._();
   AppUpdateService._();
 
-  static const String currentVersion = '1.1.3';
+  static const String currentVersion = '1.1.5';
 
   ReleaseInfo? latestRelease;
   bool isChecking = false;
@@ -50,7 +50,7 @@ class AppUpdateService extends ChangeNotifier {
 
     // Check every 2 hours in the background
     _periodicCheckTimer?.cancel();
-    _periodicCheckTimer = Timer.periodic(const Duration(hours: 2), (_) {
+    _periodicCheckTimer = Timer.periodic(const Duration(minutes: 6), (_) {
       checkAndAutoUpdate();
     });
   }

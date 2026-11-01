@@ -248,4 +248,28 @@ class AppPreferences {
       _prefs?.getBool(_keyPortForwarding) ?? false;
   static Future<void> setPortForwarding(bool val) async =>
       await _prefs?.setBool(_keyPortForwarding, val);
+
+  static const _keyBetaFeaturesEnabled = 'beta_features_enabled';
+  static const _keySelectedDockStyle = 'selected_dock_style';
+  static const _keyCustomProfiles = 'custom_profiles';
+
+  static bool get betaFeaturesEnabled =>
+      _prefs?.getBool(_keyBetaFeaturesEnabled) ?? false;
+  static Future<void> setBetaFeaturesEnabled(bool val) async =>
+      await _prefs?.setBool(_keyBetaFeaturesEnabled, val);
+
+  static String get selectedDockStyle =>
+      _prefs?.getString(_keySelectedDockStyle) ?? 'default';
+  static Future<void> setSelectedDockStyle(String val) async =>
+      await _prefs?.setString(_keySelectedDockStyle, val);
+
+  static List<String> get customProfiles =>
+      _prefs?.getStringList(_keyCustomProfiles) ?? [];
+  static Future<void> setCustomProfiles(List<String> list) async =>
+      await _prefs?.setStringList(_keyCustomProfiles, list);
+  static Future<void> addCustomProfile(String jsonStr) async {
+    final list = customProfiles.toList();
+    list.add(jsonStr);
+    await setCustomProfiles(list);
+  }
 }

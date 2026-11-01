@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import '../core/android_core.dart';
 import '../core/app_preferences.dart';
 
 class ThemeManager extends ChangeNotifier {
@@ -20,6 +23,9 @@ class ThemeManager extends ChangeNotifier {
   void init() {
     _currentTheme = AppPreferences.selectedTheme;
     _isDarkMode = AppPreferences.isDarkMode;
+    if (!kIsWeb && Platform.isAndroid) {
+      AndroidCore.setAppIconMode(_isDarkMode ? 'dark' : 'light');
+    }
     notifyListeners();
   }
 
@@ -32,6 +38,9 @@ class ThemeManager extends ChangeNotifier {
   Future<void> setDarkMode(bool isDark) async {
     _isDarkMode = isDark;
     await AppPreferences.setIsDarkMode(isDark);
+    if (!kIsWeb && Platform.isAndroid) {
+      await AndroidCore.setAppIconMode(isDark ? 'dark' : 'light');
+    }
     notifyListeners();
   }
 
@@ -106,4 +115,5 @@ class ThemeManager extends ChangeNotifier {
             ),
           ];
   }
+  void refresh() => notifyListeners();
 }

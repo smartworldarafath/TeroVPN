@@ -2,6 +2,7 @@ package com.terovpn.android
 
 import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
@@ -30,6 +31,8 @@ import java.util.concurrent.Executors
 class MainActivity : FlutterActivity() {
     /** Waits for the user's answer to the VPN permission. */
     private var pendingOn: Result? = null
+    /** Waits for the user's answer to the Camera permission. */
+    private var pendingCamera: Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         holdPhoneUpright(resources.configuration)
@@ -49,6 +52,12 @@ class MainActivity : FlutterActivity() {
                     android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                 window.attributes = params
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                window.isStatusBarContrastEnforced = false
+                window.isNavigationBarContrastEnforced = false
+            }
+            window.statusBarColor = android.graphics.Color.TRANSPARENT
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
             androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         } catch (_: Throwable) {
         }
@@ -95,8 +104,6 @@ class MainActivity : FlutterActivity() {
         } catch (_: Throwable) {
             // Graceful fallback
         }
-
-
     }
 
     /**
@@ -178,6 +185,24 @@ class MainActivity : FlutterActivity() {
                 "askNotifications" -> {
                     askForNotifications()
                     result.success(null)
+                }
+                "checkCamera" -> {
+                    val granted = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                    result.success(granted)
+                }
+                "requestCamera" -> {
+                    if (checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                        result.success(true)
+                    } else {
+                        pendingCamera?.error("camera_denied", "superseded", null)
+                        pendingCamera = result
+                        requestPermissions(arrayOf(Manifest.permission.CAMERA), CAMERA_REQUEST)
+                    }
+                }
+                "setAppIcon" -> {
+                    val mode = call.argument<String>("mode") ?: "default"
+                    setDynamicAppIcon(mode)
+                    result.success(true)
                 }
                 "connectionMode" -> result.success(CoreService.connectionMode(this))
                 "showSpeed" -> result.success(CoreService.showSpeed(this))
@@ -272,6 +297,32 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun setDynamicAppIcon(mode: String) {
+        try {
+            val pm = packageManager
+            val defaultAlias = ComponentName(this, "com.terovpn.android.MainActivityDefault")
+            val lightAlias = ComponentName(this, "com.terovpn.android.MainActivityLight")
+            val darkAlias = ComponentName(this, "com.terovpn.android.MainActivityDark")
+
+            val targetAlias = when (mode.lowercase()) {
+                "light" -> lightAlias
+                "dark" -> darkAlias
+                else -> defaultAlias
+            }
+
+            val aliases = listOf(defaultAlias, lightAlias, darkAlias)
+            for (alias in aliases) {
+                val state = if (alias == targetAlias) {
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+                } else {
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+                }
+                pm.setComponentEnabledSetting(alias, state, PackageManager.DONT_KILL_APP)
+            }
+        } catch (_: Throwable) {
+        }
+    }
+
     private val worker = Executors.newSingleThreadExecutor()
     private val main = Handler(Looper.getMainLooper())
 
@@ -337,6 +388,15 @@ class MainActivity : FlutterActivity() {
         if (resultCode == RESULT_OK) turnOn(result) else result.error("vpn_denied", "the VPN was not allowed", null)
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CAMERA_REQUEST) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            pendingCamera?.success(granted)
+            pendingCamera = null
+        }
+    }
+
     override fun onDestroy() {
         if (isFinishing && !CoreService.on) CoreService.stopCore()
         super.onDestroy()
@@ -344,6 +404,7 @@ class MainActivity : FlutterActivity() {
 
     companion object {
         private const val VPN_REQUEST = 7
+        private const val CAMERA_REQUEST = 8
         private const val UPDATE_CHANNEL_ID = "terovpn_updates"
         private const val UPDATE_NOTIFICATION_ID = 1002
     }
