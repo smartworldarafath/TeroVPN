@@ -1,4 +1,5 @@
 # Build outputs & caches
+dist/
 out/
 build/
 app/build/
