@@ -8,7 +8,7 @@ import '../../theme/theme_manager.dart';
 
 import '../components/signin_dialog.dart';
 
-import '../settings/sign_in_with_phone_screen.dart';
+import 'desktop_qr_dialog.dart';
 
 import '../settings/account_management_screen.dart';
 
@@ -83,59 +83,77 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
 
 
   void _promptSignIn(String feature) {
-    final isDark = ThemeManager.instance.isDarkMode;
+
     showDialog(
+
       context: context,
+
       builder: (ctx) => AlertDialog(
-        backgroundColor: isDark ? const Color(0xFF161426) : Colors.white,
+
+        backgroundColor: const Color(0xFF161426),
+
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+
         title: Row(
-          children: [
-            const Icon(Icons.lock_rounded, color: Color(0xFF6B42FF), size: 22),
-            const SizedBox(width: 10),
-            Text(
-              'Sign In Required',
-              style: TextStyle(
-                color: isDark ? Colors.white : const Color(0xFF1D1536),
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+
+          children: const [
+
+            Icon(Icons.lock_rounded, color: Color(0xFF6B42FF), size: 22),
+
+            SizedBox(width: 10),
+
+            Text('Sign In Required', style: TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700)),
+
           ],
+
         ),
+
         content: Text(
+
           '$feature requires an active Firefox Account session on Fastly MASQUE.\n\nPlease log in to activate advanced routing features.',
-          style: TextStyle(
-            color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
-            fontSize: 13,
-            height: 1.4,
-          ),
+
+          style: const TextStyle(color: Color(0xFF8E8B9D), fontSize: 13, height: 1.4),
+
         ),
+
         actions: [
+
           TextButton(
+
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: TextStyle(
-                color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
-              ),
-            ),
+
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF8E8B9D))),
+
           ),
+
           ElevatedButton(
+
             style: ElevatedButton.styleFrom(
+
               backgroundColor: const Color(0xFF6B42FF),
-              foregroundColor: Colors.white,
+
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+
             ),
+
             onPressed: () {
+
               Navigator.of(ctx).pop();
+
               SignInDialog.show(context, widget.controller);
+
             },
+
             child: const Text('Sign In', style: TextStyle(color: Colors.white)),
+
           ),
+
         ],
+
       ),
+
     );
+
   }
 
 
@@ -459,115 +477,189 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
             children: [
 
               // Title
-              Text(
+
+              const Text(
+
                 'Settings',
+
                 style: TextStyle(
-                  color: isDark ? Colors.white : const Color(0xFF1D1536),
+
+                  color: Colors.white,
+
                   fontSize: 26,
+
                   fontWeight: FontWeight.w800,
+
                   letterSpacing: -0.4,
+
                 ),
+
               ),
+
               const SizedBox(height: 4),
-              Text(
+
+              const Text(
+
                 'Configure VPN protocols, security features, routing, and app preferences.',
+
                 style: TextStyle(
-                  color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
+
+                  color: Color(0xFF8E8B9D),
+
                   fontSize: 13,
+
                   fontWeight: FontWeight.w400,
+
                 ),
+
               ),
+
+
 
               const SizedBox(height: 22),
 
+
+
               // ACCOUNT Section
+
               _buildSectionHeader('ACCOUNT'),
+
               const SizedBox(height: 8),
+
               _buildCardContainer([
+
                 _buildActionRow(
+
                   icon: hasAccount ? Icons.manage_accounts_rounded : Icons.person_add_alt_1_rounded,
+
                   title: hasAccount ? 'Account (${maskEmail(activeAccount?.email ?? 'user')})' : 'Add Account',
+
                   subtitle: hasAccount
+
                       ? 'Firefox Account Active · Tap to manage or switch'
+
                       : 'Sign in with Firefox Account for Fastly MASQUE',
+
                   trailing: Container(
+
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+
                     decoration: BoxDecoration(
-                      color: hasAccount
-                          ? (isDark ? const Color(0xFF133226) : const Color(0xFFE8F8F0))
-                          : (isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8)),
+
+                      color: hasAccount ? const Color(0xFF133226) : const Color(0xFF261D4C),
+
                       borderRadius: BorderRadius.circular(8),
+
                       border: Border.all(
-                        color: hasAccount
-                            ? (isDark ? const Color(0xFF1FE5BD).withValues(alpha: 0.5) : const Color(0xFF00A36C).withValues(alpha: 0.4))
-                            : const Color(0xFF6B42FF).withValues(alpha: 0.4),
+
+                        color: hasAccount ? const Color(0xFF1FE5BD).withValues(alpha: 0.5) : const Color(0xFF6B42FF).withValues(alpha: 0.5),
+
                       ),
+
                     ),
+
                     child: Text(
+
                       hasAccount ? 'ACTIVE' : '+ SIGN IN',
+
                       style: TextStyle(
+
                         fontSize: 11,
+
                         fontWeight: FontWeight.w800,
-                        color: hasAccount
-                            ? (isDark ? const Color(0xFF1FE5BD) : const Color(0xFF00A36C))
-                            : (isDark ? const Color(0xFF8B6BFF) : const Color(0xFF6B42FF)),
+
+                        color: hasAccount ? const Color(0xFF1FE5BD) : const Color(0xFF8B6BFF),
+
                       ),
+
                     ),
+
                   ),
+
                   onTap: () {
+
                     if (hasAccount) {
+
                       Navigator.of(context).push(
+
                         MaterialPageRoute(builder: (_) => AccountManagementScreen(controller: widget.controller)),
+
                       );
+
                     } else {
+
                       SignInDialog.show(context, widget.controller);
+
                     }
+
                   },
+
                 ),
+
                 if (hasAccount) ...[
+
                   _buildDivider(),
+
                   _buildActionRow(
+
                     icon: Icons.workspace_premium_rounded,
+
                     title: 'TeroVPN Unlimited Pass',
+
                     subtitle: '50GB Multi-Account Fastly Tier Active',
+
                     trailing: Container(
+
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+
                       decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF261D4C) : const Color(0xFFEDE9F8),
+
+                        color: const Color(0xFF261D4C),
+
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.5 : 0.3)),
+
+                        border: Border.all(color: const Color(0xFF6B42FF).withValues(alpha: 0.5)),
+
                       ),
-                      child: Text(
+
+                      child: const Text(
+
                         'PRO',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? const Color(0xFF8B6BFF) : const Color(0xFF6B42FF),
-                        ),
+
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF8B6BFF)),
+
                       ),
+
                     ),
+
                     onTap: () {
+
                       Navigator.of(context).push(
+
                         MaterialPageRoute(builder: (_) => AccountManagementScreen(controller: widget.controller)),
+
                       );
+
                     },
+
                   ),
+
                 ],
 
                 _buildDivider(),
 
                 _buildActionRow(
-                  icon: Icons.phone_android_rounded,
-                  title: 'Sign in with phone',
+
+                  icon: Icons.qr_code_scanner_rounded,
+
+                  title: 'Sign in via QR Code',
+
                   subtitle: 'Display QR code to pair and sign in with your phone',
+
                   trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF8E8B9D)),
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => SignInWithPhoneScreen(controller: widget.controller),
-                      ),
-                    );
-                  },
+
+                  onTap: () => DesktopQrSignInDialog.show(context, widget.controller),
+
                 ),
 
               ]),
@@ -952,151 +1044,261 @@ class _DesktopSettingsViewState extends State<DesktopSettingsView> {
 
 
   Widget _buildSectionHeader(String title) {
-    final isDark = ThemeManager.instance.isDarkMode;
+
     return Text(
+
       title,
-      style: TextStyle(
-        color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
+
+      style: const TextStyle(
+
+        color: Color(0xFF8E8B9D),
+
         fontSize: 11.5,
+
         fontWeight: FontWeight.w700,
+
         letterSpacing: 0.8,
+
       ),
+
     );
+
   }
+
+
 
   Widget _buildCardContainer(List<Widget> children) {
-    final isDark = ThemeManager.instance.isDarkMode;
+
     return Container(
+
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF161426) : Colors.white,
+
+        color: const Color(0xFF161426),
+
         borderRadius: BorderRadius.circular(16),
+
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFF5D5380).withValues(alpha: 0.10),
+
+          color: Colors.white.withValues(alpha: 0.06),
+
           width: 1,
+
         ),
-        boxShadow: isDark
-            ? null
-            : [
-                BoxShadow(
-                  color: const Color(0xFF5D5380).withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
-                ),
-              ],
+
       ),
+
       child: Column(
+
         children: children,
+
       ),
+
     );
+
   }
+
+
 
   Widget _buildDivider() {
-    final isDark = ThemeManager.instance.isDarkMode;
-    return Divider(
-      height: 1,
-      thickness: 1,
-      color: isDark ? Colors.white.withValues(alpha: 0.04) : const Color(0xFF5D5380).withValues(alpha: 0.08),
-    );
+
+    return Divider(height: 1, thickness: 1, color: Colors.white.withValues(alpha: 0.04));
+
   }
+
+
 
   Widget _buildActionRow({
+
     required IconData icon,
+
     required String title,
+
     required String subtitle,
+
     required Widget trailing,
+
     required VoidCallback onTap,
+
   }) {
-    final isDark = ThemeManager.instance.isDarkMode;
+
     return Material(
+
       color: Colors.transparent,
+
       child: InkWell(
+
         onTap: onTap,
+
         borderRadius: BorderRadius.circular(16),
+
         child: Padding(
+
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+
           child: Row(
+
             children: [
-              Icon(icon, color: isDark ? const Color(0xFF9E9BAE) : const Color(0xFF6E6B80), size: 22),
+
+              Icon(icon, color: const Color(0xFF9E9BAE), size: 22),
+
               const SizedBox(width: 16),
+
               Expanded(
+
                 child: Column(
+
                   crossAxisAlignment: CrossAxisAlignment.start,
+
                   children: [
+
                     Text(
+
                       title,
-                      style: TextStyle(
-                        color: isDark ? Colors.white : const Color(0xFF1D1536),
+
+                      style: const TextStyle(
+
+                        color: Colors.white,
+
                         fontSize: 14.5,
+
                         fontWeight: FontWeight.w600,
+
                       ),
+
                     ),
+
                     const SizedBox(height: 2),
+
                     Text(
+
                       subtitle,
-                      style: TextStyle(
-                        color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
+
+                      style: const TextStyle(
+
+                        color: Color(0xFF8E8B9D),
+
                         fontSize: 12,
+
                       ),
+
                     ),
+
                   ],
+
                 ),
+
               ),
+
               trailing,
+
             ],
+
           ),
+
         ),
+
       ),
+
     );
+
   }
 
+
+
   Widget _buildSwitchRow({
+
     required IconData icon,
+
     required String title,
+
     required String subtitle,
+
     required bool value,
+
     required ValueChanged<bool> onChanged,
+
   }) {
-    final isDark = ThemeManager.instance.isDarkMode;
+
     return Padding(
+
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+
       child: Row(
+
         children: [
-          Icon(icon, color: isDark ? const Color(0xFF9E9BAE) : const Color(0xFF6E6B80), size: 22),
+
+          Icon(icon, color: const Color(0xFF9E9BAE), size: 22),
+
           const SizedBox(width: 16),
+
           Expanded(
+
             child: Column(
+
               crossAxisAlignment: CrossAxisAlignment.start,
+
               children: [
+
                 Text(
+
                   title,
-                  style: TextStyle(
-                    color: isDark ? Colors.white : const Color(0xFF1D1536),
+
+                  style: const TextStyle(
+
+                    color: Colors.white,
+
                     fontSize: 14.5,
+
                     fontWeight: FontWeight.w600,
+
                   ),
+
                 ),
+
                 const SizedBox(height: 2),
+
                 Text(
+
                   subtitle,
-                  style: TextStyle(
-                    color: isDark ? const Color(0xFF8E8B9D) : const Color(0xFF6E6B80),
+
+                  style: const TextStyle(
+
+                    color: Color(0xFF8E8B9D),
+
                     fontSize: 12,
+
                   ),
+
                 ),
+
               ],
+
             ),
+
           ),
+
           Switch(
+
             value: value,
+
             activeThumbColor: const Color(0xFF6B42FF),
-            activeTrackColor: const Color(0xFF6B42FF).withValues(alpha: 0.4),
-            inactiveThumbColor: isDark ? const Color(0xFF757286) : const Color(0xFFB0ACC0),
-            inactiveTrackColor: isDark ? const Color(0xFF1E1C2F) : const Color(0xFFE2E0EC),
+
+            activeTrackColor: const Color(0xFF261D4C),
+
+            inactiveThumbColor: const Color(0xFF757286),
+
+            inactiveTrackColor: const Color(0xFF1E1C2F),
+
             onChanged: onChanged,
+
           ),
+
         ],
+
       ),
+
     );
+
   }
 
 }

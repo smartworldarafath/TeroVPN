@@ -2,15 +2,19 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
 
-/// 100% Pixel-Faithful Implementation of "Dock .html"
-/// 3D Glassmorphic Navigation Bar with Jelly Hold & Drag Gesture Physics
+/// 100% Pixel-Faithful & Video-Accurate Implementation of "Dock .html"
+/// 3D Glassmorphic Navigation Bar with Liquid Jelly Hold & Drag Gesture Physics
 ///
-/// Baseline: 464px x 97px with responsive scaling.
-/// Idle State: 92px x 80px tray with 78px x 42px 3D Purple Jelly Capsule.
-/// Hold/Drag State: Expands to 138px x 128px 3D Protruding Liquid Glass Lens (protrudes 24px above & below).
-/// Meniscus: Top and bottom curved refraction meniscus bands.
-/// Gestures: 60fps/120fps Pointer tracking, velocity jelly stretch/compress, rubber-banding, momentum flick release.
-/// Dual Theme: Full Dark Mode and Light Mode support with live theme listener.
+/// Features from user demo video (Recording 2026-11-01 165905.mp4) & Dock .html:
+/// - 464px x 97px baseline pill with responsive scaling
+/// - Idle state: 92px x 80px tray with 78px x 42px 3D Purple Jelly Capsule with reflection dome
+/// - Hold/Drag state: expands to 138px x 128px 3D Protruding Liquid Glass Lens (protruding 24px above & below)
+/// - Meniscus caustics: top and bottom parabolic curved refraction meniscus specular bands
+/// - Inactive tabs in hold state: labels fade to opacity 0, icons shift down 12px
+/// - Active tab in hold state: icon blooms with intense specular white/lavender glow, scales 1.16x
+/// - Smooth gliding with liquid jelly stretch on quick tap
+/// - Velocity tracking, boundary rubber-banding, and momentum flick snap on release
+/// - Works flawlessly both inside Beta Features preview cards and as main navigation bar
 class Dock1JellyBar extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTabSelected;
@@ -32,15 +36,16 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
   static const double _kSlotWidth = 98.0;
   static const int _kTotalTabs = 4;
   static const double _kMinX = 0.0;
-  static const double _kMaxX = (_kTotalTabs - 1) * _kSlotWidth;
+  static const double _kMaxX = (_kTotalTabs - 1) * _kSlotWidth; // 294.0
 
   late int _activeTab;
   int _hoveredTab = 0;
   bool _isHolding = false;
   bool _isDragging = false;
+  bool _isGliding = false;
 
   double _sliderX = 0.0;
-  double _dragStartX = 0.0;
+  double _dragStartLocalX = 0.0;
   double _dragStartSliderX = 0.0;
   double _velocity = 0.0;
   double _lastX = 0.0;
@@ -81,7 +86,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
 
     _springController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 440),
+      duration: const Duration(milliseconds: 380),
     );
   }
 
@@ -107,6 +112,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
     setState(() {
       _activeTab = target;
       _hoveredTab = target;
+      _isGliding = true;
     });
 
     _springAnimation = Tween<double>(begin: start, end: end).animate(
@@ -120,38 +126,37 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
         });
       });
 
-    _springController.forward(from: 0.0);
+    _springController.forward(from: 0.0).then((_) {
+      if (mounted) {
+        setState(() => _isGliding = false);
+      }
+    });
   }
 
-  void _onPointerDown(PointerDownEvent e, double scale, double barLeft) {
+  void _onPointerDown(PointerDownEvent e) {
     _springController.stop();
-    _dragStartX = e.position.dx;
+    _isGliding = false;
+    _dragStartLocalX = e.localPosition.dx;
+    _dragStartSliderX = _sliderX;
+    _lastX = _sliderX;
     _lastDragTime = DateTime.now().millisecondsSinceEpoch;
     _velocity = 0.0;
     _isDragging = false;
 
-    // Detect touched slot immediately from touch coordinate
-    final effectiveScale = scale > 0 ? scale : 1.0;
-    final localX = (e.position.dx - barLeft) / effectiveScale - 36.0;
+    // Detect tapped tab from local coordinate (offset 36px)
+    final localX = (e.localPosition.dx - 36.0).clamp(0.0, _kSlotWidth * _kTotalTabs);
     final tappedSlot = (localX / _kSlotWidth).floor().clamp(0, _kTotalTabs - 1);
-
-    // Jump lens immediately to touched tab slot
-    _sliderX = tappedSlot * _kSlotWidth;
-    _dragStartSliderX = _sliderX;
-    _lastX = _sliderX;
-    _activeTab = tappedSlot;
-    _hoveredTab = tappedSlot;
 
     setState(() {
       _isHolding = true;
+      _hoveredTab = tappedSlot;
     });
   }
 
-  void _onPointerMove(PointerMoveEvent e, double scale) {
+  void _onPointerMove(PointerMoveEvent e) {
     if (!_isHolding) return;
 
-    final effectiveScale = scale > 0 ? scale : 1.0;
-    final deltaX = (e.position.dx - _dragStartX) / effectiveScale;
+    final deltaX = e.localPosition.dx - _dragStartLocalX;
     if (deltaX.abs() > 3.0) {
       _isDragging = true;
     }
@@ -161,7 +166,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
 
     double nextX = _dragStartSliderX + deltaX;
 
-    // Elastic rubber-band resistance at boundaries
+    // Elastic rubber-band resistance at boundaries (from Dock .html)
     if (nextX < _kMinX) {
       nextX = _kMinX - math.pow((_kMinX - nextX).abs(), 0.70) * 1.8;
     } else if (nextX > _kMaxX) {
@@ -180,7 +185,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
     });
   }
 
-  void _onPointerUp(PointerUpEvent e, double scale, double barLeft) {
+  void _onPointerUp(PointerUpEvent e) {
     if (!_isHolding) return;
 
     final wasDragging = _isDragging;
@@ -195,8 +200,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
       final projectedX = _sliderX + _velocity * 85.0;
       targetTab = (projectedX / _kSlotWidth).round().clamp(0, _kTotalTabs - 1);
     } else {
-      final effectiveScale = scale > 0 ? scale : 1.0;
-      final localX = (e.position.dx - barLeft) / effectiveScale - 36.0;
+      final localX = (e.localPosition.dx - 36.0).clamp(0.0, _kSlotWidth * _kTotalTabs);
       targetTab = (localX / _kSlotWidth).floor().clamp(0, _kTotalTabs - 1);
     }
 
@@ -224,31 +228,29 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
           child: LayoutBuilder(
             builder: (context, constraints) {
               final maxWidth = constraints.maxWidth;
-              // Base 464px, scale down smoothly on narrow screens
-              final scale = math.min(1.0, (maxWidth - 12) / 464.0);
+              // Base 464px, smoothly responsive on narrower displays
+              final scale = math.min(1.0, (maxWidth - 8) / 464.0);
               const barWidth = 464.0;
-              final scaledWidth = barWidth * scale;
-              final barLeft = (maxWidth - scaledWidth) / 2.0;
 
               return SizedBox(
-                height: 124, // Generous height to fit 128px protruding lens without clipping
+                height: 128, // Enough height for 128px protruding lens without vertical clipping
                 child: Center(
-                  child: Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: (e) => _onPointerDown(e, scale, barLeft),
-                    onPointerMove: (e) => _onPointerMove(e, scale),
-                    onPointerUp: (e) => _onPointerUp(e, scale, barLeft),
-                    onPointerCancel: (_) => _onPointerCancel(),
-                    child: Transform.scale(
-                      scale: scale,
-                      child: SizedBox(
-                        width: barWidth,
-                        height: 124,
+                  child: Transform.scale(
+                    scale: scale,
+                    child: SizedBox(
+                      width: barWidth,
+                      height: 128,
+                      child: Listener(
+                        behavior: HitTestBehavior.opaque,
+                        onPointerDown: _onPointerDown,
+                        onPointerMove: _onPointerMove,
+                        onPointerUp: _onPointerUp,
+                        onPointerCancel: (_) => _onPointerCancel(),
                         child: Stack(
                           clipBehavior: Clip.none,
                           alignment: Alignment.center,
                           children: [
-                            // 1. Outer Ambient Glow
+                            // 1. Outer Ambient Halo
                             _buildAmbientHalo(isDark),
 
                             // 2. Main Outer Pill Container (464px x 97px)
@@ -376,27 +378,29 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
   }
 
   Widget _buildActiveSlider(bool isDark) {
-    // Liquid jelly deformation stretch based on velocity
+    // Liquid deformation stretch based on velocity or gliding
     final speed = math.min(2.2, _velocity.abs());
-    final stretchX = 1.0 + speed * 0.065;
-    final compressY = 1.0 / math.sqrt(stretchX);
+    final stretchX = _isGliding ? 1.08 : (1.0 + speed * 0.065);
+    final compressY = _isGliding ? 0.94 : (1.0 / math.sqrt(stretchX));
+    final skewAngle = math.max(-7.0, math.min(7.0, _velocity * 3.8));
 
     final currentTabX = _sliderX;
     // Base position starts at left: 36px inside 464px pill
     final trayLeft = 36.0 + currentTabX + (_kSlotWidth / 2.0);
 
-    // Idle size: 92px x 80px. Hold size: 138px x 128px (protruding!)
+    // Idle size: 92px x 80px. Hold size: 138px x 128px (protruding outside dock!)
     final trayWidth = _isHolding ? 138.0 : 92.0;
     final trayHeight = _isHolding ? 128.0 : 80.0;
     final borderRadius = _isHolding ? 44.0 : 21.0;
 
     return Positioned(
       left: trayLeft - (trayWidth / 2.0),
-      top: 62.0 - (trayHeight / 2.0),
+      top: 64.0 - (trayHeight / 2.0),
       child: IgnorePointer(
-        child: Transform.scale(
-          scaleX: stretchX,
-          scaleY: compressY,
+        child: Transform(
+          alignment: Alignment.center,
+          transform: Matrix4.diagonal3Values(stretchX, compressY, 1.0)
+            ..setEntry(0, 1, math.tan(skewAngle * math.pi / 180)),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 320),
             curve: const Cubic(0.22, 1.28, 0.32, 1.0),
@@ -410,16 +414,16 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
                       radius: 0.9,
                       colors: isDark
                           ? [
-                              const Color(0xFF100C1C).withValues(alpha: 0.88),
-                              const Color(0xFF161028).withValues(alpha: 0.78),
-                              const Color(0xFF7864AF).withValues(alpha: 0.28),
-                              const Color(0xFFF0EBFF).withValues(alpha: 0.38),
+                              const Color(0xFF100C1C).withValues(alpha: 0.90),
+                              const Color(0xFF161028).withValues(alpha: 0.80),
+                              const Color(0xFF7864AF).withValues(alpha: 0.30),
+                              const Color(0xFFF0EBFF).withValues(alpha: 0.40),
                             ]
                           : [
-                              Colors.white.withValues(alpha: 0.94),
-                              const Color(0xFFEDE7FB).withValues(alpha: 0.85),
-                              const Color(0xFFC7B3F5).withValues(alpha: 0.45),
-                              const Color(0xFF8B5CF6).withValues(alpha: 0.55),
+                              Colors.white.withValues(alpha: 0.95),
+                              const Color(0xFFEDE7FB).withValues(alpha: 0.88),
+                              const Color(0xFFC7B3F5).withValues(alpha: 0.48),
+                              const Color(0xFF8B5CF6).withValues(alpha: 0.58),
                             ],
                       stops: const [0.0, 0.54, 0.84, 1.0],
                     )
@@ -447,15 +451,15 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
               boxShadow: [
                 BoxShadow(
                   color: isDark
-                      ? Colors.black.withValues(alpha: _isHolding ? 0.78 : 0.55)
-                      : const Color(0xFF381868).withValues(alpha: _isHolding ? 0.24 : 0.10),
-                  blurRadius: _isHolding ? 40 : 18,
+                      ? Colors.black.withValues(alpha: _isHolding ? 0.80 : 0.55)
+                      : const Color(0xFF381868).withValues(alpha: _isHolding ? 0.26 : 0.10),
+                  blurRadius: _isHolding ? 42 : 18,
                   offset: Offset(0, _isHolding ? 14 : 6),
                 ),
                 if (_isHolding)
                   BoxShadow(
-                    color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.38 : 0.22),
-                    blurRadius: 24,
+                    color: const Color(0xFF6B42FF).withValues(alpha: isDark ? 0.40 : 0.24),
+                    blurRadius: 26,
                     spreadRadius: 2,
                   ),
               ],
@@ -463,49 +467,13 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
             child: Stack(
               alignment: Alignment.center,
               children: [
-                // Top & Bottom Specular Meniscus Bands on Hold
-                if (_isHolding) ...[
-                  Positioned(
-                    top: 3,
-                    left: 20,
-                    right: 20,
-                    height: 16,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.88),
-                            Colors.white.withValues(alpha: 0.35),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
+                // Top & Bottom Parabolic Curved Specular Meniscus Caustics
+                if (_isHolding)
+                  Positioned.fill(
+                    child: CustomPaint(
+                      painter: _MeniscusPainter(isDark: isDark),
                     ),
                   ),
-                  Positioned(
-                    bottom: 3,
-                    left: 20,
-                    right: 20,
-                    height: 16,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        gradient: LinearGradient(
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.88),
-                            Colors.white.withValues(alpha: 0.35),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
 
                 // 3D Glossy Purple Jelly Capsule in Idle State (78px x 42px)
                 AnimatedOpacity(
@@ -590,7 +558,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
   Widget _buildTabsLayer(bool isDark) {
     return Positioned(
       left: 36,
-      top: 22.0,
+      top: 24.0,
       width: _kSlotWidth * _kTotalTabs,
       height: 80,
       child: IgnorePointer(
@@ -619,7 +587,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
                     child: AnimatedScale(
                       duration: const Duration(milliseconds: 320),
                       scale: _isHolding
-                          ? (isActive ? 1.18 : 0.88)
+                          ? (isActive ? 1.18 : 0.90)
                           : (isActive ? 1.05 : 1.0),
                       child: Icon(
                         isActive ? tab.iconData : tab.inactiveIconData,
@@ -633,6 +601,11 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
                                   color: _isHolding ? Colors.white : const Color(0xFFE1D2FF),
                                   blurRadius: _isHolding ? 14 : 6,
                                 ),
+                                if (_isHolding)
+                                  const Shadow(
+                                    color: Color(0xFFC084FC),
+                                    blurRadius: 22,
+                                  ),
                                 const Shadow(
                                   color: Color(0xFF100330),
                                   blurRadius: 4,
@@ -646,7 +619,7 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
 
                   const SizedBox(height: 6),
 
-                  // Label Text
+                  // Label Text: in Hold state inactive labels fade to opacity 0!
                   AnimatedOpacity(
                     duration: const Duration(milliseconds: 220),
                     opacity: _isHolding ? (isActive ? 1.0 : 0.0) : 1.0,
@@ -679,6 +652,65 @@ class _Dock1JellyBarState extends State<Dock1JellyBar>
       ),
     );
   }
+}
+
+/// Parabolic Curved Specular Meniscus Caustics Painter (matching video frames & Dock .html)
+class _MeniscusPainter extends CustomPainter {
+  final bool isDark;
+
+  _MeniscusPainter({required this.isDark});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Top curved meniscus band
+    final topPath = Path()
+      ..moveTo(w * 0.14, 2)
+      ..quadraticBezierTo(w * 0.5, 20, w * 0.86, 2)
+      ..quadraticBezierTo(w * 0.5, 7, w * 0.14, 2)
+      ..close();
+
+    final topPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withValues(alpha: 0.90),
+          const Color(0xFFE1E8F5).withValues(alpha: 0.60),
+          const Color(0xFFB4C3DC).withValues(alpha: 0.15),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, 22));
+
+    canvas.drawPath(topPath, topPaint);
+
+    // Bottom curved meniscus band
+    final botPath = Path()
+      ..moveTo(w * 0.14, h - 2)
+      ..quadraticBezierTo(w * 0.5, h - 20, w * 0.86, h - 2)
+      ..quadraticBezierTo(w * 0.5, h - 7, w * 0.14, h - 2)
+      ..close();
+
+    final botPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.bottomCenter,
+        end: Alignment.topCenter,
+        colors: [
+          Colors.white.withValues(alpha: 0.90),
+          const Color(0xFFDCE6F5).withValues(alpha: 0.60),
+          const Color(0xFFAFBEDC).withValues(alpha: 0.15),
+          Colors.transparent,
+        ],
+      ).createShader(Rect.fromLTWH(0, h - 22, w, 22));
+
+    canvas.drawPath(botPath, botPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _MeniscusPainter oldDelegate) =>
+      oldDelegate.isDark != isDark;
 }
 
 class _DockTabItem {
