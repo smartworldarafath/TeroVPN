@@ -1,5 +1,6 @@
 # Build outputs & caches
 dist/
+dist_download/
 out/
 build/
 app/build/

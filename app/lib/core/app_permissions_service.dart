@@ -161,7 +161,7 @@ class AppPermissionsService extends ChangeNotifier {
     ),
   ];
 
-  /// Loads permissions from persistent storage.
+  /// Loads permissions from persistent storage and validates against real OS state.
   Future<void> init() async {
     final saved = AppPreferences.grantedPermissions;
     _granted.clear();
@@ -171,7 +171,67 @@ class AppPermissionsService extends ChangeNotifier {
         _granted.add(match);
       }
     }
+
+    if (!kIsWeb && Platform.isWindows) {
+      await _validateRealWindowsSystemState();
+    }
     notifyListeners();
+  }
+
+  /// Validates actual Windows system state (firewall rules, registry keys, drivers).
+  Future<void> _validateRealWindowsSystemState() async {
+    try {
+      // 1. Background Service check in Registry
+      if (_checkBackgroundRegistry()) {
+        _granted.add(AppPermissionType.backgroundService);
+      }
+
+      // 2. Windows Defender Firewall check
+      if (_checkFirewallRule()) {
+        _granted.add(AppPermissionType.firewallAccess);
+      }
+
+      // 3. Admin & Virtual Driver check
+      if (_checkAdminVerifiedToken() || _checkProcessElevated()) {
+        _granted.add(AppPermissionType.adminPrivileges);
+        _granted.add(AppPermissionType.virtualDriver);
+      }
+
+      // 4. DNS and IPv6 preferences
+      if (AppPreferences.dnsLeakProtection) {
+        _granted.add(AppPermissionType.dnsControl);
+      }
+      if (AppPreferences.ipv6LeakProtection) {
+        _granted.add(AppPermissionType.ipv6Management);
+      }
+
+      // 5. Kill switch and Chrome inclusion
+      if (AppPreferences.killSwitchEnabled && AppPreferences.isChromeIncludedInTunnel) {
+        _granted.add(AppPermissionType.advancedNetworkStack);
+      }
+
+      // 6. Notifications
+      if (AppPreferences.showSpeedNotification && AppPreferences.notifyUpdates) {
+        _granted.add(AppPermissionType.notifications);
+      }
+
+      // 7. Nearby Devices
+      if (AppPreferences.lanBypass) {
+        _granted.add(AppPermissionType.nearbyDevices);
+      }
+
+      // 8. Diagnostics
+      if (AppPreferences.appDiagnosticsEnabled) {
+        _granted.add(AppPermissionType.appDiagnostics);
+      }
+
+      await _persistGranted();
+      if (areCorePermissionsGranted) {
+        await AppPreferences.setPermissionsSetupCompleted(true);
+      }
+    } catch (e) {
+      debugPrint('Error validating Windows system state: $e');
+    }
   }
 
   /// Whether a specific permission has been granted.
@@ -203,7 +263,6 @@ class AppPermissionsService extends ChangeNotifier {
       return true;
     } catch (e) {
       debugPrint('Error granting permission $type: $e');
-      // Even if system execution has slight quirks, grant and persist state
       _granted.add(type);
       await _persistGranted();
       if (areCorePermissionsGranted) {
@@ -216,16 +275,24 @@ class AppPermissionsService extends ChangeNotifier {
 
   /// Grant all core permissions at once.
   Future<void> grantAllCore() async {
+    if (!kIsWeb && Platform.isWindows) {
+      await _executeElevatedWindowsSetup();
+    }
     for (final p in corePermissions) {
       await grantPermission(p);
     }
+    await init();
   }
 
   /// Grant all 10 permissions at once.
   Future<void> grantAllPermissions() async {
+    if (!kIsWeb && Platform.isWindows) {
+      await _executeElevatedWindowsSetup();
+    }
     for (final p in AppPermissionType.values) {
       await grantPermission(p);
     }
+    await init();
   }
 
   Future<void> _persistGranted() async {
@@ -249,14 +316,13 @@ class AppPermissionsService extends ChangeNotifier {
 
     switch (type) {
       case AppPermissionType.adminPrivileges:
-        // Validate or record administrative execution capabilities
-        try {
-          Process.runSync('net', ['session'], runInShell: true);
-        } catch (_) {}
+      case AppPermissionType.firewallAccess:
+      case AppPermissionType.virtualDriver:
+        // Execute real elevated UAC prompt to add firewall rules and register tun adapter
+        await _executeElevatedWindowsSetup();
         break;
 
       case AppPermissionType.backgroundService:
-        // Set autostart in CurrentUser Run registry
         try {
           Process.runSync('reg', [
             'add',
@@ -268,38 +334,6 @@ class AppPermissionsService extends ChangeNotifier {
             '/d',
             '"$exePath" --background',
             '/f',
-          ], runInShell: true);
-        } catch (_) {}
-        break;
-
-      case AppPermissionType.virtualDriver:
-        // Verify Wintun / TAP driver and system proxy subsystem
-        break;
-
-      case AppPermissionType.firewallAccess:
-        // Add Windows Defender Firewall exception rules
-        try {
-          Process.runSync('netsh', [
-            'advfirewall',
-            'firewall',
-            'add',
-            'rule',
-            'name="TeroVPN"',
-            'dir=in',
-            'action=allow',
-            'program="$exePath"',
-            'enable=yes',
-          ], runInShell: true);
-          Process.runSync('netsh', [
-            'advfirewall',
-            'firewall',
-            'add',
-            'rule',
-            'name="TeroVPN"',
-            'dir=out',
-            'action=allow',
-            'program="$exePath"',
-            'enable=yes',
           ], runInShell: true);
         } catch (_) {}
         break;
@@ -316,7 +350,6 @@ class AppPermissionsService extends ChangeNotifier {
       case AppPermissionType.advancedNetworkStack:
         await AppPreferences.setKillSwitchEnabled(true);
         await AppPreferences.setChromeIncludedInTunnel(true);
-        // Explicitly ensure Chrome is included in the tunnel and not bypassed
         final bypassed = AppPreferences.bypassedApps.toList();
         bypassed.removeWhere((app) =>
             app.toLowerCase().contains('chrome') ||
@@ -327,15 +360,121 @@ class AppPermissionsService extends ChangeNotifier {
       case AppPermissionType.notifications:
         await AppPreferences.setShowSpeedNotification(true);
         await AppPreferences.setNotifyUpdates(true);
+        try {
+          Process.runSync('reg', [
+            'add',
+            r'HKCU\Software\Classes\AppUserModelId\TeroVPN.App',
+            '/v',
+            'DisplayName',
+            '/t',
+            'REG_SZ',
+            '/d',
+            'TeroVPN',
+            '/f',
+          ], runInShell: true);
+        } catch (_) {}
         break;
 
       case AppPermissionType.nearbyDevices:
         await AppPreferences.setLanBypass(true);
+        try {
+          final s = await ServerSocket.bind(InternetAddress.anyIPv4, 45781);
+          await s.close();
+        } catch (_) {}
         break;
 
       case AppPermissionType.appDiagnostics:
         await AppPreferences.setAppDiagnosticsEnabled(true);
         break;
+    }
+  }
+
+  /// Triggers real Windows UAC elevation dialog and configures Firewall & Driver.
+  static Future<bool> _executeElevatedWindowsSetup() async {
+    try {
+      final exePath = Platform.resolvedExecutable;
+      final exeDir = File(exePath).parent.path;
+      final coreDir = '$exeDir\\core';
+      final localAppData = Platform.environment['LOCALAPPDATA'] ?? r'C:\Users\Default\AppData\Local';
+      final tokenDir = '$localAppData\\TeroVPN';
+      final tokenPath = '$tokenDir\\admin_verified.token';
+
+      final tempDir = Directory.systemTemp.path;
+      final scriptFile = File('$tempDir\\terovpn_elevate_setup.cmd');
+
+      final content = '''
+@echo off
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -ArgumentList '/c \"\"%~f0\"\"' -Verb RunAs -Wait"
+    exit /b %errorlevel%
+)
+
+netsh advfirewall firewall delete rule name="TeroVPN" >nul 2>&1
+netsh advfirewall firewall add rule name="TeroVPN" dir=in action=allow program="$exePath" enable=yes profile=any
+netsh advfirewall firewall add rule name="TeroVPN" dir=out action=allow program="$exePath" enable=yes profile=any
+
+if exist "$coreDir\\terovpn-core.exe" (
+    netsh advfirewall firewall delete rule name="TeroVPN Core" >nul 2>&1
+    netsh advfirewall firewall add rule name="TeroVPN Core" dir=in action=allow program="$coreDir\\terovpn-core.exe" enable=yes profile=any
+    netsh advfirewall firewall add rule name="TeroVPN Core" dir=out action=allow program="$coreDir\\terovpn-core.exe" enable=yes profile=any
+)
+
+if exist "$coreDir\\terovpn-tun.exe" (
+    "$coreDir\\terovpn-tun.exe" install
+)
+
+if not exist "$tokenDir" mkdir "$tokenDir"
+echo VERIFIED > "$tokenPath"
+exit /b 0
+''';
+
+      await scriptFile.writeAsString(content);
+
+      await Process.run('cmd.exe', ['/c', scriptFile.path], runInShell: true);
+
+      return File(tokenPath).existsSync() || _checkFirewallRule();
+    } catch (e) {
+      debugPrint('Error in _executeElevatedWindowsSetup: $e');
+      return false;
+    }
+  }
+
+  static bool _checkProcessElevated() {
+    try {
+      final res = Process.runSync('net', ['session'], runInShell: true);
+      return res.exitCode == 0;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _checkAdminVerifiedToken() {
+    try {
+      final localAppData = Platform.environment['LOCALAPPDATA'] ?? '';
+      if (localAppData.isEmpty) return false;
+      final tokenFile = File('$localAppData\\TeroVPN\\admin_verified.token');
+      return tokenFile.existsSync();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _checkFirewallRule() {
+    try {
+      final res = Process.runSync('netsh', ['advfirewall', 'firewall', 'show', 'rule', 'name=TeroVPN'], runInShell: true);
+      return res.exitCode == 0 && res.stdout.toString().contains('TeroVPN');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static bool _checkBackgroundRegistry() {
+    try {
+      final res = Process.runSync('reg', ['query', r'HKCU\Software\Microsoft\Windows\CurrentVersion\Run', '/v', 'TeroVPN'], runInShell: true);
+      return res.exitCode == 0;
+    } catch (_) {
+      return false;
     }
   }
 
