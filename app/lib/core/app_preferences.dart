@@ -298,11 +298,18 @@ class AppPreferences {
 
   static String? getSavedAuthPassword(String email) {
     if (email.isEmpty) return null;
-    return _prefs?.getString('$_keySavedAuthPassword${email.toLowerCase().trim()}');
+    final cleanEmail = email.toLowerCase().trim();
+    return _prefs?.getString('$_keySavedAuthPassword$cleanEmail') ??
+        _prefs?.getString('pwd_$cleanEmail');
   }
 
   static Future<void> setSavedAuthPassword(String email, String password) async {
     if (email.isEmpty || password.isEmpty) return;
-    await _prefs?.setString('$_keySavedAuthPassword${email.toLowerCase().trim()}', password);
+    final cleanEmail = email.toLowerCase().trim();
+    await _prefs?.setString('$_keySavedAuthPassword$cleanEmail', password);
+    await _prefs?.setString('pwd_$cleanEmail', password);
   }
+
+  static String? getSavedAccountPassword(String email) => getSavedAuthPassword(email);
+  static Future<void> setSavedAccountPassword(String email, String password) => setSavedAuthPassword(email, password);
 }

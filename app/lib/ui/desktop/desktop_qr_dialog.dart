@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../core/app_preferences.dart';
 import '../../core/core_controller.dart';
 import '../../core/qr_auth_sync_service.dart';
 import '../../core/models.dart';
+import '../../core/app_preferences.dart';
 import '../../theme/theme_manager.dart';
 import '../components/top_dock_toast.dart';
 
@@ -89,10 +89,15 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       _loadingStep = 'Authenticating Desktop Environment...';
     });
 
+    final email = account.email.trim();
+    final effectivePassword = (password != null && password.isNotEmpty)
+        ? password
+        : (account.password ?? AppPreferences.getSavedAuthPassword(email) ?? '');
+
     // 1. Immediately persist active account in AppPreferences
     await AppPreferences.setSavedActiveAccount(account.toJson());
-    if (password != null && password.isNotEmpty) {
-      await AppPreferences.setSavedAuthPassword(account.email, password);
+    if (effectivePassword.isNotEmpty) {
+      await AppPreferences.setSavedAuthPassword(email, effectivePassword);
     }
 
     // 2. Synthesize into controller accounts immediately
@@ -101,15 +106,41 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       'switch_threshold_percent': 10.0,
     }));
 
-    // 3. Attempt real core sign-in if password provided
-    if (password != null && password.isNotEmpty) {
+    // 3. Attempt real core activation or sign-in if password available
+    bool accountActivated = false;
+    try {
+      final existingAccounts = widget.controller.accounts?.accounts ?? [];
+      Account? existing;
+      for (final a in existingAccounts) {
+        if (a.email.toLowerCase() == email.toLowerCase()) {
+          existing = a;
+          break;
+        }
+      }
+      if (existing != null) {
+        await widget.controller.activate(existing);
+        await widget.controller.refresh(accountsToo: true);
+        accountActivated = true;
+      }
+    } catch (_) {}
+
+    if (!accountActivated && effectivePassword.isNotEmpty) {
       try {
-        final state = await widget.controller.startSignIn(account.email, password);
-        if (state.step == SignInStep.working) {
-          for (int i = 0; i < 15; i++) {
+        final state = await widget.controller.startSignIn(email, effectivePassword);
+        if (state.step == SignInStep.done) {
+          accountActivated = true;
+        } else if (state.step == SignInStep.working) {
+          for (var i = 0; i < 20; i++) {
             await Future.delayed(const Duration(milliseconds: 300));
-            final s = await widget.controller.signInState(state.id);
-            if (s.step != SignInStep.working) break;
+            try {
+              final pollState = await widget.controller.signInState(state.id);
+              if (pollState.step == SignInStep.done) {
+                accountActivated = true;
+                break;
+              } else if (pollState.step == SignInStep.failed) {
+                break;
+              }
+            } catch (_) {}
           }
         }
       } catch (_) {}
@@ -117,7 +148,9 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
 
     // 4. Ensure controller accounts stays populated
     try {
-      await widget.controller.refresh(accountsToo: true);
+      if (accountActivated) {
+        await widget.controller.refresh(accountsToo: true);
+      }
     } catch (_) {}
 
     if (!widget.controller.hasAccount) {

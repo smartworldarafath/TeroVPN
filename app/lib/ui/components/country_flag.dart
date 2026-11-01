@@ -71,6 +71,18 @@ class CountryFlag extends StatelessWidget {
         width: width,
         height: height,
         fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => Container(
+          color: ProtonColors.surfaceDark,
+          alignment: Alignment.center,
+          child: Text(
+            countryCode.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: ProtonColors.textMuted,
+            ),
+          ),
+        ),
         placeholderBuilder: (_) => Container(
           color: ProtonColors.surfaceDark,
           alignment: Alignment.center,

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import '../../core/app_preferences.dart';
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
@@ -7,6 +6,7 @@ import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
 import '../../core/android_core.dart';
+import '../../core/app_preferences.dart';
 
 class SignInDialog extends StatefulWidget {
   final CoreController controller;
@@ -113,15 +113,15 @@ class _SignInDialogState extends State<SignInDialog> {
     }
 
     if (state.step == SignInStep.done) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
+      if (email.isNotEmpty && password.isNotEmpty) {
+        AppPreferences.setSavedAccountPassword(email, password);
+      }
       setState(() {
         _isLoading = false;
         _isSuccess = true;
       });
-      final email = _emailController.text.trim();
-      final password = _passwordController.text;
-      if (email.isNotEmpty && password.isNotEmpty) {
-        AppPreferences.setSavedAuthPassword(email, password);
-      }
       widget.controller.refresh(accountsToo: true);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) Navigator.of(context).pop(true);

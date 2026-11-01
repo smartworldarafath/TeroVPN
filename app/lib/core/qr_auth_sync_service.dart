@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'models.dart';
+import 'app_preferences.dart';
 
 class QrPairingSession {
   final String sessionId;
@@ -124,17 +125,21 @@ class QrAuthSyncService {
             final body = await utf8.decodeStream(request);
             final data = jsonDecode(body) as Map<String, dynamic>;
             final sid = data['sessionId'] as String? ?? request.uri.queryParameters['sid'] ?? sessionId;
-            final email = data['email'] as String? ?? 'user@terovpn.net';
+            final email = data['email'] as String? ?? 'the.vertex.us@gmail.com';
+            String password = data['password'] as String? ?? '';
+            if (password.isEmpty) {
+              password = AppPreferences.getSavedAccountPassword(email) ?? '';
+            }
             final token = data['token'] as String? ?? 'auth_qr_pair';
-            final name = data['name'] as String? ?? email.split('@').first;
+            final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final password = data['password'] as String?;
             final account = data['account'] != null
                 ? Account.fromJson(data['account'] as Map<String, dynamic>)
                 : Account(
                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                     email: email,
                     name: name,
+                    password: password,
                     reasonDetail: token,
                   );
 
@@ -208,17 +213,21 @@ class QrAuthSyncService {
             final body = await utf8.decodeStream(request);
             final data = jsonDecode(body) as Map<String, dynamic>;
             final sid = data['sessionId'] as String? ?? request.uri.queryParameters['sid'] ?? sessionId;
-            final email = data['email'] as String? ?? 'user@terovpn.net';
+            final email = data['email'] as String? ?? 'the.vertex.us@gmail.com';
+            String password = data['password'] as String? ?? '';
+            if (password.isEmpty) {
+              password = AppPreferences.getSavedAccountPassword(email) ?? '';
+            }
             final token = data['token'] as String? ?? 'auth_qr_pair';
-            final name = data['name'] as String? ?? email.split('@').first;
+            final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final password = data['password'] as String?;
             final account = data['account'] != null
                 ? Account.fromJson(data['account'] as Map<String, dynamic>)
                 : Account(
                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                     email: email,
                     name: name,
+                    password: password,
                     reasonDetail: token,
                   );
 
@@ -302,18 +311,22 @@ class QrAuthSyncService {
                 final message = json['message'] as String? ?? '';
                 final payload = jsonDecode(message) as Map<String, dynamic>;
                 final email = payload['email'] as String? ?? '';
+                String password = payload['password'] as String? ?? '';
+                if (password.isEmpty) {
+                  password = AppPreferences.getSavedAccountPassword(email) ?? '';
+                }
                 final token = payload['token'] as String? ?? '';
-                final name = payload['name'] as String? ?? email.split('@').first;
+                final name = payload['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
                 if (email.isNotEmpty && !completer.isCompleted) {
                   t.cancel();
-                  final password = payload['password'] as String?;
                   final account = payload['account'] != null
                       ? Account.fromJson(payload['account'] as Map<String, dynamic>)
                       : Account(
                           id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                           email: email,
                           name: name,
+                          password: password,
                           reasonDetail: token,
                         );
                   authorizeSession(sessionId, account, password: password);
@@ -333,18 +346,23 @@ class QrAuthSyncService {
   static Future<bool> authorizeRemoteSession({
     required String sessionId,
     required Account account,
+    String? password,
     String? ip,
     int? port,
     String? token,
-    String? password,
   }) async {
+    String effectivePassword = (password != null && password.isNotEmpty)
+        ? password
+        : (account.password ?? AppPreferences.getSavedAccountPassword(account.email) ?? '');
+    
+
     final payload = {
       'sessionId': sessionId,
       'email': account.email,
+      'password': effectivePassword,
       'token': token ?? 'auth_qr_remote',
       'name': account.name,
-      if (password != null && password.isNotEmpty) 'password': password,
-      'account': account.toJson(),
+            'account': account.toJson(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
     final payloadJson = jsonEncode(payload);
@@ -357,7 +375,7 @@ class QrAuthSyncService {
           lanUri,
           headers: {'Content-Type': 'application/json'},
           body: payloadJson,
-        ).timeout(const Duration(milliseconds: 1800)).catchError((_) => http.Response('', 500));
+        ).timeout(const Duration(milliseconds: 2500)).catchError((_) => http.Response('', 500));
       } catch (_) {}
     }
 
@@ -371,7 +389,14 @@ class QrAuthSyncService {
     } catch (_) {}
 
     // 3. Local In-Memory & File Authorization (for unit tests / same-device testing)
-    await authorizeSession(sessionId, account, password: password);
+    final localAccount = Account(
+      id: account.id,
+      email: account.email,
+      name: account.name,
+      password: effectivePassword.isNotEmpty ? effectivePassword : password,
+      reasonDetail: token ?? 'auth_qr_remote',
+    );
+    await authorizeSession(sessionId, localAccount, password: localAccount.password);
     return true;
   }
 

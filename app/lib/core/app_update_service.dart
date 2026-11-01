@@ -92,7 +92,7 @@ class AppUpdateService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body) as Map<String, dynamic>;
-        final tagName = (data['tag_name'] as String?) ?? 'v1.1.7';
+        final tagName = (data['tag_name'] as String?) ?? 'v1.1.8';
         final releaseName = (data['name'] as String?) ?? 'TeroVPN $tagName';
         final publishedAt = (data['published_at'] as String?) ?? '';
         final body = (data['body'] as String?) ?? '';

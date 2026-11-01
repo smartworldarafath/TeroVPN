@@ -186,7 +186,8 @@ class Account {
     this.retryAt,
     this.usage,
     this.usedPercent = 0.0,
-    this.hasPassword = true,
+    this.hasPassword = true,
+    this.password,
   });
 
   Map<String, dynamic> toJson() => {
@@ -201,7 +202,8 @@ class Account {
     'reason_code': reasonCode,
     'reason_detail': reasonDetail,
     'used_percent': usedPercent,
-    'has_password': hasPassword,
+    'has_password': hasPassword,
+    if (password != null) 'password': password,
   };
 
   Account.fromJson(Map<String, Object?> j)
@@ -221,7 +223,8 @@ class Account {
         null => null,
       },
       usedPercent = _double(j['used_percent']),
-      hasPassword = _bool(j['has_password']);
+      hasPassword = _bool(j['has_password']),
+      password = j['password'] as String?;
 
   final String id;
   final String name;
@@ -239,7 +242,8 @@ class Account {
   final DateTime? retryAt;
   final Usage? usage;
   final double usedPercent;
-  final bool hasPassword;
+  final bool hasPassword;
+  final String? password;
 
   bool get needsSignIn => status == AccountStatus.reauthRequired;
 }
