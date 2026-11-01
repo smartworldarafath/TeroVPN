@@ -120,61 +120,20 @@ The system delivers native line-speed bandwidth, instant connection migration, m
 
 ---
 
-## Technical Architecture & VPN Mechanism
+## Step-by-Step Packet Lifecycle & Tunneling Mechanism
 
-### High-Level Architectural Pipeline
+### End-to-End Tunnel Pipeline
 
 ```mermaid
-flowchart TD
-    subgraph Layer1["1. INBOUND APPLICATION CAPTURE"]
-        Apps["Client Traffic (Web Browsers, Games, Media, CLI)"]
-        SysNetwork["Operating System Network Stack (WinINet / NetworkExtension / iptables)"]
-        TunEngine["Virtual TUN Device & Loopback SOCKS5/HTTP Proxy (:10810)"]
-    end
-
-    subgraph Layer2["2. CORE CONTROLLER & CRYPTOGRAPHIC ENGINE"]
-        Router["Dispatch Routing Engine & Split Tunneling Filter"]
-        PrivateDns["Encrypted Private DNS Resolver (DoH / Quad9 / Cloudflare)"]
-        WireGuard["WireGuard Cryptographic Engine (Curve25519, ChaCha20-Poly1305, BLAKE2s)"]
-    end
-
-    subgraph Layer3["3. MASQUE OBFUSCATION & ENCAPSULATION (RFC 9298)"]
-        H3Quic["Primary Protocol: HTTP/3 QUIC (UDP 443 DATAGRAM Capsules)"]
-        H2Tls["Fallback Protocol: HTTP/2 TLS (TCP 443 Stream Encapsulation)"]
-        Stealth["Stealth Protocol: Obfuscated WebSocket TLS Camouflage"]
-    end
-
-    subgraph Layer4["4. FASTLY ANYCAST EDGE INFRASTRUCTURE"]
-        AnycastPoP["Fastly Anycast Gateway PoPs (33 Edge Locations)"]
-        TokenAuth["Multi-Account Session Token Authentication Pool"]
-        Decapsulator["MASQUE Decapsulation & Egress Engine"]
-    end
-
-    subgraph Layer5["5. PUBLIC INTERNET DESTINATION"]
-        EgressIp["Dedicated Clean Anycast IPv4 / IPv6 Exit Node"]
-        TargetWeb["Destination Web Host / Remote Service"]
-    end
-
-    Apps -->|Socket Request| SysNetwork
-    SysNetwork -->|Capture & Forward| TunEngine
-    TunEngine -->|Raw IP Packets| Router
-    Router -->|DNS Resolution| PrivateDns
-    Router -->|IP Datagrams| WireGuard
-    WireGuard -->|Encrypted Payload| H3Quic
-    WireGuard -.->|Firewall Failover| H2Tls
-    WireGuard -.->|DPI Camouflage| Stealth
-    H3Quic -->|TLS 1.3 / UDP 443| AnycastPoP
-    H2Tls -->|TLS / TCP 443| AnycastPoP
-    Stealth -->|HTTPS Frame| AnycastPoP
-    AnycastPoP --> TokenAuth
-    TokenAuth --> Decapsulator
-    Decapsulator --> EgressIp
-    EgressIp --> TargetWeb
+flowchart LR
+    A["Client Application<br/>(Browsers / Apps)"] --> B["Virtual TUN / Proxy<br/>(127.0.0.1:10810)"]
+    B --> C["WireGuard Core<br/>(ChaCha20-Poly1305)"]
+    C --> D["MASQUE Layer<br/>(HTTP/3 QUIC 443)"]
+    D --> E["Fastly Anycast Edge<br/>(33 Global PoPs)"]
+    E --> F["Target Host<br/>(Clean Egress IP)"]
 ```
 
----
-
-### Step-by-Step Packet Lifecycle & Tunneling Mechanism
+### Detailed Packet Sequence Flow
 
 ```mermaid
 sequenceDiagram
