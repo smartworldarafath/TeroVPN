@@ -1,310 +1,341 @@
-# TeroVPN 🛡️
+# TeroVPN
 
 <p align="center">
-  <img src="docs/branding/hero_banner_dark.jpg" width="100%" alt="TeroVPN Official Hero Banner" style="border-radius: 16px; box-shadow: 0 10px 40px rgba(107, 66, 255, 0.45);" />
+  <img src="docs/branding/hero_banner_dark.jpg" width="100%" alt="TeroVPN Header Banner" style="border-radius: 12px;" />
 </p>
 
 <p align="center">
-  <strong>Fast, Secure & Private Next-Generation VPN Client</strong><br>
-  Cross-platform desktop & mobile experience powered by <em>WireGuard MASQUE (HTTP/3 QUIC)</em> over Fastly's global Anycast edge network with 120Hz Liquid Glass design.
+  <strong>High-Throughput, Low-Latency Virtual Private Network Client</strong><br>
+  Cross-platform architecture engineered for Windows, macOS, Linux, and Android.<br>
+  Powered by WireGuard MASQUE (RFC 9298 HTTP/3 QUIC) encapsulation across Fastly Anycast edge infrastructure.
 </p>
 
 <p align="center">
   <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><img src="https://img.shields.io/github/v/release/smartworldarafath/TeroVPN?color=6B42FF&label=Release&style=for-the-badge" alt="Latest Release"></a>
   <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-6B42FF?style=for-the-badge" alt="Platforms">
-  <img src="https://img.shields.io/badge/Tunnel-WireGuard%20MASQUE%20HTTP%2F3-2CFFCC?style=for-the-badge&logo=wireguard&logoColor=black" alt="WireGuard MASQUE">
-  <img src="https://img.shields.io/badge/Network-Fastly%20Edge%20Anycast-FF9900?style=for-the-badge&logo=fastly&logoColor=white" alt="Fastly Edge">
+  <img src="https://img.shields.io/badge/Transport-MASQUE%20HTTP%2F3%20QUIC%20RFC9298-2CFFCC?style=for-the-badge&logo=wireguard&logoColor=black" alt="WireGuard MASQUE">
+  <img src="https://img.shields.io/badge/Network-Fastly%20Global%20Anycast-FF9900?style=for-the-badge&logo=fastly&logoColor=white" alt="Fastly Edge">
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License">
 </p>
 
 ---
 
-## 🎨 Brand Identity & Icon Showcase
+## Overview
+
+TeroVPN is a production-grade virtual private network client designed to bypass advanced state-level censorship, protocol throttling, and deep packet inspection (DPI). By encapsulating encrypted WireGuard datagrams into standard HTTP/3 QUIC and HTTP/2 MASQUE tunnels over UDP/TCP port 443, TeroVPN renders VPN traffic indistinguishable from ordinary HTTPS web traffic.
+
+The system delivers native line-speed bandwidth, instant connection migration, multi-account quota rotation, and platform-native integration across all desktop and mobile operating systems.
+
+---
+
+## Brand Identity & Official Icons
 
 <table align="center" width="100%">
   <tr>
-    <td align="center" width="50%" colspan="2">
-      <strong>✨ Current Official App Icons</strong>
-    </td>
-    <td align="center" width="50%" colspan="2">
-      <strong>🚀 Upcoming Next-Gen App Icons (Preview)</strong>
-    </td>
-  </tr>
-  <tr>
-    <td align="center" width="25%">
-      <img src="docs/branding/app_icon_light.png" width="130" alt="Official App Icon Light" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(107, 66, 255, 0.25);"/><br><br>
+    <td align="center" width="50%">
       <strong>Light Edition</strong><br>
-      <sub>Frosted Lavender Squircle</sub>
+      <sub>Frosted Lavender Vector Squircle</sub><br><br>
+      <img src="docs/branding/app_icon_light.png" width="140" alt="TeroVPN Light Icon" style="border-radius: 28px;" />
     </td>
-    <td align="center" width="25%">
-      <img src="docs/branding/app_icon_dark.png" width="130" alt="Official App Icon Dark" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);"/><br><br>
-      <strong>Dark Liquid Glass</strong><br>
-      <sub>Obsidian Refractive Optic</sub>
-    </td>
-    <td align="center" width="25%">
-      <img src="docs/branding/upcoming_icon_shield.png" width="130" alt="Upcoming Icon Hex Shield" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(107, 66, 255, 0.3);"/><br><br>
-      <strong>Hex Shield Concept</strong><br>
-      <sub>Geometric Frosted Shield</sub>
-    </td>
-    <td align="center" width="25%">
-      <img src="docs/branding/upcoming_icon_pass.png" width="130" alt="Upcoming Icon Pro Pass" style="border-radius: 28px; box-shadow: 0 8px 24px rgba(107, 66, 255, 0.3);"/><br><br>
-      <strong>Pro Pass Concept</strong><br>
-      <sub>Holographic Verified Ticket</sub>
+    <td align="center" width="50%">
+      <strong>Dark Liquid Glass Edition</strong><br>
+      <sub>Obsidian Refractive Optic Canvas</sub><br><br>
+      <img src="docs/branding/app_icon_dark.png" width="140" alt="TeroVPN Dark Liquid Glass Icon" style="border-radius: 28px;" />
     </td>
   </tr>
 </table>
 
-### 🏷️ Official Banners & Logotypes
-
 <p align="center">
-  <img src="docs/branding/brand_banner_light.jpg" width="67%" alt="TeroVPN Light Typography Banner" style="border-radius: 14px; margin-right: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.08);" />
-  <img src="docs/branding/brand_badge.jpg" width="30%" alt="TeroVPN Emblem Badge" style="border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.08);" />
+  <img src="docs/branding/brand_banner_light.jpg" width="100%" alt="TeroVPN Brand Banner" style="border-radius: 12px;" />
 </p>
 
 ---
 
-## 🌟 Overview
+## Downloads & Platform Packages
 
-**TeroVPN** combines carrier-grade censorship circumvention with an ultra-responsive, privacy-respecting user interface for **Windows, macOS, Linux, and Android**. By routing encrypted UDP traffic through **Fastly MASQUE HTTP/3 (QUIC)** and **HTTP/2** edge proxies, TeroVPN bypasses strict state firewalls and deep packet inspection (DPI) while preserving native line-speed bandwidth and low latencies.
-
-Whether you're streaming 4K media, gaming with ultra-low latency, or securing public Wi-Fi sessions, TeroVPN provides hardened cryptographic protection and seamless multi-account quota rotation.
-
----
-
-## 📥 Downloads & Platform Packages
-
-| Platform | Package Format | Description | Direct Download |
-| :--- | :--- | :--- | :---: |
-| 🪟 **Windows** | `.exe` (Setup Installer) | Official Windows Setup Installer with Desktop & Start Menu shortcuts | [Download .exe](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 🪟 **Windows** | `.zip` (Portable) | Portable 64-bit zero-install archive | [Download .zip](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 🍏 **macOS** | `.dmg` (Disk Image) | Apple Disk Image with drag-and-drop to Applications | [Download .dmg](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 🍏 **macOS** | `.tar.gz` (App Bundle) | Portable macOS application bundle (`TeroVPN.app`) | [Download .tar.gz](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 🐧 **Linux** | `.AppImage` (Executable) | Self-contained standalone AppImage for all Linux distributions | [Download .AppImage](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 🐧 **Linux** | `.tar.gz` (Binaries) | Linux 64-bit binaries bundle | [Download .tar.gz](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-| 📱 **Android** | `.apk` (Release) | Universal Android APK (Android 8.0+) with Proguard optimization | [Download .apk](https://github.com/smartworldarafath/TeroVPN/releases/latest) |
-
----
-
-## 📸 Screenshots Showcase
-
-<table align="center">
-  <tr>
-    <td align="center" width="25%">
-      <strong>🏠 Home Screen</strong><br>
-      <em>Circular Halo & Quick Connect</em><br><br>
-      <img src="docs/screenshots/home_screen.jpg" width="220" alt="Home Screen" style="border-radius: 12px;"/>
-    </td>
-    <td align="center" width="25%">
-      <strong>🌍 Countries & Latency</strong><br>
-      <em>33 Global Edge Locations</em><br><br>
-      <img src="docs/screenshots/countries_screen.jpg" width="220" alt="Countries Screen" style="border-radius: 12px;"/>
-    </td>
-    <td align="center" width="25%">
-      <strong>⚡ Fast Presets</strong><br>
-      <em>Profiles & 50GB Token Pool</em><br><br>
-      <img src="docs/screenshots/profiles_screen.jpg" width="220" alt="Profiles Screen" style="border-radius: 12px;"/>
-    </td>
-    <td align="center" width="25%">
-      <strong>⚙️ Settings & Core</strong><br>
-      <em>Grouped Glass Controls</em><br><br>
-      <img src="docs/screenshots/settings_screen.jpg" width="220" alt="Settings Screen" style="border-radius: 12px;"/>
-    </td>
-  </tr>
+<table align="center" width="100%">
+  <thead>
+    <tr>
+      <th align="center" width="12%">Platform</th>
+      <th align="left" width="22%">Target Environment</th>
+      <th align="left" width="20%">Package Format</th>
+      <th align="left" width="30%">Distribution Architecture</th>
+      <th align="center" width="16%">Download</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">
+        <img src="https://www.icosix.com/uploads/icons/2025/12/windows-11.png" width="36" height="36" alt="Windows" /><br>
+        <strong>Windows</strong>
+      </td>
+      <td>Windows 10, 11 (64-bit)</td>
+      <td>Setup EXE Installer<br>Portable ZIP</td>
+      <td>Inno Setup Native Installer with system proxy auto-routing and TUN driver</td>
+      <td align="center">
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><strong>Get Windows (.exe)</strong></a><br>
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest">Portable (.zip)</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c9/Finder_Icon_macOS_Big_Sur.png" width="36" height="36" alt="macOS" /><br>
+        <strong>macOS</strong>
+      </td>
+      <td>macOS 11.0+ (Big Sur, Monterey, Ventura, Sonoma, Sequoia)</td>
+      <td>Apple Disk Image (.dmg)<br>Tarball (.tar.gz)</td>
+      <td>Universal Drag-and-Drop Disk Image with unsandboxed socket permissions</td>
+      <td align="center">
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><strong>Get macOS (.dmg)</strong></a><br>
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest">Bundle (.tar.gz)</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://img.icons8.com/color/1200/linux--v2.jpg" width="36" height="36" alt="Linux" /><br>
+        <strong>Linux</strong>
+      </td>
+      <td>Ubuntu, Debian, Fedora, Arch, openSUSE (x86_64)</td>
+      <td>Standalone AppImage<br>Tarball (.tar.gz)</td>
+      <td>Single-file self-contained binary adhering to freedesktop.org specifications</td>
+      <td align="center">
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><strong>Get Linux (.AppImage)</strong></a><br>
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest">Tarball (.tar.gz)</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">
+        <img src="https://img.icons8.com/liquid-glass-color/1200/android-os.jpg" width="36" height="36" alt="Android" /><br>
+        <strong>Android</strong>
+      </td>
+      <td>Android 8.0+ (Oreo through Android 15)</td>
+      <td>Release APK</td>
+      <td>Android VpnService integration with 120Hz native refresh rate and ProGuard tuning</td>
+      <td align="center">
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><strong>Get Android (.apk)</strong></a>
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 ---
 
-## 🚀 Key Features
+## Technical Architecture & VPN Mechanism
 
-### 🌐 Proton VPN-Grade Protocol Suite
-Choose the optimal protocol for your network environment directly under **Settings > Protocol**:
-- **Smart (Automatic)**: Automatically resolves network firewalls and switches to the fastest reliable protocol.
-- **WireGuard (UDP)**: Modern, lightweight, ultra-high-speed tunneling ideal for 4K streaming and gaming.
-- **WireGuard (TCP)**: WireGuard encapsulated over TCP port 443 to bypass UDP filtering and restrictive hotel/corporate firewalls.
-- **Stealth (TLS Obfuscated)**: Disguises VPN traffic as standard HTTPS browsing traffic to circumvent deep packet inspection (DPI).
-- **OpenVPN (UDP & TCP)**: Battle-tested industry standard protocols for hardened reliability.
-- **IKEv2 (macOS Native)**: High-speed handoffs across cellular and Wi-Fi networks.
-
-### 📱 Sign in with Phone (QR Code Session Sync)
-- Instant account transfer from mobile to desktop without typing credentials.
-- Navigate to **Settings > Account > Sign in with phone** to generate a single-use cryptographically signed QR code with 5-minute countdown.
-- Point the TeroVPN mobile scanner to instantly authenticate and sync active sessions.
-
-### 🗺️ Proton-Style Geographic World Map (`ProtonWorldMap`)
-- **Origin Telemetry**: Displays the user's real location (e.g. Bangladesh / Dhaka) with a pulsating radar pin and unencrypted status when disconnected.
-- **Animated Flight Arc**: Renders a glowing geodesic curved trajectory with an animated photon energy beam traveling from Origin to Destination.
-- **Destination Beacons**: Tri-concentric expanding ripple rings highlight connected servers with distance in kilometers and AES-256 encryption indicators.
-
-### 🔒 WireGuard MASQUE (HTTP/3 QUIC) Tunneling
-- Encapsulates WireGuard UDP packets inside standard QUIC HTTP/3 web traffic over port 443.
-- Completely impervious to ISP traffic shaping, SNI inspection, and protocol filtering.
-- Fast fallback to Fastly HTTP/2 MASQUE encapsulation on networks where UDP/QUIC is blocked.
-
-### ⚙️ Advanced Settings (Extra Functions)
-- **Custom DNS Resolvers**: Configure primary & secondary DNS servers with 1-click presets for Cloudflare (1.1.1.1), Google (8.8.8.8), Quad9 (9.9.9.9), and AdGuard (94.140.14.14).
-- **DNS Leak Protection**: Forces all domain name resolutions through encrypted VPN tunnels.
-- **IPv6 Leak Protection**: Completely drops untunneled IPv6 packets to prevent identity leaks.
-- **LAN Traffic Bypass**: Direct local access to printers, smart TVs, Chromecast, and local NAS storage.
-- **Alternative Routing**: Uses third-party CDN relays (Cloudflare/AWS) if local ISPs block direct VPN server endpoints.
-- **Moderate NAT**: Optimizes peer-to-peer gaming and VoIP calls.
-- **Tunnel MTU Size**: Auto (1420), Conservative (1360), Minimal (1280), or Standard Ethernet (1500).
-- **Auto-Connect on Launch**: Automatically connects to the fastest server upon system startup.
-
-### 🎨 120Hz Liquid Glass Design System
-- **Classic Proton UI**: Official Proton VPN obsidian dark mode with subtle border contrast.
-- **Liquid Glass Mode**: Translucent frosted glass materials (`sigma: 20`), underneath neon violet glow (`#6B42FF`), and floating capsule navigation dock.
-- Full adaptive Light Mode and Dark Mode support with synchronized transitions.
-
-### 🔄 Multi-Account Session Rotation Pool
-- Real-time 50GB high-speed session management with Firefox Account integration.
-- Hot-swappable secondary accounts remain paused until activated, eliminating manual token management.
-- Live bandwidth consumption meter (`X.X MB of 50.0 GB`) with instant quota refresh.
-
----
-
-## 🏗️ Architecture & Protocol Stack
+### High-Level Architectural Pipeline
 
 ```mermaid
 flowchart TD
-    subgraph Client["Client Applications (Windows, macOS, Linux, Android)"]
-        UI["Flutter UI Layer (Proton / Liquid Glass 120Hz)"]
-        Controller["CoreController & ThemeManager"]
-        GoCore["Native Go VPN Core Engine (terovpn-core)"]
-        Tun["TUN Interface / System Proxy Engine (terovpn-tun)"]
+    subgraph Layer1["1. INBOUND APPLICATION CAPTURE"]
+        Apps["Client Traffic (Web Browsers, Games, Media, CLI)"]
+        SysNetwork["Operating System Network Stack (WinINet / NetworkExtension / iptables)"]
+        TunEngine["Virtual TUN Device & Loopback SOCKS5/HTTP Proxy (:10810)"]
     end
 
-    subgraph Transport["Encapsulation Layer"]
-        H3["WireGuard MASQUE (HTTP/3 QUIC) :443"]
-        H2["Fastly HTTP/2 MASQUE (Fallback) :443"]
-        Stealth["Stealth TLS Obfuscated :443"]
+    subgraph Layer2["2. CORE CONTROLLER & CRYPTOGRAPHIC ENGINE"]
+        Router["Dispatch Routing Engine & Split Tunneling Filter"]
+        PrivateDns["Encrypted Private DNS Resolver (DoH / Quad9 / Cloudflare)"]
+        WireGuard["WireGuard Cryptographic Engine (Curve25519, ChaCha20-Poly1305, BLAKE2s)"]
     end
 
-    subgraph Edge["Fastly Global Edge Network"]
-        Anycast["Global Anycast Routing (33 Countries)"]
-        ExitNodes["Edge Exit Nodes (US, NL, DE, JP, etc.)"]
+    subgraph Layer3["3. MASQUE OBFUSCATION & ENCAPSULATION (RFC 9298)"]
+        H3Quic["Primary Protocol: HTTP/3 QUIC (UDP 443 DATAGRAM Capsules)"]
+        H2Tls["Fallback Protocol: HTTP/2 TLS (TCP 443 Stream Encapsulation)"]
+        Stealth["Stealth Protocol: Obfuscated WebSocket TLS Camouflage"]
     end
 
-    subgraph Internet["Public Web"]
-        Web["Secure Encrypted Internet Traffic"]
+    subgraph Layer4["4. FASTLY ANYCAST EDGE INFRASTRUCTURE"]
+        AnycastPoP["Fastly Anycast Gateway PoPs (33 Edge Locations)"]
+        TokenAuth["Multi-Account Session Token Authentication Pool"]
+        Decapsulator["MASQUE Decapsulation & Egress Engine"]
     end
 
-    UI --> Controller
-    Controller --> GoCore
-    GoCore --> Tun
-    Tun --> H3
-    Tun --> H2
-    Tun --> Stealth
-    H3 --> Anycast
-    H2 --> Anycast
-    Stealth --> Anycast
-    Anycast --> ExitNodes
-    ExitNodes --> Web
+    subgraph Layer5["5. PUBLIC INTERNET DESTINATION"]
+        EgressIp["Dedicated Clean Anycast IPv4 / IPv6 Exit Node"]
+        TargetWeb["Destination Web Host / Remote Service"]
+    end
+
+    Apps -->|Socket Request| SysNetwork
+    SysNetwork -->|Capture & Forward| TunEngine
+    TunEngine -->|Raw IP Packets| Router
+    Router -->|DNS Resolution| PrivateDns
+    Router -->|IP Datagrams| WireGuard
+    WireGuard -->|Encrypted Payload| H3Quic
+    WireGuard -.->|Firewall Failover| H2Tls
+    WireGuard -.->|DPI Camouflage| Stealth
+    H3Quic -->|TLS 1.3 / UDP 443| AnycastPoP
+    H2Tls -->|TLS / TCP 443| AnycastPoP
+    Stealth -->|HTTPS Frame| AnycastPoP
+    AnycastPoP --> TokenAuth
+    TokenAuth --> Decapsulator
+    Decapsulator --> EgressIp
+    EgressIp --> TargetWeb
 ```
 
 ---
 
-## 📊 Protocol Comparison
+### Step-by-Step Packet Lifecycle & Tunneling Mechanism
 
-| Protocol | Transport | Port | DPI / Censorship Bypass | Latency | Recommended For |
-| :--- | :---: | :---: | :---: | :---: | :--- |
-| **Smart (Automatic)** | Dynamic | Dynamic | ⭐⭐⭐⭐⭐ Highest | Auto-Optimized | Default recommendation for all users |
-| **WireGuard (UDP)** | QUIC / UDP | 443 / 51820 | ⭐⭐⭐⭐⭐ Highest | Lowest (<20ms) | Gaming, 4K Streaming, Everyday |
-| **WireGuard (TCP)** | TLS / TCP | 443 | ⭐⭐⭐⭐ Very High | Low (~25-35ms) | Restricted corporate / hotel Wi-Fi |
-| **Stealth (TLS)** | TLS Obfuscated | 443 | ⭐⭐⭐⭐⭐ Maximum | Moderate | Strict nation-state firewalls & DPI |
-| **OpenVPN (UDP)** | OpenVPN / UDP | 1194 | ⭐⭐⭐⭐ High | Low (~30ms) | Traditional security-first setups |
-| **OpenVPN (TCP)** | OpenVPN / TCP | 443 | ⭐⭐⭐⭐ High | Moderate | Firewalled legacy connections |
-| **IKEv2** | UDP | 500 / 4500 | ⭐⭐⭐ Standard | Very Low | macOS / iOS native mobile roaming |
+```mermaid
+sequenceDiagram
+    autonumber
+    actor ClientApp as Application (e.g., Chrome / Terminal)
+    participant HostOS as Host OS Network Layer
+    participant LocalCore as TeroVPN Core Engine (terovpn-core)
+    participant CryptoEngine as WireGuard Cryptographic Engine
+    participant MasqueLayer as MASQUE Encapsulator (RFC 9298)
+    participant FastlyEdge as Fastly Anycast Edge PoP
+    participant RemoteServer as Remote Destination Server
+
+    Note over ClientApp,HostOS: Phase 1: Local Inbound Capture
+    ClientApp->>HostOS: Generates TCP/UDP socket request
+    HostOS->>LocalCore: Captures and routes packet to 127.0.0.1:10810 (Proxy/TUN)
+    
+    Note over LocalCore,CryptoEngine: Phase 2: Cryptographic Encryption
+    LocalCore->>CryptoEngine: Ingests raw IP datagram
+    CryptoEngine->>CryptoEngine: Encrypts packet using ChaCha20-Poly1305 with 1-RTT Noise protocol
+    CryptoEngine-->>LocalCore: Outputs authenticated WireGuard ciphertext datagram
+    
+    Note over LocalCore,MasqueLayer: Phase 3: MASQUE Protocol Encapsulation
+    LocalCore->>MasqueLayer: Passes WireGuard datagram to MASQUE capsule builder
+    MasqueLayer->>MasqueLayer: Encapsulates into HTTP/3 DATAGRAM frame (RFC 9298 / CONNECT-UDP)
+    MasqueLayer->>FastlyEdge: Transmits payload over TLS 1.3 QUIC connection on port 443
+    Note over MasqueLayer,FastlyEdge: Deep Packet Inspection (DPI) sees only valid HTTPS traffic to Fastly CDN
+    
+    Note over FastlyEdge,RemoteServer: Phase 4: Edge Decapsulation & Egress
+    FastlyEdge->>FastlyEdge: Terminates QUIC session, validates account token pass, decapsulates WireGuard frame
+    FastlyEdge->>RemoteServer: Routes outbound packet via selected Anycast exit IPv4/IPv6 node
+    RemoteServer-->>FastlyEdge: Remote host returns application response
+    
+    Note over FastlyEdge,ClientApp: Phase 5: Reverse Stream Decryption & Delivery
+    FastlyEdge-->>MasqueLayer: Encapsulates response into HTTP/3 return stream
+    MasqueLayer-->>LocalCore: Receives and extracts WireGuard ciphertext
+    LocalCore->>CryptoEngine: Authenticates and decrypts packet
+    CryptoEngine-->>HostOS: Delivers original plaintext IP datagram to loopback
+    HostOS-->>ClientApp: Application receives verified data stream with zero identity leak
+```
 
 ---
 
-## 🛠️ Building from Source
+## Detailed Protocol Matrix
 
-### Prerequisites
-- [Flutter SDK](https://flutter.dev) (v3.13+ / 3.47 recommended)
-- [Android Studio & Android SDK](https://developer.android.com/studio) (for Android APK)
-- Visual Studio 2022 / C++ Desktop Workload (for Windows)
-- Xcode & Command Line Tools (for macOS)
-- Clang, CMake, Ninja, GTK3 development headers (for Linux)
+| Protocol Specification | Underlying Transport | Port Configuration | DPI / Firewall Bypass | Throughput & Latency | Best Suited Scenario |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **Smart (Automatic)** | Dynamic Selection | Dynamic (443 / 51820) | Maximum Adaptive | Auto-Optimized | Default recommendation for all client sessions |
+| **WireGuard (UDP)** | QUIC / UDP | Port 443 / 51820 | High | Lowest Latency (&lt;20ms) | Low-ping competitive gaming and 4K media streaming |
+| **WireGuard (TCP)** | TLS / TCP | Port 443 | Very High | Low Latency (~25ms) | Firewalled networks where outbound UDP is throttled or dropped |
+| **Stealth (TLS Obfuscated)** | Obfuscated TLS Stream | Port 443 | Maximum Evasion | Moderate Throughput | Restrictive nation-state censorship and deep packet inspection |
+| **OpenVPN (UDP)** | OpenVPN Datagram | Port 1194 / 51820 | High | Low Latency (~30ms) | Legacy infrastructure requiring conventional tunnel standards |
+| **OpenVPN (TCP)** | OpenVPN Stream | Port 443 | High | Moderate Throughput | Strict captive portals and enterprise proxy firewalls |
+| **IKEv2** | Native IPSec / UDP | Port 500 / 4500 | Standard | Very Low Latency | macOS and iOS mobile handoffs across cellular and Wi-Fi |
 
-### Step-by-Step Build
+---
+
+## Core System Features
+
+### Mobile QR Code Handshake (`SignInWithPhoneScreen`)
+Enables cross-device account authentication without typing passwords:
+1. Navigate to **Settings > Account > Sign in with phone** on Windows, macOS, or Linux.
+2. An interactive cryptographic pairing token (`terovpn://auth?session=...`) is generated with a 5-minute countdown.
+3. Scanning the code via the TeroVPN mobile app instantly authenticates the desktop instance.
+
+### Geographic Telemetry Canvas (`ProtonWorldMap`)
+Real-time geographic visualization rendered on the client dashboard:
+- **Origin Node**: Pinpoints real user location and connection status.
+- **Geodesic Flight Arc**: Projects an animated flight trajectory with a continuous photon energy beam from Origin to Destination.
+- **Destination Beacons**: Tri-concentric expanding ripple waves display destination city metrics, distance in kilometers, and cryptographic cipher status.
+
+### Advanced Leak Protection & System Controls
+- **IPv6 Leak Protection**: Null-routes unencrypted IPv6 packets outside the tunnel.
+- **DNS Leak Protection**: Forces all DNS requests through private encrypted resolvers.
+- **Custom DNS Configurations**: Direct support for custom resolvers with built-in presets for Cloudflare, Google, Quad9, and AdGuard.
+- **LAN Traffic Bypass**: Direct routing for local area network devices including printers, smart home peripherals, and NAS storage.
+- **Alternative Routing**: Automatically falls back to secondary CDN relays (Cloudflare, AWS) if primary server endpoints are restricted.
+- **Moderate NAT**: Optimizes peer-to-peer VoIP and multiplayer gaming connections.
+- **Custom MTU Tuning**: Adjusts packet boundaries between 1280 and 1500 bytes to eliminate packet fragmentation on mobile hotspots.
+
+---
+
+## Source Compilation
+
+### System Prerequisites
+- Flutter SDK (v3.13 or newer; v3.47+ recommended)
+- Android SDK & Android Studio (API level 26 minimum, API level 34+ target)
+- Microsoft Visual Studio 2022 with C++ Desktop Workload (Windows)
+- Xcode and Command Line Tools (macOS)
+- Clang, CMake, Ninja, and GTK3 development libraries (Linux)
+
+### Build Instructions
 
 ```bash
 # 1. Clone repository
 git clone https://github.com/smartworldarafath/TeroVPN.git
 cd TeroVPN
 
-# 2. Fetch project dependencies
+# 2. Fetch dependencies
 cd app
 flutter pub get
 
-# 3. Run lint and static analyzer
+# 3. Verify static analysis and test suite
 flutter analyze
-
-# 4. Run test suite
 flutter test
 
-# 5. Build for your target platform:
-flutter build windows --release    # Windows
-flutter build macos --release      # macOS
-flutter build linux --release      # Linux
-flutter build apk --release        # Android
+# 4. Target compilation:
+flutter build windows --release    # Windows executable
+flutter build macos --release      # macOS application bundle
+flutter build linux --release      # Linux GTK bundle
+flutter build apk --release        # Android package
 ```
 
 ---
 
-## 📁 Repository Structure
+## Repository Layout
 
 ```
 TeroVPN/
 ├── app/
-│   ├── android/              # Native Android wrapper & VpnService bindings
-│   ├── assets/               # Flags, vector graphics, and icons
-│   ├── ios/                  # iOS Xcode project
+│   ├── android/              # Android VpnService bindings and ProGuard rules
+│   ├── assets/               # Country flags, vector assets, and typography
+│   ├── ios/                  # iOS Xcode project configuration
 │   ├── lib/
-│   │   ├── core/             # CoreController, Fastly API, preferences & models
-│   │   ├── theme/            # ProtonTheme, ProtonColors, ThemeManager
+│   │   ├── core/             # Process controllers, API endpoints, and preference storage
+│   │   ├── theme/            # Theme manager and Liquid Glass styling
 │   │   └── ui/
-│   │       ├── components/   # Reusable UI widgets, flag icons, load bars
-│   │       ├── countries/    # Country selection screen & server details sheet
-│   │       ├── desktop/      # Dedicated desktop sidebar & 2-column views
-│   │       ├── home/         # Home screen, ProtonWorldMap, connection cards
-│   │       ├── profiles/     # Fast presets & Multi-Account Token Pool
-│   │       ├── settings/     # Account, QR phone sign-in, split tunneling, extra functions
-│   │       └── shell/        # Navigation shell & 120Hz AnimatedSwitcher
+│   │       ├── components/   # Reusable widgets, flag renders, and dialogs
+│   │       ├── countries/    # Server selection and latency telemetry
+│   │       ├── desktop/      # Dedicated desktop sidebar and responsive views
+│   │       ├── home/         # Dashboard, ProtonWorldMap, and status cards
+│   │       ├── profiles/     # Fast presets and Multi-Account Token Pool
+│   │       ├── settings/     # Account, phone QR sign-in, and advanced functions
+│   │       └── shell/        # Navigation shell and animated switcher
 │   ├── linux/                # Native Linux GTK runner
-│   ├── macos/                # Native macOS runner & entitlements
-│   ├── pubspec.yaml          # Flutter package configuration
-│   ├── test/                 # Widget and unit tests
-│   └── windows/              # Native Windows runner & CMake
+│   ├── macos/                # Native macOS runner and unsandboxed entitlements
+│   ├── pubspec.yaml          # Flutter package definitions
+│   ├── test/                 # Automated unit and widget tests
+│   └── windows/              # Windows C++ runner and CMake configuration
 ├── docs/
-│   ├── branding/             # Official app icons, hero banners & logos
-│   └── screenshots/          # Application screenshots showcase
+│   ├── branding/             # Official app icons and brand assets
+│   │   └── platforms/        # Official operating system platform marks
+│   └── screenshots/          # Application interface captures
 ├── linux/
 │   └── appimage/             # AppRun and desktop entry for AppImage builds
 ├── windows/
-│   └── installer/            # Inno Setup Windows installer script (Setup.exe)
+│   └── installer/            # Inno Setup Windows installer configuration
 ├── .github/
-│   └── workflows/            # GitHub Actions CI/CD matrix (Windows, macOS, Linux)
-└── README.md                 # Project documentation
+│   └── workflows/            # GitHub Actions CI matrix (Windows, macOS, Linux)
+└── README.md                 # Technical documentation
 ```
 
 ---
 
-## 🔒 Security & Zero-Leak Policy
+## Security & Verification Standards
 
-- **No Hardcoded Secrets**: TeroVPN strictly externalizes all session tokens, encryption keys, and credentials.
-- **Leak Protection**: DNS queries are encrypted and routed exclusively through secure MASQUE tunnels, preventing IPv4/IPv6 and WebRTC leaks.
-- **Client Integrity**: Code audits and pre-commit scans ensure zero plaintext credential exposure.
-- **Zero-Logs Guarantee**: No connection logs, traffic logs, or user browsing activity are ever recorded or stored.
-
----
-
-## 📄 License
-
-This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)**. See the [LICENSE](LICENSE) file for complete details.
+- **Zero Plaintext Credentials**: All session tokens and authentication parameters are stored in secured platform keystores.
+- **Complete DNS & IP Containment**: Mandatory loopback binding and system proxy integration ensure complete elimination of WebRTC, DNS, and IPv6 leaks.
+- **Zero-Logs Guarantee**: TeroVPN operates under a strict zero-knowledge model. No browsing activity, DNS queries, or session connection logs are ever recorded.
 
 ---
 
-<p align="center">
-  Crafted with precision for open, unrestricted, and private internet access. 🛡️
-</p>
+## License
+
+This software is released under the **GNU General Public License v3.0 (GPL-3.0)**. Refer to the [LICENSE](LICENSE) file for complete licensing terms.
