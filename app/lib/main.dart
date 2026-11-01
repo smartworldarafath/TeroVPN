@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
 
@@ -33,18 +34,26 @@ import 'ui/splash/splash_animation_screen.dart';
 import 'ui/onboarding/onboarding_screen.dart';
 
 import 'core/app_update_service.dart';
-
-
+import 'core/desktop_system_proxy_service.dart';
 
 void main(List<String> args) async {
-
   WidgetsFlutterBinding.ensureInitialized();
-
   await AppPreferences.init();
-
   ThemeManager.instance.init();
-
   AppUpdateService.instance.startBackgroundChecker();
+
+  if (!kIsWeb && !Platform.isAndroid && !Platform.isIOS) {
+    await DesktopSystemProxyService.instance.init();
+    AppLifecycleListener(
+      onDetach: () {
+        DesktopSystemProxyService.instance.disableProxy();
+      },
+      onExitRequested: () async {
+        await DesktopSystemProxyService.instance.disableProxy();
+        return AppExitResponse.exit;
+      },
+    );
+  }
 
 
 

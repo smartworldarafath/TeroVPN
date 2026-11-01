@@ -8,6 +8,7 @@ import 'models.dart';
 import 'ports.dart';
 import 'tun_service.dart';
 import 'app_preferences.dart';
+import 'desktop_system_proxy_service.dart';
 
 /// Connects to the core, polls its status and accounts, and runs the
 /// user's actions. It holds no VPN logic: every decision is the core's.
@@ -148,6 +149,13 @@ class CoreController extends ChangeNotifier {
       final readAccounts = accountsToo || accounts == null || _tick % 3 == 0;
       _tick++;
       status = next;
+      if (!kIsWeb && turnOn == null) {
+        if (next.state.phase == Phase.running && !DesktopSystemProxyService.instance.isEnabled) {
+          unawaited(DesktopSystemProxyService.instance.enableProxy(port: 10810));
+        } else if (next.state.phase == Phase.off && DesktopSystemProxyService.instance.isEnabled) {
+          unawaited(DesktopSystemProxyService.instance.disableProxy());
+        }
+      }
       // The phone's VPN while on; the computer's proxy, which always runs,
       // in either mode.
       if (turnOn != null || next.systemProxySupported) {
@@ -304,6 +312,9 @@ class CoreController extends ChangeNotifier {
         try {
           await api.setSystemProxy(on ? 'set' : 'clear');
         } catch (_) {}
+        if (!on) {
+          await DesktopSystemProxyService.instance.disableProxy();
+        }
       }
       await (turnOn ?? api.setPower)(on);
       for (var i = 0; i < 20; i++) {
@@ -311,6 +322,13 @@ class CoreController extends ChangeNotifier {
         status = next;
         if ((next.state.phase == Phase.off) != on) break;
         await Future<void>.delayed(const Duration(milliseconds: 150));
+      }
+      if (!kIsWeb && turnOn == null) {
+        if (on && status?.state.phase == Phase.running) {
+          await DesktopSystemProxyService.instance.enableProxy(port: 10810);
+        } else if (!on) {
+          await DesktopSystemProxyService.instance.disableProxy();
+        }
       }
     } finally {
       switchingProxy = false;
@@ -511,7 +529,10 @@ class CoreController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    return _act(() => _require().setLocation(country));
+    await _act(() => _require().setLocation(country));
+    if (!kIsWeb && turnOn == null && isConnected) {
+      await DesktopSystemProxyService.instance.enableProxy(port: 10810);
+    }
   }
 
   /// Stops polling, before the app quits.
@@ -612,6 +633,9 @@ class CoreController extends ChangeNotifier {
     _timer?.cancel();
     _quick?.cancel();
     _api?.close();
+    if (!kIsWeb && turnOn == null) {
+      DesktopSystemProxyService.instance.disableProxy();
+    }
     super.dispose();
   }
 }
