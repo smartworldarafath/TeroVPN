@@ -1,18 +1,24 @@
+import 'dart:async';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../theme/theme_manager.dart';
-import '../../core/core_controller.dart';
+
+import '../../core/android_core.dart';
 import '../../core/app_preferences.dart';
+import '../../core/core_controller.dart';
+import '../../theme/theme_manager.dart';
+import '../components/details_sheet.dart';
 import '../components/signin_dialog.dart';
 import '../components/top_dock_toast.dart';
 import '../countries/country_manager.dart';
-import '../components/details_sheet.dart';
-import 'world_map_atmosphere.dart';
-import 'vpn_status_view.dart';
-import 'vpn_connection_card.dart';
-import 'recents_list.dart';
+import '../settings/permissions_screen.dart';
 import 'default_connection_sheet.dart';
+import 'recents_list.dart';
+import 'vpn_connection_card.dart';
+import 'vpn_status_view.dart';
+import 'world_map_atmosphere.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   final CoreController controller;
   final VoidCallback onNavigateToCountries;
 
@@ -23,34 +29,191 @@ class HomeScreen extends StatelessWidget {
   });
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  bool _missingVpn = false;
+  bool _missingNotif = false;
+  Timer? _periodicCheckTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _checkPermissions();
+
+    // Periodically check permissions every 2.5 minutes for existing installs
+    _periodicCheckTimer = Timer.periodic(const Duration(seconds: 150), (_) {
+      _checkPermissions(isPeriodic: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _periodicCheckTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkPermissions();
+    }
+  }
+
+  Future<void> _checkPermissions({bool isPeriodic = false}) async {
+    if (kIsWeb || !Platform.isAndroid) return;
+    try {
+      final perms = await AndroidCore.checkPermissions();
+      final vpnMissing = perms['vpn'] != true;
+      final notifMissing = perms['notifications'] != true;
+
+      if (mounted) {
+        setState(() {
+          _missingVpn = vpnMissing;
+          _missingNotif = notifMissing;
+        });
+
+        // If periodic and VPN permission is still missing, remind user
+        if (isPeriodic && vpnMissing && !widget.controller.isConnected) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          if (now - AppPreferences.lastPermissionPromptTime > 120000) {
+            AppPreferences.setLastPermissionPromptTime(now);
+            TopDockToast.show(
+              context,
+              title: 'Permission Notice',
+              message: 'TeroVPN needs VPN Configuration permission to protect your network traffic.',
+              icon: Icons.shield_outlined,
+              iconColor: const Color(0xFFEF4444),
+            );
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _handleConnectToggle({
+    required bool isVpnOn,
+    required bool isConnected,
+    required bool isConnecting,
+    required String countryCode,
+  }) async {
+    if (isVpnOn || isConnected || isConnecting) {
+      widget.controller.setOn(false);
+      return;
+    }
+
+    if (!widget.controller.hasAccount) {
+      if (mounted) SignInDialog.show(context, widget.controller);
+      return;
+    }
+
+    // Check VPN permission before attempting connection
+    if (!kIsWeb && Platform.isAndroid) {
+      final hasVpn = await AndroidCore.isVpnPermissionGranted();
+      if (!hasVpn) {
+        final granted = await AndroidCore.requestVpnPermission();
+        await _checkPermissions();
+        if (!granted) {
+          if (mounted) {
+            TopDockToast.show(
+              context,
+              title: 'Permission Required',
+              message: 'VPN connection cannot start without system permission. Please allow VPN configuration.',
+              icon: Icons.warning_amber_rounded,
+              iconColor: const Color(0xFFEF4444),
+            );
+          }
+          return;
+        }
+      }
+    }
+
+    try {
+      if (AppPreferences.defaultConnectionType == 'fastest' ||
+          AppPreferences.selectedLocation.toLowerCase() == 'fastest') {
+        final fastest = CountryManager.instance.getFastestCountry();
+        await widget.controller.setLocation(fastest.code.toLowerCase());
+        await AppPreferences.setSelectedLocation(fastest.code);
+        await widget.controller.setOn(true);
+        if (mounted) {
+          TopDockToast.show(
+            context,
+            title: 'Connecting to Fastest Country',
+            message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
+            icon: Icons.bolt_rounded,
+            iconColor: const Color(0xFF00E676),
+          );
+        }
+      } else {
+        await widget.controller.setLocation(countryCode.toLowerCase());
+        await widget.controller.setOn(true);
+      }
+    } on VpnNotAllowed {
+      await _checkPermissions();
+      if (mounted) {
+        TopDockToast.show(
+          context,
+          title: 'Permission Denied',
+          message: 'Android denied VPN configuration. Please grant VPN permission in settings.',
+          icon: Icons.error_outline_rounded,
+          iconColor: const Color(0xFFEF4444),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        TopDockToast.show(
+          context,
+          title: 'Connection Error',
+          message: '$e',
+          icon: Icons.error_outline_rounded,
+          iconColor: const Color(0xFFEF4444),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([controller, ThemeManager.instance]),
-      builder: (context, _) {
-        final status = controller.status;
-        final isConnected = controller.isConnected;
-        final isConnecting = controller.isConnecting;
-        final isVpnOn = controller.isVpnOn;
+      listenable: Listenable.merge([widget.controller, ThemeManager.instance]),
+      builder: (builderContext, _) {
+        final status = widget.controller.status;
+        final isConnected = widget.controller.isConnected;
+        final isConnecting = widget.controller.isConnecting;
+        final isVpnOn = widget.controller.isVpnOn;
         final proxy = status?.proxy;
 
-        final isFastestMode = AppPreferences.defaultConnectionType == 'fastest' || AppPreferences.selectedLocation.toLowerCase() == 'fastest';
-        final countryCode = (!isConnected && !isConnecting && isFastestMode) ? 'fastest' : (proxy?.countryCode ?? AppPreferences.selectedLocation);
-        final countryName = (!isConnected && !isConnecting && isFastestMode) ? 'Fastest country' : (proxy?.countryName ?? 'Netherlands');
-        final cityName = (!isConnected && !isConnecting && isFastestMode) ? 'Auto-Routing (lowest latency)' : (proxy?.cityName ?? 'Amsterdam #12');
+        final isFastestMode = AppPreferences.defaultConnectionType == 'fastest' ||
+            AppPreferences.selectedLocation.toLowerCase() == 'fastest';
+        final countryCode = (!isConnected && !isConnecting && isFastestMode)
+            ? 'fastest'
+            : (proxy?.countryCode ?? AppPreferences.selectedLocation);
+        final countryName = (!isConnected && !isConnecting && isFastestMode)
+            ? 'Fastest country'
+            : (proxy?.countryName ?? 'Netherlands');
+        final cityName = (!isConnected && !isConnecting && isFastestMode)
+            ? 'Auto-Routing (lowest latency)'
+            : (proxy?.cityName ?? 'Amsterdam #12');
 
         // Dynamic 3 recent servers from live Fastly countries
         final dynamicCountries = CountryManager.instance.countries;
         final nl = dynamicCountries.firstWhere(
           (c) => c.code == 'NL',
-          orElse: () => DynamicCountry(code: 'NL', name: 'Netherlands', cities: 'Amsterdam #12', load: 32, pingMs: 18),
+          orElse: () => DynamicCountry(
+              code: 'NL', name: 'Netherlands', cities: 'Amsterdam #12', load: 32, pingMs: 18),
         );
         final de = dynamicCountries.firstWhere(
           (c) => c.code == 'DE',
-          orElse: () => DynamicCountry(code: 'DE', name: 'Germany', cities: 'Frankfurt #8', load: 54, pingMs: 24),
+          orElse: () => DynamicCountry(
+              code: 'DE', name: 'Germany', cities: 'Frankfurt #8', load: 54, pingMs: 24),
         );
         final us = dynamicCountries.firstWhere(
           (c) => c.code == 'US',
-          orElse: () => DynamicCountry(code: 'US', name: 'United States', cities: 'New York #102', load: 68, pingMs: 82),
+          orElse: () => DynamicCountry(
+              code: 'US', name: 'United States', cities: 'New York #102', load: 68, pingMs: 82),
         );
 
         final recentItems = [nl, de, us].map((item) {
@@ -65,6 +228,7 @@ class HomeScreen extends StatelessWidget {
 
         final textPrimary = ThemeManager.instance.textPrimaryColor;
         final textSecondary = ThemeManager.instance.textSecondaryColor;
+        final isDark = ThemeManager.instance.isDarkMode;
 
         return Scaffold(
           backgroundColor: Colors.transparent,
@@ -79,7 +243,7 @@ class HomeScreen extends StatelessWidget {
                 bottom: false,
                 child: Column(
                   children: [
-                    // Top App Bar matching photo_1 & photo_12
+                    // Top App Bar
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                       child: Row(
@@ -146,14 +310,107 @@ class HomeScreen extends StatelessWidget {
                         ),
                         child: Column(
                           children: [
-                            const SizedBox(height: 12),
+                            // Missing Permissions Warning Banner
+                            if (_missingVpn || _missingNotif)
+                              GestureDetector(
+                                onTap: () async {
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          PermissionsScreen(controller: widget.controller),
+                                    ),
+                                  );
+                                  _checkPermissions();
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: (_missingVpn
+                                            ? const Color(0xFFEF4444)
+                                            : const Color(0xFFF59E0B))
+                                        .withValues(alpha: isDark ? 0.16 : 0.08),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: (_missingVpn
+                                              ? const Color(0xFFEF4444)
+                                              : const Color(0xFFF59E0B))
+                                          .withValues(alpha: 0.35),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        _missingVpn
+                                            ? Icons.warning_amber_rounded
+                                            : Icons.notifications_none_rounded,
+                                        color: _missingVpn
+                                            ? const Color(0xFFEF4444)
+                                            : const Color(0xFFF59E0B),
+                                        size: 24,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              _missingVpn
+                                                  ? 'VPN Permission Required'
+                                                  : 'Notification Access Pending',
+                                              style: TextStyle(
+                                                color: textPrimary,
+                                                fontSize: 13.5,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _missingVpn
+                                                  ? 'Tap to allow VPN configuration before connecting.'
+                                                  : 'Tap to enable background connection status.',
+                                              style: TextStyle(
+                                                color: textSecondary,
+                                                fontSize: 11.5,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10, vertical: 5),
+                                        decoration: BoxDecoration(
+                                          color: _missingVpn
+                                              ? const Color(0xFFEF4444)
+                                              : const Color(0xFFF59E0B),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: const Text(
+                                          'Grant',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 11.5,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                            const SizedBox(height: 4),
                             VpnStatusView(
                               isConnected: isConnected,
                               isConnecting: isConnecting,
                               exitCountry: proxy?.countryName,
                             ),
                             const SizedBox(height: 24),
-                            // Default connection selector matching video_20261030_222613.mp4
+
+                            // Default connection selector
                             Padding(
                               padding: const EdgeInsets.only(left: 4, bottom: 8),
                               child: Align(
@@ -161,12 +418,13 @@ class HomeScreen extends StatelessWidget {
                                 child: InkWell(
                                   onTap: () => DefaultConnectionSheet.show(
                                     context,
-                                    controller: controller,
+                                    controller: widget.controller,
                                     onSelected: (_) {},
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 4),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
@@ -179,7 +437,8 @@ class HomeScreen extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(width: 4),
-                                        Icon(Icons.arrow_drop_down_rounded, size: 20, color: textSecondary),
+                                        Icon(Icons.arrow_drop_down_rounded,
+                                            size: 20, color: textSecondary),
                                       ],
                                     ),
                                   ),
@@ -193,47 +452,33 @@ class HomeScreen extends StatelessWidget {
                               isConnected: isConnected,
                               isConnecting: isConnecting,
                               isVpnOn: isVpnOn,
-                              onToggle: () async {
-                                if (isVpnOn || isConnected || isConnecting) {
-                                  controller.setOn(false);
-                                } else {
-                                  if (!controller.hasAccount) {
-                                    SignInDialog.show(context, controller);
-                                    return;
-                                  }
-                                  if (AppPreferences.defaultConnectionType == 'fastest' || AppPreferences.selectedLocation.toLowerCase() == 'fastest') {
-                                    final fastest = CountryManager.instance.getFastestCountry();
-                                    await controller.setLocation(fastest.code.toLowerCase());
-                                    await AppPreferences.setSelectedLocation(fastest.code);
-                                    controller.setOn(true);
-                                    if (context.mounted) {
-                                      TopDockToast.show(
-                                        context,
-                                        title: 'Connecting to Fastest Country',
-                                        message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
-                                        icon: Icons.bolt_rounded,
-                                        iconColor: const Color(0xFF00E676),
-                                      );
-                                    }
-                                  } else {
-                                    await controller.setLocation(countryCode.toLowerCase());
-                                    controller.setOn(true);
-                                  }
-                                }
-                              },
-                              onChangeServer: onNavigateToCountries,
+                              onToggle: () => _handleConnectToggle(
+                                isVpnOn: isVpnOn,
+                                isConnected: isConnected,
+                                isConnecting: isConnecting,
+                                countryCode: countryCode,
+                              ),
+                              onChangeServer: widget.onNavigateToCountries,
                             ),
                             const SizedBox(height: 28),
                             RecentsList(
                               items: recentItems,
-                              onSelect: (item) {
-                                controller.setLocation(item.code);
+                              onSelect: (item) async {
+                                await widget.controller.setLocation(item.code);
+                                if (!mounted) return;
                                 if (!isVpnOn) {
-                                  if (!controller.hasAccount) {
-                                    SignInDialog.show(context, controller);
+                                  if (!widget.controller.hasAccount) {
+                                    if (builderContext.mounted) {
+                                      SignInDialog.show(builderContext, widget.controller);
+                                    }
                                     return;
                                   }
-                                  controller.setOn(true);
+                                  await _handleConnectToggle(
+                                    isVpnOn: isVpnOn,
+                                    isConnected: isConnected,
+                                    isConnecting: isConnecting,
+                                    countryCode: item.code,
+                                  );
                                 }
                               },
                             ),

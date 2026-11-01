@@ -307,4 +307,81 @@ class AndroidCore {
       await _channel.invokeMethod<void>('setAppIcon', {'mode': mode});
     } catch (_) {}
   }
+
+  /// Checks status of all system and VPN permissions.
+  static Future<Map<String, bool>> checkPermissions() async {
+    try {
+      final res = await _channel.invokeMapMethod<String, dynamic>('checkPermissions');
+      if (res != null) {
+        return {
+          'vpn': res['vpn'] == true,
+          'network': res['network'] == true,
+          'notifications': res['notifications'] == true,
+          'nearby': res['nearby'] == true,
+          'usage_access': res['usage_access'] == true,
+          'camera': res['camera'] == true,
+        };
+      }
+    } catch (_) {}
+    return {
+      'vpn': false,
+      'network': true,
+      'notifications': false,
+      'nearby': false,
+      'usage_access': false,
+      'camera': false,
+    };
+  }
+
+  /// Checks if VPN service permission is prepared and allowed by Android.
+  static Future<bool> isVpnPermissionGranted() async {
+    try {
+      final perms = await checkPermissions();
+      return perms['vpn'] ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requests the user to allow VPN configuration (VpnService.prepare).
+  static Future<bool> requestVpnPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestVpn') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requests system notifications permission.
+  static Future<bool> requestNotificationPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestNotifications') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Requests nearby devices (Bluetooth & Wi-Fi) permission.
+  static Future<bool> requestNearbyPermission() async {
+    try {
+      return await _channel.invokeMethod<bool>('requestNearby') ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens the system Usage Access settings page.
+  static Future<void> requestUsageAccessPermission() async {
+    try {
+      await _channel.invokeMethod<void>('requestUsageAccess');
+    } catch (_) {}
+  }
+
+  /// Opens the system Application Details settings page for this app.
+  static Future<void> openAppSettings() async {
+    try {
+      await _channel.invokeMethod<void>('openAppSettings');
+    } catch (_) {}
+  }
 }
+

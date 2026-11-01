@@ -31,6 +31,7 @@ import 'ui/shell/main_navigation_shell.dart';
 import 'ui/splash/splash_animation_screen.dart';
 
 import 'ui/onboarding/onboarding_screen.dart';
+import 'ui/onboarding/permissions_onboarding_screen.dart';
 
 import 'core/app_update_service.dart';
 
@@ -170,9 +171,18 @@ await CoreLocator.ensureDefaultConfig(dataDir);
     },
 
     turnOn: !kIsWeb && Platform.isAndroid
-
-        ? (on) => AndroidCore.setOn(on)
-
+        ? (on) async {
+            if (on) {
+              final hasVpn = await AndroidCore.isVpnPermissionGranted();
+              if (!hasVpn) {
+                final granted = await AndroidCore.requestVpnPermission();
+                if (!granted) {
+                  throw const VpnNotAllowed();
+                }
+              }
+            }
+            await AndroidCore.setOn(on);
+          }
         : null,
 
     moveStoppedCore: !kIsWeb && desktopProcess != null && dataDir != null
@@ -233,7 +243,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
 
       'switch_threshold_percent': 10.0,
 
-      'version': '1.1.8',
+      'version': '1.1.9',
 
       'can_exit': true,
 
@@ -382,13 +392,10 @@ class TeroVpnApp extends StatelessWidget {
 
 
 enum AppFlowStep {
-
   splash,
-
   onboarding,
-
+  permissions,
   main,
-
 }
 
 
@@ -418,35 +425,32 @@ class _AppRootFlowState extends State<AppRootFlow> {
 
 
   void _onSplashFinished() {
-
     setState(() {
-
       if (!AppPreferences.onboardingCompleted) {
-
         _step = AppFlowStep.onboarding;
-
+      } else if (!kIsWeb && Platform.isAndroid && !AppPreferences.permissionsOnboardingDone) {
+        _step = AppFlowStep.permissions;
       } else {
-
         _step = AppFlowStep.main;
-
       }
-
     });
-
   }
-
-
 
   void _onOnboardingFinished() {
-
     setState(() {
-
-      _step = AppFlowStep.main;
-
+      if (!kIsWeb && Platform.isAndroid && !AppPreferences.permissionsOnboardingDone) {
+        _step = AppFlowStep.permissions;
+      } else {
+        _step = AppFlowStep.main;
+      }
     });
-
   }
 
+  void _onPermissionsFinished() {
+    setState(() {
+      _step = AppFlowStep.main;
+    });
+  }
 
 
   @override
@@ -504,6 +508,9 @@ class _AppRootFlowState extends State<AppRootFlow> {
       case AppFlowStep.onboarding:
 
         return OnboardingScreen(onFinished: _onOnboardingFinished);
+
+      case AppFlowStep.permissions:
+        return PermissionsOnboardingScreen(onFinished: _onPermissionsFinished);
 
       case AppFlowStep.main:
 

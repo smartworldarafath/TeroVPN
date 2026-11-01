@@ -33,6 +33,12 @@ class MainActivity : FlutterActivity() {
     private var pendingOn: Result? = null
     /** Waits for the user's answer to the Camera permission. */
     private var pendingCamera: Result? = null
+    /** Waits for standalone VPN permission answer. */
+    private var pendingVpnOnly: Result? = null
+    /** Waits for notifications permission answer. */
+    private var pendingNotif: Result? = null
+    /** Waits for nearby devices permission answer. */
+    private var pendingNearby: Result? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         holdPhoneUpright(resources.configuration)
@@ -197,9 +203,103 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
-                "askNotifications" -> {
+                                "askNotifications" -> {
                     askForNotifications()
                     result.success(null)
+                }
+                "checkPermissions" -> {
+                    val vpnGranted = VpnService.prepare(this) == null
+                    val netGranted = checkCallingOrSelfPermission(Manifest.permission.INTERNET) == PackageManager.PERMISSION_GRANTED
+                    val notifGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled()
+                    }
+                    val nearbyGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+                    } else {
+                        true
+                    }
+                    val usageGranted = isUsageAccessGranted()
+                    val cameraGranted = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+                    result.success(mapOf(
+                        "vpn" to vpnGranted,
+                        "network" to netGranted,
+                        "notifications" to notifGranted,
+                        "nearby" to nearbyGranted,
+                        "usage_access" to usageGranted,
+                        "camera" to cameraGranted
+                    ))
+                }
+                "requestVpn" -> {
+                    val consent = VpnService.prepare(this)
+                    if (consent == null) {
+                        result.success(true)
+                    } else {
+                        pendingVpnOnly?.error("superseded", "Another VPN request was started", null)
+                        pendingVpnOnly = result
+                        startActivityForResult(consent, VPN_STANDALONE_REQUEST)
+                    }
+                }
+                "requestNotifications" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+                            result.success(true)
+                        } else {
+                            pendingNotif?.error("superseded", "Another notification request was started", null)
+                            pendingNotif = result
+                            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), NOTIF_REQUEST)
+                        }
+                    } else {
+                        val enabled = androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled()
+                        if (!enabled) openAppNotificationSettings()
+                        result.success(enabled)
+                    }
+                }
+                "requestNearby" -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val perms = mutableListOf(
+                            Manifest.permission.BLUETOOTH_CONNECT,
+                            Manifest.permission.BLUETOOTH_SCAN,
+                            Manifest.permission.NEARBY_WIFI_DEVICES
+                        )
+                        val missing = perms.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+                        if (missing.isEmpty()) {
+                            result.success(true)
+                        } else {
+                            pendingNearby?.error("superseded", "Another nearby request was started", null)
+                            pendingNearby = result
+                            requestPermissions(missing.toTypedArray(), NEARBY_REQUEST)
+                        }
+                    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val perms = listOf(Manifest.permission.BLUETOOTH_CONNECT, Manifest.permission.BLUETOOTH_SCAN)
+                        val missing = perms.filter { checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }
+                        if (missing.isEmpty()) {
+                            result.success(true)
+                        } else {
+                            pendingNearby?.error("superseded", "Another nearby request was started", null)
+                            pendingNearby = result
+                            requestPermissions(missing.toTypedArray(), NEARBY_REQUEST)
+                        }
+                    } else {
+                        result.success(true)
+                    }
+                }
+                "requestUsageAccess" -> {
+                    openUsageAccessSettings()
+                    result.success(true)
+                }
+                "openAppSettings" -> {
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        }
+                        startActivity(intent)
+                        result.success(true)
+                    } catch (e: Exception) {
+                        result.error("settings_error", e.message, null)
+                    }
                 }
                 "checkCamera" -> {
                     val granted = checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -375,10 +475,19 @@ class MainActivity : FlutterActivity() {
     @Deprecated("The VPN permission is asked with startActivityForResult.")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode != VPN_REQUEST) return
-        val result = pendingOn ?: return
-        pendingOn = null
-        if (resultCode == RESULT_OK) turnOn(result) else result.error("vpn_denied", "the VPN was not allowed", null)
+        if (requestCode == VPN_REQUEST) {
+            val result = pendingOn
+            pendingOn = null
+            if (resultCode == RESULT_OK) {
+                if (result != null) turnOn(result)
+            } else {
+                result?.error("vpn_denied", "the VPN was not allowed", null)
+            }
+        } else if (requestCode == VPN_STANDALONE_REQUEST) {
+            val granted = (resultCode == RESULT_OK)
+            pendingVpnOnly?.success(granted)
+            pendingVpnOnly = null
+        }
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -387,7 +496,71 @@ class MainActivity : FlutterActivity() {
             val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             pendingCamera?.success(granted)
             pendingCamera = null
+        } else if (requestCode == NOTIF_REQUEST) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            pendingNotif?.success(granted)
+            pendingNotif = null
+        } else if (requestCode == NEARBY_REQUEST) {
+            val granted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
+            pendingNearby?.success(granted)
+            pendingNearby = null
         }
+    }
+
+    private fun isUsageAccessGranted(): Boolean {
+        return try {
+            val appOps = getSystemService(android.app.AppOpsManager::class.java) ?: return false
+            val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                appOps.unsafeCheckOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    packageName
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appOps.checkOpNoThrow(
+                    android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(),
+                    packageName
+                )
+            }
+            mode == android.app.AppOpsManager.MODE_ALLOWED
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private fun openUsageAccessSettings() {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                data = Uri.parse("package:$packageName")
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            startActivity(intent)
+        } catch (_: Exception) {
+            try {
+                startActivity(Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                })
+            } catch (_: Exception) {}
+        }
+    }
+
+    private fun openAppNotificationSettings() {
+        try {
+            val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, packageName)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            } else {
+                Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                    data = Uri.parse("package:$packageName")
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+            }
+            startActivity(intent)
+        } catch (_: Exception) {}
     }
 
     override fun onDestroy() {
@@ -398,6 +571,9 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val VPN_REQUEST = 7
         private const val CAMERA_REQUEST = 8
+        private const val VPN_STANDALONE_REQUEST = 9
+        private const val NOTIF_REQUEST = 10
+        private const val NEARBY_REQUEST = 11
         private const val UPDATE_CHANNEL_ID = "terovpn_updates"
         private const val UPDATE_NOTIFICATION_ID = 1002
     }

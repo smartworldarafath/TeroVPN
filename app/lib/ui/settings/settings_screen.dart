@@ -29,6 +29,7 @@ import 'account_management_screen.dart';
 import 'qr_sign_in_screen.dart';
 import 'beta_features_screen.dart';
 import 'appearance_settings_screen.dart';
+import 'permissions_screen.dart';
 
 
 
@@ -744,7 +745,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             title: 'About TeroVPN',
 
-                            subtitle: 'Version 1.1.8 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.1.9 · Legal, Support & Acknowledgements',
 
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
 
@@ -850,6 +851,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             onTap: () {
                               Navigator.of(context).push(
                                 MaterialPageRoute(builder: (_) => const ExtraFunctionsScreen()),
+                              );
+                            },
+                          ),
+                                                    SettingsRow(
+                            icon: Icons.security_rounded,
+                            title: 'Permissions',
+                            subtitle: 'VPN, Notifications, Nearby Devices & Access Status',
+                            trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => PermissionsScreen(controller: widget.controller),
+                                ),
                               );
                             },
                           ),

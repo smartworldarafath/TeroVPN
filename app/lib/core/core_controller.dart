@@ -345,6 +345,14 @@ class CoreController extends ChangeNotifier {
         if ((next.state.phase == Phase.off) != on) break;
         await Future<void>.delayed(const Duration(milliseconds: 150));
       }
+      if (on && status?.state.phase == Phase.off) {
+        _localVpnOn = false;
+        notifyListeners();
+      }
+    } catch (e) {
+      _localVpnOn = false;
+      notifyListeners();
+      rethrow;
     } finally {
       switchingProxy = false;
     }

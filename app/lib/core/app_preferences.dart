@@ -188,6 +188,18 @@ class AppPreferences {
   static Future<void> setOnboardingCompleted(bool val) async =>
       await _prefs?.setBool(_keyOnboardingCompleted, val);
 
+  static const _keyPermissionsOnboardingDone = 'permissions_onboarding_done';
+  static bool get permissionsOnboardingDone =>
+      _prefs?.getBool(_keyPermissionsOnboardingDone) ?? false;
+  static Future<void> setPermissionsOnboardingDone(bool val) async =>
+      await _prefs?.setBool(_keyPermissionsOnboardingDone, val);
+
+  static const _keyLastPermissionPromptTime = 'last_permission_prompt_time';
+  static int get lastPermissionPromptTime =>
+      _prefs?.getInt(_keyLastPermissionPromptTime) ?? 0;
+  static Future<void> setLastPermissionPromptTime(int val) async =>
+      await _prefs?.setInt(_keyLastPermissionPromptTime, val);
+
   // Tablet Desktop Mode Toggle
   static bool get desktopModeEnabled =>
       _prefs?.getBool(_keyDesktopModeEnabled) ?? false;
