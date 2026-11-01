@@ -9,6 +9,8 @@ import '../components/top_dock_toast.dart';
 import 'country_manager.dart';
 import 'country_item_row.dart';
 import 'country_details_sheet.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class CountriesScreen extends StatefulWidget {
   final CoreController controller;
@@ -311,6 +313,12 @@ class _CountriesScreenState extends State<CountriesScreen>
                               isFastest: true,
                               isSelected: isFastestSelected,
                               onTap: () async {
+                                if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                  await PermissionsSetupScreen.showAsModal(context);
+                                  if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                    return;
+                                  }
+                                }
                                 final fastest = CountryManager.instance.getFastestCountry();
                                 await AppPreferences.setDefaultConnectionType('fastest');
                                 await AppPreferences.setSelectedLocation(fastest.code);
@@ -351,6 +359,12 @@ class _CountriesScreenState extends State<CountriesScreen>
                             pingMs: country.pingMs,
                             isSelected: isSelected,
                             onTap: () async {
+                              if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                await PermissionsSetupScreen.showAsModal(context);
+                                if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                  return;
+                                }
+                              }
                               await AppPreferences.setSelectedLocation(country.code);
                               await AppPreferences.setLastConnection(country.code);
                               await widget.controller.setLocation(country.code.toLowerCase());

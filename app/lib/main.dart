@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'dart:ui' show AppExitResponse;
 
 import 'package:flutter/foundation.dart';
 
@@ -34,18 +35,29 @@ import 'ui/onboarding/onboarding_screen.dart';
 import 'ui/onboarding/permissions_onboarding_screen.dart';
 
 import 'core/app_update_service.dart';
-
-
+import 'core/desktop_system_proxy_service.dart';
+import 'core/app_permissions_service.dart';
+import 'ui/permissions/permissions_setup_screen.dart';
 
 void main(List<String> args) async {
-
   WidgetsFlutterBinding.ensureInitialized();
-
   await AppPreferences.init();
-
+  await AppPermissionsService.instance.init();
   ThemeManager.instance.init();
-
   AppUpdateService.instance.startBackgroundChecker();
+
+  if (!kIsWeb && !Platform.isAndroid && !Platform.isIOS) {
+    await DesktopSystemProxyService.instance.init();
+    AppLifecycleListener(
+      onDetach: () {
+        DesktopSystemProxyService.instance.disableProxy();
+      },
+      onExitRequested: () async {
+        await DesktopSystemProxyService.instance.disableProxy();
+        return AppExitResponse.exit;
+      },
+    );
+  }
 
 
 
@@ -242,9 +254,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
       'accounts': {'running': 1, 'configured': 2},
 
       'switch_threshold_percent': 10.0,
-
       'version': '1.1.9',
-
       'can_exit': true,
 
       'system_proxy': 'off',
@@ -398,37 +408,23 @@ enum AppFlowStep {
   main,
 }
 
-
-
 class AppRootFlow extends StatefulWidget {
-
   final CoreController controller;
-
-
 
   const AppRootFlow({super.key, required this.controller});
 
-
-
   @override
-
   State<AppRootFlow> createState() => _AppRootFlowState();
-
 }
 
-
-
 class _AppRootFlowState extends State<AppRootFlow> {
-
   AppFlowStep _step = AppFlowStep.splash;
-
-
 
   void _onSplashFinished() {
     setState(() {
       if (!AppPreferences.onboardingCompleted) {
         _step = AppFlowStep.onboarding;
-      } else if (!kIsWeb && Platform.isAndroid && !AppPreferences.permissionsOnboardingDone) {
+      } else if (!kIsWeb && Platform.isAndroid ? !AppPreferences.permissionsOnboardingDone : !AppPermissionsService.instance.areCorePermissionsGranted) {
         _step = AppFlowStep.permissions;
       } else {
         _step = AppFlowStep.main;
@@ -438,7 +434,10 @@ class _AppRootFlowState extends State<AppRootFlow> {
 
   void _onOnboardingFinished() {
     setState(() {
-      if (!kIsWeb && Platform.isAndroid && !AppPreferences.permissionsOnboardingDone) {
+      final needsPermissions = !kIsWeb && Platform.isAndroid
+          ? !AppPreferences.permissionsOnboardingDone
+          : !AppPermissionsService.instance.areCorePermissionsGranted;
+      if (needsPermissions) {
         _step = AppFlowStep.permissions;
       } else {
         _step = AppFlowStep.main;
@@ -447,6 +446,9 @@ class _AppRootFlowState extends State<AppRootFlow> {
   }
 
   void _onPermissionsFinished() {
+    if (!kIsWeb && Platform.isAndroid) {
+      AppPreferences.setPermissionsOnboardingDone(true);
+    }
     setState(() {
       _step = AppFlowStep.main;
     });
@@ -510,12 +512,13 @@ class _AppRootFlowState extends State<AppRootFlow> {
         return OnboardingScreen(onFinished: _onOnboardingFinished);
 
       case AppFlowStep.permissions:
-        return PermissionsOnboardingScreen(onFinished: _onPermissionsFinished);
+        if (!kIsWeb && Platform.isAndroid) {
+          return PermissionsOnboardingScreen(onFinished: _onPermissionsFinished);
+        }
+        return PermissionsSetupScreen(onFinished: _onPermissionsFinished);
 
       case AppFlowStep.main:
-
         return MainNavigationShell(controller: widget.controller);
-
     }
 
   }

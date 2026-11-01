@@ -245,37 +245,67 @@ class _SplitTunnelingScreenState extends State<SplitTunnelingScreen> {
                             ),
                             itemBuilder: (context, index) {
                               final app = _filteredApps[index];
-                              final isChecked = _selectedPackages.contains(app.package);
+                              final isChrome = app.package.toLowerCase().contains('chrome') ||
+                                  app.label.toLowerCase().contains('chrome');
+                              final isChecked = isChrome ? false : _selectedPackages.contains(app.package);
                               return CheckboxListTile(
                                 value: isChecked,
                                 activeColor: const Color(0xFF6B42FF),
                                 checkColor: Colors.white,
-                                title: Text(
-                                  app.label,
-                                  style: ProtonTypography.bodyMedium.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: ThemeManager.instance.textPrimaryColor,
-                                  ),
+                                title: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        app.label,
+                                        style: ProtonTypography.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                          color: ThemeManager.instance.textPrimaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isChrome)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF00C896).withValues(alpha: 0.15),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: const Text(
+                                          'TUNNELED',
+                                          style: TextStyle(
+                                            color: Color(0xFF00C896),
+                                            fontSize: 9.5,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                                 subtitle: Text(
-                                  app.package,
+                                  isChrome
+                                      ? '${app.package} · Always secured in tunnel'
+                                      : app.package,
                                   style: ProtonTypography.bodySmall.copyWith(
-                                    color: ThemeManager.instance.textSecondaryColor,
+                                    color: isChrome
+                                        ? const Color(0xFF00C896).withValues(alpha: 0.9)
+                                        : ThemeManager.instance.textSecondaryColor,
                                     fontSize: 11,
                                   ),
                                 ),
                                 secondary: AppIconWidget(package: app.package),
-                                onChanged: (val) async {
-                                  setState(() {
-                                    if (val == true) {
-                                      _selectedPackages.add(app.package);
-                                    } else {
-                                      _selectedPackages.remove(app.package);
-                                    }
-                                  });
-                                  await AppPreferences.setBypassedApps(_selectedPackages.toList());
-                                  _applyRouting();
-                                },
+                                onChanged: isChrome
+                                    ? null
+                                    : (val) async {
+                                        setState(() {
+                                          if (val == true) {
+                                            _selectedPackages.add(app.package);
+                                          } else {
+                                            _selectedPackages.remove(app.package);
+                                          }
+                                        });
+                                        await AppPreferences.setBypassedApps(_selectedPackages.toList());
+                                        _applyRouting();
+                                      },
                               );
                             },
                           ),

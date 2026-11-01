@@ -10,6 +10,8 @@ import '../home/default_connection_sheet.dart';
 import '../home/proton_world_map.dart';
 import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class AnimatedConnectButton extends StatefulWidget {
   final VoidCallback onTap;
@@ -455,6 +457,14 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                   if (isVpnOn || isConnected || isConnecting) {
                                     widget.controller.setOn(false);
                                   } else {
+                                    if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                      await PermissionsSetupScreen.showAsModal(context);
+                                      if (!context.mounted) return;
+                                      if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                        return;
+                                      }
+                                    }
+                                    if (!context.mounted) return;
                                     if (!widget.controller.hasAccount) {
                                       SignInDialog.show(context, widget.controller);
                                       return;
@@ -806,6 +816,14 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                       await widget.controller.setLocation(item.code.toLowerCase());
                                       await AppPreferences.setSelectedLocation(item.code);
                                       if (!isVpnOn) {
+                                        if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                          if (context.mounted) {
+                                            await PermissionsSetupScreen.showAsModal(context);
+                                          }
+                                          if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                            return;
+                                          }
+                                        }
                                         if (!widget.controller.hasAccount) {
                                           if (context.mounted) {
                                             SignInDialog.show(context, widget.controller);

@@ -17,6 +17,8 @@ import 'recents_list.dart';
 import 'vpn_connection_card.dart';
 import 'vpn_status_view.dart';
 import 'world_map_atmosphere.dart';
+import '../../core/app_permissions_service.dart';
+import '../permissions/permissions_setup_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final CoreController controller;
@@ -126,6 +128,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               iconColor: const Color(0xFFEF4444),
             );
           }
+          return;
+        }
+      }
+    } else {
+      if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+        await PermissionsSetupScreen.showAsModal(context);
+        if (!AppPermissionsService.instance.areCorePermissionsGranted) {
           return;
         }
       }

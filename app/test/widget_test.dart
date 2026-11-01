@@ -4,11 +4,17 @@ import 'package:terovpn/main.dart';
 import 'package:terovpn/core/core_controller.dart';
 import 'package:terovpn/core/core_api.dart';
 import 'package:terovpn/core/app_preferences.dart';
+import 'package:terovpn/core/app_permissions_service.dart';
 
 void main() {
   setUp(() async {
-    SharedPreferences.setMockInitialValues({'onboarding_completed': true});
+    SharedPreferences.setMockInitialValues({
+      'onboarding_completed': true,
+      'permissions_onboarding_done': true,
+    });
     await AppPreferences.init();
+    await AppPermissionsService.instance.init();
+    await AppPermissionsService.instance.grantAllCore();
   });
 
   testWidgets('TeroVPN app smoke test and brand title verification', (WidgetTester tester) async {
