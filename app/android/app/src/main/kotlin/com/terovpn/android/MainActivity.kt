@@ -174,8 +174,8 @@ class MainActivity : FlutterActivity() {
                 "installApk" -> {
                     val filePath = call.argument<String>("filePath") ?: ""
                     val file = java.io.File(filePath)
-                    if (!file.exists()) {
-                        result.error("not_found", "APK file does not exist", null)
+                    if (!file.exists() || file.length() < 1000000L) {
+                        result.error("invalid_apk", "APK file is missing or truncated (${file.length()} bytes)", null)
                     } else {
                         try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -185,17 +185,48 @@ class MainActivity : FlutterActivity() {
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                     startActivity(manageIntent)
+                                    result.success(false)
+                                    return@setMethodCallHandler
                                 }
                             }
+
+                            // Copy APK to external cache directory if currently in internal cache, so system installer has universal read access
+                            val installTargetFile: java.io.File = try {
+                                val externalDir = getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS) ?: externalCacheDir
+                                if (externalDir != null && !file.absolutePath.startsWith(externalDir.absolutePath)) {
+                                    val target = java.io.File(externalDir, "TeroVPN_update.apk")
+                                    if (target.exists()) target.delete()
+                                    file.copyTo(target, overwrite = true)
+                                    target.setReadable(true, false)
+                                    target
+                                } else {
+                                    file.setReadable(true, false)
+                                    file
+                                }
+                            } catch (ignored: Exception) {
+                                file.setReadable(true, false)
+                                file
+                            }
+
                             val uri = androidx.core.content.FileProvider.getUriForFile(
                                 this,
                                 "$packageName.fileprovider",
-                                file
+                                installTargetFile
                             )
-                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
                                 setDataAndType(uri, "application/vnd.android.package-archive")
-                                flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                                        Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION
                             }
+
+                            val resInfoList = packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                            for (resolveInfo in resInfoList) {
+                                val targetPkg = resolveInfo.activityInfo.packageName
+                                grantUriPermission(targetPkg, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+
                             startActivity(intent)
                             result.success(true)
                         } catch (e: Exception) {

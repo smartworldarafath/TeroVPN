@@ -119,11 +119,17 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
     _notifyUpdates = AppPreferences.notifyUpdates;
 
     if (AppUpdateService.instance.downloadedApkPath != null) {
-
-      _downloadedFilePath = AppUpdateService.instance.downloadedApkPath;
-
-      _isInstallReady = true;
-
+      final existingPath = AppUpdateService.instance.downloadedApkPath!;
+      final f = File(existingPath);
+      if (f.existsSync() && f.lengthSync() >= 45 * 1024 * 1024) {
+        _downloadedFilePath = existingPath;
+        _isInstallReady = true;
+      } else {
+        f.delete().catchError((_) => f);
+        AppUpdateService.instance.downloadedApkPath = null;
+        _downloadedFilePath = null;
+        _isInstallReady = false;
+      }
     }
 
     _fetchLatestRelease();
@@ -417,97 +423,67 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
 
 
       final tempDir = await getTemporaryDirectory();
-
+      final partFile = File('${tempDir.path}/TeroVPN_$_latestVersionTag.apk.part');
       final saveFile = File('${tempDir.path}/TeroVPN_$_latestVersionTag.apk');
 
-      if (await saveFile.exists()) {
-
-        await saveFile.delete();
-
+      if (await partFile.exists()) {
+        await partFile.delete().catchError((_) => partFile);
       }
-
-      final sink = saveFile.openWrite();
-
-
+      if (await saveFile.exists()) {
+        await saveFile.delete().catchError((_) => saveFile);
+      }
+      final sink = partFile.openWrite();
 
       int lastTime = DateTime.now().millisecondsSinceEpoch;
-
       int lastBytes = 0;
 
-
-
       await for (final chunk in response.stream) {
-
         if (!mounted || !_isDownloading) break;
-
         sink.add(chunk);
-
         _receivedBytes += chunk.length;
 
-
-
         final now = DateTime.now().millisecondsSinceEpoch;
-
         final elapsedMs = now - lastTime;
 
-
-
         if (elapsedMs >= 350) {
-
           final deltaBytes = _receivedBytes - lastBytes;
-
           final dtSec = elapsedMs / 1000.0;
-
           final bits = deltaBytes * 8.0;
-
           final currentMbps = (bits / (1000.0 * 1000.0)) / dtSec;
 
-
-
           setState(() {
-
             _downloadProgress = _totalBytes > 0 ? (_receivedBytes / _totalBytes).clamp(0.0, 1.0) : 0.0;
-
             _downloadSpeedMbps = _downloadSpeedMbps == 0 ? currentMbps : (_downloadSpeedMbps * 0.35 + currentMbps * 0.65);
-
           });
-
           lastTime = now;
-
           lastBytes = _receivedBytes;
-
         }
-
       }
 
-
-
       await sink.flush();
-
       await sink.close();
 
+      final minExpected = _apkSizeBytes > 0 ? (_apkSizeBytes * 0.98).toInt() : (_totalBytes * 0.95).toInt();
+      if (_receivedBytes < minExpected) {
+        if (await partFile.exists()) {
+          await partFile.delete().catchError((_) => partFile);
+        }
+        throw Exception('Download was interrupted ($_receivedBytes of $_totalBytes bytes). Please tap Download to retry.');
+      }
 
+      await partFile.rename(saveFile.path);
 
       if (mounted) {
-
         setState(() {
-
           _isDownloading = false;
-
           _downloadProgress = 1.0;
-
           _isInstallReady = true;
-
           _downloadedFilePath = saveFile.path;
-
         });
-
-
+        AppUpdateService.instance.downloadedApkPath = saveFile.path;
 
         // Trigger installation directly upon download complete
-
         await _triggerInstall();
-
       }
 
     } catch (e) {
@@ -543,29 +519,40 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
 
 
   Future<void> _triggerInstall() async {
-
     if (_downloadedFilePath == null) return;
+    final file = File(_downloadedFilePath!);
+    if (!await file.exists() || await file.length() < 45 * 1024 * 1024) {
+      if (await file.exists()) {
+        await file.delete().catchError((_) => file);
+      }
+      if (mounted) {
+        setState(() {
+          _isInstallReady = false;
+          _downloadedFilePath = null;
+        });
+        AppUpdateService.instance.downloadedApkPath = null;
+        TopDockToast.show(
+          context,
+          title: 'Corrupted Package Detected',
+          message: 'The downloaded APK was incomplete. Please tap Download to get a fresh copy.',
+          icon: Icons.refresh_rounded,
+          iconColor: Colors.amber,
+        );
+      }
+      return;
+    }
 
     try {
-
       final success = await AndroidCore.installApk(_downloadedFilePath!);
-
       if (!success && mounted) {
-
         TopDockToast.show(
-
           context,
-
-          title: 'Installing Update',
-
-          message: 'Installation package launched. Confirm prompt.',
-
-          icon: Icons.system_update_rounded,
-
+          title: 'Permission Required',
+          message: 'Please allow "Install unknown apps" for TeroVPN in Settings, then tap Install again.',
+          icon: Icons.security_rounded,
+          iconColor: Colors.amber,
         );
-
       }
-
     } catch (e) {
 
       if (mounted) {
@@ -1913,37 +1900,37 @@ class _AppUpdateScreenState extends State<AppUpdateScreen> {
             ),
 
           ] else if (_isInstallReady) ...[
-
             SizedBox(
-
               height: 52,
-
               child: ElevatedButton.icon(
-
                 onPressed: _triggerInstall,
-
                 icon: const Icon(Icons.install_mobile_rounded),
-
                 label: const Text('Install Update'),
-
                 style: ElevatedButton.styleFrom(
-
                   backgroundColor: const Color(0xFF00C853),
-
                   foregroundColor: Colors.white,
-
                   elevation: 4,
-
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-
                   textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-
                 ),
-
               ),
-
             ),
-
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                if (_downloadUrl != null) {
+                  AndroidCore.openUrl(_downloadUrl!);
+                }
+              },
+              icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+              label: const Text('Download via Browser (Direct APK)'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF8B6BFF),
+                side: BorderSide(color: const Color(0xFF8B6BFF).withValues(alpha: 0.5)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                minimumSize: const Size.fromHeight(46),
+              ),
+            ),
           ] else ...[
 
             SizedBox(

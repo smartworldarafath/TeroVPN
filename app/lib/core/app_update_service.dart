@@ -139,11 +139,19 @@ class AppUpdateService extends ChangeNotifier {
         isChecking = false;
         notifyListeners();
 
-        // Check if previously downloaded APK exists and is ready
+        // Check if previously downloaded APK exists and is ready (validate size and integrity)
         final tempDir = await getTemporaryDirectory();
         final cachedApk = File('${tempDir.path}/TeroVPN_$tagName.apk');
-        if (await cachedApk.exists() && (await cachedApk.length()) > 10 * 1024 * 1024) {
-          downloadedApkPath = cachedApk.path;
+        final minExpected = apkSize > 0 ? (apkSize * 0.98).toInt() : 45 * 1024 * 1024;
+        if (await cachedApk.exists()) {
+          final actualLen = await cachedApk.length();
+          if (actualLen >= minExpected) {
+            downloadedApkPath = cachedApk.path;
+          } else {
+            // Delete truncated / incomplete file from previous failed attempt
+            await cachedApk.delete().catchError((_) => cachedApk);
+            downloadedApkPath = null;
+          }
         }
 
         if (hasNewer) {
@@ -190,12 +198,16 @@ class AppUpdateService extends ChangeNotifier {
       final total = response.contentLength ?? (expectedBytes > 0 ? expectedBytes : 48 * 1024 * 1024);
 
       final tempDir = await getTemporaryDirectory();
+      final partFile = File('${tempDir.path}/TeroVPN_$tagName.apk.part');
       final saveFile = File('${tempDir.path}/TeroVPN_$tagName.apk');
+      if (await partFile.exists()) {
+        await partFile.delete().catchError((_) => partFile);
+      }
       if (await saveFile.exists()) {
-        await saveFile.delete();
+        await saveFile.delete().catchError((_) => saveFile);
       }
 
-      final sink = saveFile.openWrite();
+      final sink = partFile.openWrite();
       int received = 0;
       int lastTime = DateTime.now().millisecondsSinceEpoch;
       int lastBytes = 0;
@@ -223,6 +235,16 @@ class AppUpdateService extends ChangeNotifier {
       await sink.flush();
       await sink.close();
       client.close();
+
+      final minExpected = expectedBytes > 0 ? (expectedBytes * 0.98).toInt() : (total * 0.95).toInt();
+      if (received < minExpected) {
+        if (await partFile.exists()) {
+          await partFile.delete().catchError((_) => partFile);
+        }
+        throw Exception('Download was incomplete ($received of $total bytes). Please retry.');
+      }
+
+      await partFile.rename(saveFile.path);
 
       downloadProgress = 1.0;
       isDownloading = false;
