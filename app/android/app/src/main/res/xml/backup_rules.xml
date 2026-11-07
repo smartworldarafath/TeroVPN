@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Auto Backup (Android 6 to 11): everything, so a new phone keeps the
-     accounts and the settings, except what the core makes again: logs,
-     routing lists, caches, and per-run files. -->
+<!-- Auto Backup (Android 6 to 11): Exclude sensitive SharedPreferences and core files. -->
 <full-backup-content>
+    <exclude domain="sharedpref" path="." />
     <exclude domain="file" path="core/logs/" />
     <exclude domain="file" path="core/routing/" />
     <exclude domain="file" path="core/servers.json" />

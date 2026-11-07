@@ -87,9 +87,10 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     });
   }
 
-  void _initShowQrSession() {
+  Future<void> _initShowQrSession() async {
     _sessionPollTimer?.cancel();
-    final session = QrAuthSyncService.createSession(deviceName: 'TeroVPN Mobile');
+    final session = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Mobile');
+    if (!mounted) return;
     setState(() {
       _activeQrSession = session;
     });
@@ -104,15 +105,26 @@ class _QrSignInScreenState extends State<QrSignInScreen>
 
   Future<void> _handleIncomingAuthorization(Account account) async {
     setState(() => _isAuthorizing = true);
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 600));
 
     final email = account.email.trim();
     String password = (account.password != null && account.password!.isNotEmpty)
         ? account.password!
         : (AppPreferences.getSavedAccountPassword(email) ?? '');
 
-    
+    // 1. Immediately persist active account in AppPreferences
+    await AppPreferences.setSavedActiveAccount(account.toJson());
+    if (password.isNotEmpty) {
+      await AppPreferences.setSavedAccountPassword(email, password);
+    }
 
+    // 2. Synthesize into controller accounts immediately
+    widget.controller.setAccounts(AccountList.fromJson({
+      'accounts': [account.toJson()],
+      'switch_threshold_percent': 10.0,
+    }));
+
+    // 3. Attempt real core activation or sign-in if password available
     bool accountActivated = false;
     try {
       final existingAccounts = widget.controller.accounts?.accounts ?? [];
@@ -238,6 +250,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     final ip = uri?.queryParameters['ip'];
     final portStr = uri?.queryParameters['port'];
     final port = portStr != null ? int.tryParse(portStr) : null;
+    final secretKey = uri?.queryParameters['k'];
 
     String? password = AppPreferences.getSavedAuthPassword(activeAccount.email);
     if (password == null || password.isEmpty) {
@@ -260,6 +273,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       ip: ip,
       port: port,
       password: password,
+      secretKey: secretKey,
     );
 
     if (mounted) {
@@ -581,7 +595,12 @@ class _QrSignInScreenState extends State<QrSignInScreen>
               ],
             ),
             child: QrImageView(
-              data: QrAuthSyncService.generateSessionPayload(sessionId),
+              data: QrAuthSyncService.generateSessionPayload(
+                sessionId,
+                localIp: _activeQrSession?.localIp,
+                port: _activeQrSession?.localPort,
+                secretKey: _activeQrSession?.secretKey,
+              ),
               version: QrVersions.auto,
               size: 190,
               backgroundColor: Colors.white,

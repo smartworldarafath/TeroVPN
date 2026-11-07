@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
@@ -46,7 +49,7 @@ class AppPreferences {
   static SharedPreferences? _prefs;
 
   static Future<void> init() async {
-    _prefs ??= await SharedPreferences.getInstance();
+    _prefs = await SharedPreferences.getInstance();
   }
 
   // Selected VPN Location
@@ -312,18 +315,38 @@ class AppPreferences {
     await _prefs?.remove(_keySavedActiveAccount);
   }
 
+  static final enc.Key _prefsEncryptionKey = enc.Key(Uint8List.fromList(
+    sha256.convert(utf8.encode('terovpn.keystore.salt.v1.local_device')).bytes,
+  ));
+
   static String? getSavedAuthPassword(String email) {
     if (email.isEmpty) return null;
     final cleanEmail = email.toLowerCase().trim();
-    return _prefs?.getString('$_keySavedAuthPassword$cleanEmail') ??
+    final raw = _prefs?.getString('$_keySavedAuthPassword$cleanEmail') ??
         _prefs?.getString('pwd_$cleanEmail');
+    if (raw == null || raw.isEmpty) return null;
+    if (raw.startsWith('enc:v1:')) {
+      try {
+        final parts = raw.split(':');
+        if (parts.length == 4) {
+          final iv = enc.IV.fromBase64(parts[2]);
+          final cipher = enc.Encrypter(enc.AES(_prefsEncryptionKey, mode: enc.AESMode.cbc));
+          return cipher.decrypt(enc.Encrypted.fromBase64(parts[3]), iv: iv);
+        }
+      } catch (_) {}
+    }
+    return raw;
   }
 
   static Future<void> setSavedAuthPassword(String email, String password) async {
     if (email.isEmpty || password.isEmpty) return;
     final cleanEmail = email.toLowerCase().trim();
-    await _prefs?.setString('$_keySavedAuthPassword$cleanEmail', password);
-    await _prefs?.setString('pwd_$cleanEmail', password);
+    final iv = enc.IV.fromSecureRandom(16);
+    final cipher = enc.Encrypter(enc.AES(_prefsEncryptionKey, mode: enc.AESMode.cbc));
+    final encrypted = cipher.encrypt(password, iv: iv);
+    final encryptedString = 'enc:v1:${iv.base64}:${encrypted.base64}';
+    await _prefs?.setString('$_keySavedAuthPassword$cleanEmail', encryptedString);
+    await _prefs?.remove('pwd_$cleanEmail');
   }
 
   static String? getSavedAccountPassword(String email) => getSavedAuthPassword(email);

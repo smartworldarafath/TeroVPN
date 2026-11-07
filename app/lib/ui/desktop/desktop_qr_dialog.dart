@@ -307,6 +307,7 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
               _session.sessionId,
               localIp: _session.localIp,
               port: _session.localPort,
+              secretKey: _session.secretKey,
             ),
             version: QrVersions.auto,
             size: 190,

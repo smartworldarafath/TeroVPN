@@ -16,10 +16,10 @@ void main() {
 
   group('v1.1.9 Cross-Device QR Auto-Login & Version Tests', () {
     test('Version is bumped to 1.1.9', () {
-      expect(AppUpdateService.currentVersion, '1.1.9');
-      expect(AppUpdateService.isNewerVersion('v1.2.0', '1.1.9'), true);
-      expect(AppUpdateService.isNewerVersion('v1.1.9', '1.1.9'), false);
-      expect(AppUpdateService.isNewerVersion('v1.1.8', '1.1.9'), false);
+      expect(AppUpdateService.currentVersion, '1.2.0');
+      expect(AppUpdateService.isNewerVersion('v1.2.1', '1.2.0'), true);
+      expect(AppUpdateService.isNewerVersion('v1.2.0', '1.2.0'), false);
+      expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.0'), false);
     });
 
     test('Cross-device QR authorization transmits password and persists session', () async {

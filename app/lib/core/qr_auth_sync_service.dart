@@ -1,6 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
+import 'dart:typed_data';
+import 'package:crypto/crypto.dart';
+import 'package:encrypt/encrypt.dart' as enc;
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'models.dart';
@@ -10,6 +14,7 @@ class QrPairingSession {
   final String sessionId;
   final String deviceName;
   final DateTime createdAt;
+  final String secretKey;
   String localIp;
   int localPort;
   bool isAuthorized;
@@ -20,6 +25,7 @@ class QrPairingSession {
     required this.sessionId,
     required this.deviceName,
     required this.createdAt,
+    required this.secretKey,
     this.localIp = '127.0.0.1',
     this.localPort = 0,
     this.isAuthorized = false,
@@ -31,6 +37,7 @@ class QrPairingSession {
         'sessionId': sessionId,
         'deviceName': deviceName,
         'createdAt': createdAt.toIso8601String(),
+        'secretKey': secretKey,
         'localIp': localIp,
         'localPort': localPort,
         'isAuthorized': isAuthorized,
@@ -42,6 +49,7 @@ class QrPairingSession {
         sessionId: json['sessionId'] as String,
         deviceName: json['deviceName'] as String? ?? 'TeroVPN Desktop',
         createdAt: DateTime.tryParse(json['createdAt'] as String? ?? '') ?? DateTime.now(),
+        secretKey: json['secretKey'] as String? ?? '',
         localIp: json['localIp'] as String? ?? '127.0.0.1',
         localPort: json['localPort'] as int? ?? 0,
         isAuthorized: json['isAuthorized'] as bool? ?? false,
@@ -50,7 +58,7 @@ class QrPairingSession {
       );
 }
 
-/// Realtime Cross-Device QR Authorization Synchronization Service
+/// Realtime Cross-Device QR Authorization Synchronization Service with AES-256 E2EE
 /// Supports direct zero-config local LAN HTTP server (<20ms response) +
 /// Global cloud relay fallback (ntfy.sh) across mobile networks and subnets.
 class QrAuthSyncService {
@@ -59,6 +67,57 @@ class QrAuthSyncService {
   static final Map<String, Completer<Account>> _pendingCompleters = {};
   static final Map<String, HttpServer> _activeServers = {};
   static final Map<String, Timer> _activePollTimers = {};
+
+  static String generateSecureSecretKey() {
+    final rng = Random.secure();
+    final bytes = Uint8List.fromList(List<int>.generate(32, (_) => rng.nextInt(256)));
+    return base64UrlEncode(bytes);
+  }
+
+  static String generateSessionId(String secretKey) {
+    final hash = sha256.convert(utf8.encode(secretKey)).toString().substring(0, 16);
+    final rand = 100000 + Random.secure().nextInt(900000);
+    return 'tero_${hash}_$rand';
+  }
+
+  static Map<String, dynamic> encryptPayload(String plainJson, String secretKey) {
+    final keyBytes = base64Url.decode(base64Url.normalize(secretKey));
+    final encKey = enc.Key(keyBytes);
+    final iv = enc.IV.fromSecureRandom(16);
+    final encrypter = enc.Encrypter(enc.AES(encKey, mode: enc.AESMode.cbc));
+    final encrypted = encrypter.encrypt(plainJson, iv: iv);
+    final hmac = Hmac(sha256, keyBytes).convert(encrypted.bytes).toString();
+
+    return {
+      'e2ee': true,
+      'cipher': encrypted.base64,
+      'iv': iv.base64,
+      'mac': hmac,
+    };
+  }
+
+  static Map<String, dynamic>? decryptPayload(Map<String, dynamic> envelope, String secretKey) {
+    try {
+      final keyBytes = base64Url.decode(base64Url.normalize(secretKey));
+      final cipherBase64 = envelope['cipher'] as String;
+      final ivBase64 = envelope['iv'] as String;
+      final receivedMac = envelope['mac'] as String? ?? '';
+
+      final encrypted = enc.Encrypted.fromBase64(cipherBase64);
+      final computedMac = Hmac(sha256, keyBytes).convert(encrypted.bytes).toString();
+      if (computedMac != receivedMac) {
+        return null;
+      }
+
+      final encKey = enc.Key(keyBytes);
+      final iv = enc.IV.fromBase64(ivBase64);
+      final encrypter = enc.Encrypter(enc.AES(encKey, mode: enc.AESMode.cbc));
+      final plainText = encrypter.decrypt(encrypted, iv: iv);
+      return jsonDecode(plainText) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
 
   /// Resolves the device's actual primary local IPv4 address (WiFi or Ethernet)
   static Future<String> getLocalIpAddress() async {
@@ -85,19 +144,23 @@ class QrAuthSyncService {
     String sessionId, {
     String? localIp,
     int? port,
+    String? secretKey,
   }) {
+    final key = secretKey ?? _activeSessions[sessionId]?.secretKey ?? '';
+    final keyParam = key.isNotEmpty ? '&k=$key' : '';
     final ipParam = (localIp != null && localIp.isNotEmpty && localIp != '127.0.0.1')
         ? '&ip=$localIp'
         : '';
     final portParam = (port != null && port > 0) ? '&port=$port' : '';
-    return 'terovpn://pair?sid=$sessionId$ipParam$portParam&relay=ntfy.sh&t=${DateTime.now().millisecondsSinceEpoch}';
+    return 'terovpn://pair?sid=$sessionId$keyParam$ipParam$portParam&relay=ntfy.sh&t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   /// Creates and binds a new pairing session with an ephemeral LAN HTTP server and cloud relay
   static Future<QrPairingSession> createSessionAsync({
     String deviceName = 'TeroVPN Desktop',
   }) async {
-    final sessionId = 'tero_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecond % 9000))}';
+    final secretKey = generateSecureSecretKey();
+    final sessionId = generateSessionId(secretKey);
     String localIp = '127.0.0.1';
     int localPort = 0;
     HttpServer? server;
@@ -125,16 +188,38 @@ class QrAuthSyncService {
             final body = await utf8.decodeStream(request);
             final data = jsonDecode(body) as Map<String, dynamic>;
             final sid = data['sessionId'] as String? ?? request.uri.queryParameters['sid'] ?? sessionId;
-            final email = data['email'] as String? ?? 'the.vertex.us@gmail.com';
-            String password = data['password'] as String? ?? '';
+            final activeSession = _activeSessions[sid] ?? _activeSessions[sessionId];
+
+            Map<String, dynamic> decryptedPayload;
+            if (data['e2ee'] == true && data['cipher'] != null) {
+              if (activeSession == null || activeSession.secretKey.isEmpty) {
+                request.response.statusCode = HttpStatus.unauthorized;
+                request.response.write(jsonEncode({'error': 'Unauthorized session'}));
+                await request.response.close();
+                return;
+              }
+              final decrypted = decryptPayload(data, activeSession.secretKey);
+              if (decrypted == null) {
+                request.response.statusCode = HttpStatus.unauthorized;
+                request.response.write(jsonEncode({'error': 'Invalid MAC or decryption failure'}));
+                await request.response.close();
+                return;
+              }
+              decryptedPayload = decrypted;
+            } else {
+              decryptedPayload = data;
+            }
+
+            final email = decryptedPayload['email'] as String? ?? 'the.vertex.us@gmail.com';
+            String password = decryptedPayload['password'] as String? ?? '';
             if (password.isEmpty) {
               password = AppPreferences.getSavedAccountPassword(email) ?? '';
             }
-            final token = data['token'] as String? ?? 'auth_qr_pair';
-            final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
+            final token = decryptedPayload['token'] as String? ?? 'auth_qr_pair';
+            final name = decryptedPayload['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final account = data['account'] != null
-                ? Account.fromJson(data['account'] as Map<String, dynamic>)
+            final account = decryptedPayload['account'] != null
+                ? Account.fromJson(decryptedPayload['account'] as Map<String, dynamic>)
                 : Account(
                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                     email: email,
@@ -167,6 +252,7 @@ class QrAuthSyncService {
       sessionId: sessionId,
       deviceName: deviceName,
       createdAt: DateTime.now(),
+      secretKey: secretKey,
       localIp: localIp,
       localPort: localPort,
     );
@@ -180,11 +266,13 @@ class QrAuthSyncService {
 
   /// Synchronous fallback helper for backwards compatibility
   static QrPairingSession createSession({String deviceName = 'TeroVPN Desktop'}) {
-    final sessionId = 'tero_${DateTime.now().millisecondsSinceEpoch}_${(1000 + (DateTime.now().microsecond % 9000))}';
+    final secretKey = generateSecureSecretKey();
+    final sessionId = generateSessionId(secretKey);
     final session = QrPairingSession(
       sessionId: sessionId,
       deviceName: deviceName,
       createdAt: DateTime.now(),
+      secretKey: secretKey,
     );
     _activeSessions[sessionId] = session;
     _pendingCompleters[sessionId] = Completer<Account>();
@@ -213,16 +301,38 @@ class QrAuthSyncService {
             final body = await utf8.decodeStream(request);
             final data = jsonDecode(body) as Map<String, dynamic>;
             final sid = data['sessionId'] as String? ?? request.uri.queryParameters['sid'] ?? sessionId;
-            final email = data['email'] as String? ?? 'the.vertex.us@gmail.com';
-            String password = data['password'] as String? ?? '';
+            final activeSession = _activeSessions[sid] ?? _activeSessions[sessionId];
+
+            Map<String, dynamic> decryptedPayload;
+            if (data['e2ee'] == true && data['cipher'] != null) {
+              if (activeSession == null || activeSession.secretKey.isEmpty) {
+                request.response.statusCode = HttpStatus.unauthorized;
+                request.response.write(jsonEncode({'error': 'Unauthorized session'}));
+                await request.response.close();
+                return;
+              }
+              final decrypted = decryptPayload(data, activeSession.secretKey);
+              if (decrypted == null) {
+                request.response.statusCode = HttpStatus.unauthorized;
+                request.response.write(jsonEncode({'error': 'Invalid MAC or decryption failure'}));
+                await request.response.close();
+                return;
+              }
+              decryptedPayload = decrypted;
+            } else {
+              decryptedPayload = data;
+            }
+
+            final email = decryptedPayload['email'] as String? ?? 'the.vertex.us@gmail.com';
+            String password = decryptedPayload['password'] as String? ?? '';
             if (password.isEmpty) {
               password = AppPreferences.getSavedAccountPassword(email) ?? '';
             }
-            final token = data['token'] as String? ?? 'auth_qr_pair';
-            final name = data['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
+            final token = decryptedPayload['token'] as String? ?? 'auth_qr_pair';
+            final name = decryptedPayload['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
-            final account = data['account'] != null
-                ? Account.fromJson(data['account'] as Map<String, dynamic>)
+            final account = decryptedPayload['account'] != null
+                ? Account.fromJson(decryptedPayload['account'] as Map<String, dynamic>)
                 : Account(
                     id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                     email: email,
@@ -310,18 +420,30 @@ class QrAuthSyncService {
               if (json['event'] == 'message') {
                 final message = json['message'] as String? ?? '';
                 final payload = jsonDecode(message) as Map<String, dynamic>;
-                final email = payload['email'] as String? ?? '';
-                String password = payload['password'] as String? ?? '';
+
+                final session = _activeSessions[sessionId];
+                Map<String, dynamic> decryptedPayload;
+                if (payload['e2ee'] == true && payload['cipher'] != null) {
+                  if (session == null || session.secretKey.isEmpty) continue;
+                  final decrypted = decryptPayload(payload, session.secretKey);
+                  if (decrypted == null) continue;
+                  decryptedPayload = decrypted;
+                } else {
+                  decryptedPayload = payload;
+                }
+
+                final email = decryptedPayload['email'] as String? ?? '';
+                String password = decryptedPayload['password'] as String? ?? '';
                 if (password.isEmpty) {
                   password = AppPreferences.getSavedAccountPassword(email) ?? '';
                 }
-                final token = payload['token'] as String? ?? '';
-                final name = payload['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
+                final token = decryptedPayload['token'] as String? ?? '';
+                final name = decryptedPayload['name'] as String? ?? (email.contains('@') ? email.split('@').first : 'User');
 
                 if (email.isNotEmpty && !completer.isCompleted) {
                   t.cancel();
-                  final account = payload['account'] != null
-                      ? Account.fromJson(payload['account'] as Map<String, dynamic>)
+                  final account = decryptedPayload['account'] != null
+                      ? Account.fromJson(decryptedPayload['account'] as Map<String, dynamic>)
                       : Account(
                           id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
                           email: email,
@@ -342,7 +464,7 @@ class QrAuthSyncService {
     _activePollTimers[sessionId] = timer;
   }
 
-  /// Authorizes a session from phone scanning, delivering to LAN and Global Relay simultaneously
+  /// Authorizes a session from phone scanning, delivering to LAN and Global Relay simultaneously with AES-256 E2EE
   static Future<bool> authorizeRemoteSession({
     required String sessionId,
     required Account account,
@@ -350,22 +472,37 @@ class QrAuthSyncService {
     String? ip,
     int? port,
     String? token,
+    String? secretKey,
   }) async {
     String effectivePassword = (password != null && password.isNotEmpty)
         ? password
         : (account.password ?? AppPreferences.getSavedAccountPassword(account.email) ?? '');
-    
 
-    final payload = {
+    final plainPayload = {
       'sessionId': sessionId,
       'email': account.email,
       'password': effectivePassword,
       'token': token ?? 'auth_qr_remote',
       'name': account.name,
-            'account': account.toJson(),
+      'account': account.toJson(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
-    final payloadJson = jsonEncode(payload);
+    final plainJson = jsonEncode(plainPayload);
+
+    // E2EE encryption if secretKey is available
+    final keyToUse = (secretKey != null && secretKey.isNotEmpty)
+        ? secretKey
+        : _activeSessions[sessionId]?.secretKey;
+
+    String outgoingJson;
+    if (keyToUse != null && keyToUse.isNotEmpty) {
+      final envelope = encryptPayload(plainJson, keyToUse);
+      envelope['sessionId'] = sessionId;
+      envelope['timestamp'] = DateTime.now().millisecondsSinceEpoch;
+      outgoingJson = jsonEncode(envelope);
+    } else {
+      outgoingJson = plainJson;
+    }
 
     // 1. Direct LAN HTTP Delivery (fastest, <20ms on same WiFi)
     if (ip != null && ip.isNotEmpty && port != null && port > 0) {
@@ -374,7 +511,7 @@ class QrAuthSyncService {
         http.post(
           lanUri,
           headers: {'Content-Type': 'application/json'},
-          body: payloadJson,
+          body: outgoingJson,
         ).timeout(const Duration(milliseconds: 2500)).catchError((_) => http.Response('', 500));
       } catch (_) {}
     }
@@ -384,7 +521,7 @@ class QrAuthSyncService {
       final relayUri = Uri.parse('https://ntfy.sh/terovpn_auth_$sessionId');
       http.post(
         relayUri,
-        body: payloadJson,
+        body: outgoingJson,
       ).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('', 500));
     } catch (_) {}
 
@@ -411,6 +548,7 @@ class QrAuthSyncService {
           sessionId: sessionId,
           deviceName: 'TeroVPN Desktop',
           createdAt: DateTime.now(),
+          secretKey: generateSecureSecretKey(),
         );
 
     session.isAuthorized = true;
