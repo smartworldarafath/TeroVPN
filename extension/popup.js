@@ -208,7 +208,7 @@ function renderAll(state) {
 
   // Render lists & forms
   renderCountries(locs, state.activeCountryCode, $('country-search-input').value);
-  renderAccounts(accounts);
+  renderAccounts(accounts, state.coreState);
   populateSettingsForm(state);
 }
 
@@ -374,7 +374,11 @@ function renderProfiles() {
 }
 
 // ---------------- Accounts & Sign-In Tab ----------------
-function renderAccounts(accounts) {
+function renderAccounts(accounts, coreState = 'offline') {
+  const offlineBanner = $('signin-core-offline-banner');
+  if (offlineBanner) {
+    offlineBanner.classList.toggle('hidden', coreState === 'online');
+  }
   const container = $('accounts-list-container');
   container.innerHTML = '';
 
@@ -409,20 +413,20 @@ function renderAccounts(accounts) {
     `;
 
     card.querySelector('.btn-acc-activate')?.addEventListener('click', async () => {
-      await sendMsg({ action: 'ACCOUNT_ACTIVATE', id: acc.id });
-      showToast(`Switched to ${acc.email}`);
+      const res = await sendMsg({ action: 'ACCOUNT_ACTIVATE', id: acc.id });
+      showToast(res.success ? `Switched to ${acc.email}` : (res.error || 'Failed to switch account'), !res.success);
       await refreshState();
     });
 
     card.querySelector('.btn-acc-refresh')?.addEventListener('click', async () => {
-      await sendMsg({ action: 'ACCOUNT_REFRESH', id: acc.id });
-      showToast('Quota refreshed');
+      const res = await sendMsg({ action: 'ACCOUNT_REFRESH', id: acc.id });
+      showToast(res.success ? 'Quota refreshed' : (res.error || 'Failed to refresh quota'), !res.success);
       await refreshState();
     });
 
     card.querySelector('.btn-acc-remove')?.addEventListener('click', async () => {
-      await sendMsg({ action: 'ACCOUNT_REMOVE', id: acc.id });
-      showToast('Account removed');
+      const res = await sendMsg({ action: 'ACCOUNT_REMOVE', id: acc.id });
+      showToast(res.success ? 'Account removed' : (res.error || 'Failed to remove account'), !res.success);
       await refreshState();
     });
 
@@ -461,6 +465,21 @@ function initAccountsListeners() {
   $('btn-email-link-confirmed').addEventListener('click', () => submitVerification('continue'));
   $('btn-verify-cancel').addEventListener('click', cancelSignInFlow);
   $('btn-qr-refresh').addEventListener('click', startQrFlow);
+
+  $('btn-switch-to-qr')?.addEventListener('click', () => {
+    $('seg-btn-qr').click();
+  });
+
+  $('btn-retry-core-signin')?.addEventListener('click', async () => {
+    const state = await refreshState();
+    if (state?.coreState === 'online') {
+      showToast('TeroVPN Core connected!');
+    } else if (state?.coreState === 'unauthorized') {
+      showToast('Core found, but token needed in Settings.', true);
+    } else {
+      showToast('Core still offline. Start TeroVPN Desktop first.', true);
+    }
+  });
 }
 
 async function submitSignIn() {

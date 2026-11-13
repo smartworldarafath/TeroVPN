@@ -155,6 +155,14 @@
         <!-- Password Sign-In Form -->
         <div id="signin-password-view">
           <div id="signin-step-credentials">
+            <div id="signin-core-offline-banner" class="info-banner hidden" style="margin-bottom:10px; padding:9px 10px; border-radius:10px; background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.35); font-size:11px; line-height:1.45; color:var(--text-primary);">
+              <div style="font-weight:600; color:#fbbf24; margin-bottom:3px;">TeroVPN Core is Offline (127.0.0.1:10820)</div>
+              <div style="color:var(--text-secondary); margin-bottom:7px;">Email &amp; Password sign-in and VPN tunneling require the TeroVPN Desktop app running. Or use <b>QR Code</b> to sync from your phone without Core.</div>
+              <div style="display:flex; gap:6px;">
+                <button id="btn-switch-to-qr" type="button" class="mini-pill-btn" style="flex:1;">Use QR Code</button>
+                <button id="btn-retry-core-signin" type="button" class="secondary-btn" style="flex:1; padding:4px 8px; font-size:10.5px;">Retry Core</button>
+              </div>
+            </div>
             <input type="email" id="signin-email" class="text-input full-width" placeholder="Mozilla Account Email" autocomplete="email">
             <div class="password-wrap">
               <input type="password" id="signin-password" class="text-input full-width" placeholder="Password" autocomplete="current-password">

@@ -555,17 +555,44 @@ chrome.runtime.onMessage.addListener((req, _sender, sendResponse) => {
       }
 
       // ---- Accounts ----
-      case 'ACCOUNT_ACTIVATE':
-        await core.activateAccount(req.id);
+      case 'ACCOUNT_ACTIVATE': {
+        const probe = await core.probe();
+        if (probe.state === 'online') {
+          await core.activateAccount(req.id);
+        } else {
+          const updated = (state.syncedAccounts || []).map((a) => ({
+            ...a,
+            active: a.id === req.id
+          }));
+          await chrome.storage.local.set({ syncedAccounts: updated });
+        }
         return { success: true };
+      }
 
-      case 'ACCOUNT_TOGGLE':
-        await core.setAccountEnabled(req.id, req.enabled);
+      case 'ACCOUNT_TOGGLE': {
+        const probe = await core.probe();
+        if (probe.state === 'online') {
+          await core.setAccountEnabled(req.id, req.enabled);
+        } else {
+          const updated = (state.syncedAccounts || []).map((a) =>
+            a.id === req.id ? { ...a, enabled: Boolean(req.enabled) } : a
+          );
+          await chrome.storage.local.set({ syncedAccounts: updated });
+        }
         return { success: true };
+      }
 
-      case 'ACCOUNT_REFRESH':
+      case 'ACCOUNT_REFRESH': {
+        const probe = await core.probe();
+        if (probe.state !== 'online') {
+          return {
+            success: false,
+            error: 'Start TeroVPN Core (127.0.0.1:' + (state.coreApiPort || 10820) + ') to refresh live Mozilla quota.'
+          };
+        }
         await core.refreshAccount(req.id);
         return { success: true };
+      }
 
       case 'ACCOUNT_REMOVE': {
         const probe = await core.probe();
