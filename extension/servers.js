@@ -1,202 +1,101 @@
 /**
- * TeroVPN Chrome Extension - Global Server Network Definition
+ * TeroVPN Chrome Extension - Locations, Profiles & DNS Presets
+ * Matches TeroVPN Desktop & Mobile app configurations.
  * Version: 1.2.0
  */
 
-export const SERVERS = [
+export const DEFAULT_LOCATIONS = [
+  { code: 'nl', name: 'Netherlands', city: 'Amsterdam', region: 'Europe', recommended: true, ping_ms: 0 },
+  { code: 'de', name: 'Germany', city: 'Frankfurt', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'us', name: 'United States', city: 'New York', region: 'North America', recommended: false, ping_ms: 0 },
+  { code: 'gb', name: 'United Kingdom', city: 'London', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'jp', name: 'Japan', city: 'Tokyo', region: 'Asia Pacific', recommended: false, ping_ms: 0 },
+  { code: 'sg', name: 'Singapore', city: 'Singapore', region: 'Asia Pacific', recommended: false, ping_ms: 0 },
+  { code: 'ca', name: 'Canada', city: 'Toronto', region: 'North America', recommended: false, ping_ms: 0 },
+  { code: 'ch', name: 'Switzerland', city: 'Zurich', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'fr', name: 'France', city: 'Paris', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'se', name: 'Sweden', city: 'Stockholm', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'no', name: 'Norway', city: 'Oslo', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'fi', name: 'Finland', city: 'Helsinki', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'au', name: 'Australia', city: 'Sydney', region: 'Oceania', recommended: false, ping_ms: 0 },
+  { code: 'kr', name: 'South Korea', city: 'Seoul', region: 'Asia Pacific', recommended: false, ping_ms: 0 },
+  { code: 'br', name: 'Brazil', city: 'Sao Paulo', region: 'South America', recommended: false, ping_ms: 0 },
+  { code: 'es', name: 'Spain', city: 'Madrid', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'it', name: 'Italy', city: 'Milan', region: 'Europe', recommended: false, ping_ms: 0 },
+  { code: 'bd', name: 'Bangladesh', city: 'Dhaka', region: 'South Asia', recommended: false, ping_ms: 0 }
+];
+
+export const PROFILES = [
   {
-    id: 'nl-ams-01',
-    countryCode: 'nl',
-    countryName: 'Netherlands',
-    cityName: 'Amsterdam',
-    region: 'Europe',
-    defaultPing: 18,
-    pingUrl: 'https://speed.cloudflare.com/__down?bytes=0',
-    host: 'nl.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['P2P', 'WireGuard/MASQUE', 'No-Logs']
+    id: 'fastest',
+    name: 'Fastest',
+    subtitle: 'Lowest latency exit node',
+    countryCode: 'auto',
+    transport: 'auto',
+    icon: 'bolt',
+    color: '#10B981'
   },
   {
-    id: 'de-fra-01',
-    countryCode: 'de',
-    countryName: 'Germany',
-    cityName: 'Frankfurt',
-    region: 'Europe',
-    defaultPing: 22,
-    pingUrl: 'https://de.speedtest.net',
-    host: 'de.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['P2P', 'Streaming', 'Anti-DPI']
+    id: 'random',
+    name: 'Random',
+    subtitle: 'Randomized global exit route',
+    countryCode: 'random',
+    transport: 'auto',
+    icon: 'shuffle',
+    color: '#8B5CF6'
   },
   {
-    id: 'us-nyc-01',
+    id: 'streaming',
+    name: 'Streaming',
+    subtitle: 'US High-Throughput 4K route',
     countryCode: 'us',
-    countryName: 'United States',
-    cityName: 'New York',
-    region: 'North America',
-    defaultPing: 32,
-    pingUrl: 'https://us.speedtest.net',
-    host: 'us-east.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Streaming', 'High-Speed', 'No-Logs']
+    transport: 'h2',
+    icon: 'play',
+    color: '#3B82F6'
   },
   {
-    id: 'us-lax-01',
-    countryCode: 'us',
-    countryName: 'United States',
-    cityName: 'Los Angeles',
-    region: 'North America',
-    defaultPing: 45,
-    pingUrl: 'https://us-west.speedtest.net',
-    host: 'us-west.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Streaming', 'Gaming', 'No-Logs']
-  },
-  {
-    id: 'gb-lon-01',
-    countryCode: 'gb',
-    countryName: 'United Kingdom',
-    cityName: 'London',
-    region: 'Europe',
-    defaultPing: 24,
-    pingUrl: 'https://uk.speedtest.net',
-    host: 'gb.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Streaming', 'BBC iPlayer', 'No-Logs']
-  },
-  {
-    id: 'jp-tyo-01',
-    countryCode: 'jp',
-    countryName: 'Japan',
-    cityName: 'Tokyo',
-    region: 'Asia Pacific',
-    defaultPing: 48,
-    pingUrl: 'https://jp.speedtest.net',
-    host: 'jp.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Anime', 'Low-Latency', 'No-Logs']
-  },
-  {
-    id: 'sg-sin-01',
+    id: 'gaming',
+    name: 'Gaming',
+    subtitle: 'Low-jitter Singapore QUIC route',
     countryCode: 'sg',
-    countryName: 'Singapore',
-    cityName: 'Singapore',
-    region: 'Asia Pacific',
-    defaultPing: 29,
-    pingUrl: 'https://sg.speedtest.net',
-    host: 'sg.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Gaming', 'Fiber-Speed', 'No-Logs']
+    transport: 'h3',
+    icon: 'gamepad',
+    color: '#F59E0B'
   },
   {
-    id: 'ca-tor-01',
-    countryCode: 'ca',
-    countryName: 'Canada',
-    cityName: 'Toronto',
-    region: 'North America',
-    defaultPing: 35,
-    pingUrl: 'https://ca.speedtest.net',
-    host: 'ca.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['P2P', 'Streaming', 'No-Logs']
-  },
-  {
-    id: 'ch-zrh-01',
+    id: 'privacy',
+    name: 'Secure Core',
+    subtitle: 'Swiss privacy jurisdiction',
     countryCode: 'ch',
-    countryName: 'Switzerland',
-    cityName: 'Zurich',
-    region: 'Europe',
-    defaultPing: 26,
-    pingUrl: 'https://ch.speedtest.net',
-    host: 'ch.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Maximum Privacy', 'Swiss Law', 'No-Logs']
-  },
-  {
-    id: 'fr-par-01',
-    countryCode: 'fr',
-    countryName: 'France',
-    cityName: 'Paris',
-    region: 'Europe',
-    defaultPing: 25,
-    pingUrl: 'https://fr.speedtest.net',
-    host: 'fr.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Streaming', 'No-Logs']
-  },
-  {
-    id: 'se-sto-01',
-    countryCode: 'se',
-    countryName: 'Sweden',
-    cityName: 'Stockholm',
-    region: 'Europe',
-    defaultPing: 28,
-    pingUrl: 'https://se.speedtest.net',
-    host: 'se.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['High Privacy', 'No-Logs']
-  },
-  {
-    id: 'bd-dac-01',
-    countryCode: 'bd',
-    countryName: 'Bangladesh',
-    cityName: 'Dhaka',
-    region: 'South Asia',
-    defaultPing: 12,
-    pingUrl: 'https://bd.speedtest.net',
-    host: 'bd.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Local Access', 'BDIX Direct', 'No-Logs']
-  },
-  {
-    id: 'au-syd-01',
-    countryCode: 'au',
-    countryName: 'Australia',
-    cityName: 'Sydney',
-    region: 'Oceania',
-    defaultPing: 65,
-    pingUrl: 'https://au.speedtest.net',
-    host: 'au.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Streaming', 'No-Logs']
-  },
-  {
-    id: 'kr-seo-01',
-    countryCode: 'kr',
-    countryName: 'South Korea',
-    cityName: 'Seoul',
-    region: 'Asia Pacific',
-    defaultPing: 42,
-    pingUrl: 'https://kr.speedtest.net',
-    host: 'kr.relay.terovpn.net',
-    port: 443,
-    scheme: 'https',
-    features: ['Ultra-Speed', 'Gaming', 'No-Logs']
+    transport: 'h3',
+    icon: 'shield',
+    color: '#00F0FF'
   }
 ];
 
-export function getDefaultServer() {
-  return SERVERS[0]; // Netherlands
-}
+export const DNS_PRESETS = [
+  { id: 'system', name: 'System / Default', address: '' },
+  { id: 'cloudflare', name: 'Cloudflare (1.1.1.1)', address: 'https://cloudflare-dns.com/dns-query' },
+  { id: 'google', name: 'Google (8.8.8.8)', address: 'https://dns.google/dns-query' },
+  { id: 'quad9', name: 'Quad9 Security (9.9.9.9)', address: 'https://dns.quad9.net/dns-query' },
+  { id: 'adguard', name: 'AdGuard AdBlock', address: 'https://dns.adguard-dns.com/dns-query' }
+];
 
-export function getServerById(id) {
-  return SERVERS.find(s => s.id === id) || getDefaultServer();
-}
+const SUPPORTED_FLAGS = new Set([
+  'ar', 'at', 'au', 'bd', 'be', 'bg', 'br', 'ca', 'ch', 'cl', 'co', 'de',
+  'dk', 'es', 'fi', 'fr', 'gb', 'gh', 'ie', 'is', 'it', 'jp', 'kr', 'mx',
+  'my', 'nl', 'no', 'nz', 'pe', 'ph', 'pt', 'se', 'sg', 'th', 'us', 'za'
+]);
 
 export function getFlagUrl(countryCode) {
   const code = (countryCode || 'nl').toLowerCase();
-  return `flags/${code}.svg`;
+  if (SUPPORTED_FLAGS.has(code)) {
+    return `flags/${code}.svg`;
+  }
+  return 'flags/nl.svg';
+}
+
+export function getLocationByCode(code, list = DEFAULT_LOCATIONS) {
+  const c = (code || '').toLowerCase();
+  return list.find((l) => l.code.toLowerCase() === c) || list[0] || DEFAULT_LOCATIONS[0];
 }

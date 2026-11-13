@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,7 +8,7 @@
 </head>
 <body>
   <div class="app-container">
-    <!-- Header -->
+    <!-- Top Header -->
     <header class="header">
       <div class="brand">
         <img src="icons/icon32.png" alt="TeroVPN Logo" class="brand-logo">
@@ -18,20 +18,25 @@
         </div>
       </div>
       <div class="header-actions">
-        <span id="mode-badge" class="mode-badge" title="Active Routing Mode">AUTO</span>
-        <button id="btn-open-settings" class="icon-btn" title="Settings" aria-label="Settings">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        <span id="core-pill" class="core-pill offline" title="Core Connection Status">CORE: OFFLINE</span>
+        <button id="btn-theme-toggle" class="icon-btn" title="Toggle Dark/Light Theme" aria-label="Toggle Theme">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
           </svg>
         </button>
       </div>
     </header>
 
-    <!-- Main View -->
-    <main class="main-content">
-      <!-- Power Button Card -->
-      <div class="power-card">
+    <!-- Tab: Home -->
+    <section id="tab-home" class="tab-panel active">
+      <!-- Actionable Banner when Core is offline/unauthorized or no account -->
+      <div id="alert-banner" class="alert-banner hidden">
+        <span id="alert-banner-text">TeroVPN Core not connected.</span>
+        <button id="alert-banner-btn" class="alert-btn">Setup</button>
+      </div>
+
+      <!-- Power Hero Card -->
+      <div class="glass-card power-card">
         <div class="power-button-wrapper">
           <div id="glow-ring" class="glow-ring"></div>
           <button id="btn-toggle-vpn" class="power-btn" aria-label="Toggle VPN Connection">
@@ -48,12 +53,13 @@
         </div>
 
         <div class="ip-shield-bar">
-          <div class="ip-display" id="ip-display" title="Click to refresh IP">
+          <div class="ip-display" id="ip-display" title="Click to test/refresh IP">
             <span class="ip-dot"></span>
-            <span id="ip-value">Checking IP...</span>
+            <span id="ip-value">Tap to check IP</span>
           </div>
-          <div id="shield-indicator" class="shield-indicator active" title="WebRTC Leak Protection Active">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button id="btn-test-conn" class="mini-pill-btn" title="Run Connection Test">Test</button>
+          <div id="shield-indicator" class="shield-indicator active" title="WebRTC Leak Shield Active">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             <span>Shield</span>
@@ -61,8 +67,8 @@
         </div>
       </div>
 
-      <!-- Server Selection Card -->
-      <div id="btn-open-servers" class="server-card" role="button" tabindex="0">
+      <!-- Quick Server Selector -->
+      <div id="btn-quick-country" class="glass-card server-card" role="button" tabindex="0">
         <div class="server-flag-wrap">
           <img id="active-flag" src="flags/nl.svg" alt="Flag" class="server-flag">
         </div>
@@ -71,130 +77,287 @@
           <div class="server-city" id="active-city">Amsterdam</div>
         </div>
         <div class="server-meta">
-          <span class="ping-pill" id="active-ping">18 ms</span>
+          <span class="ping-pill" id="active-ping">-- ms</span>
           <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 18 15 12 9 6"></polyline>
           </svg>
         </div>
       </div>
 
-      <!-- Protocol Telemetry Grid -->
+      <!-- Active Account Summary -->
+      <div id="btn-quick-account" class="glass-card account-mini-card" role="button" tabindex="0">
+        <div class="account-avatar" id="mini-account-avatar">?</div>
+        <div class="account-mini-info">
+          <div class="account-mini-email" id="mini-account-email">Not signed in</div>
+          <div class="account-mini-quota" id="mini-account-quota">Tap to sign in with Mozilla or QR</div>
+        </div>
+        <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </div>
+
+      <!-- Telemetry Grid -->
       <div class="telemetry-grid">
         <div class="telemetry-item">
           <span class="telemetry-label">PROTOCOL</span>
-          <span class="telemetry-val" id="telemetry-protocol">MASQUE / HTTP3</span>
+          <span class="telemetry-val" id="telemetry-protocol">SMART</span>
         </div>
         <div class="telemetry-item">
-          <span class="telemetry-label">ENCRYPTION</span>
-          <span class="telemetry-val">ChaCha20</span>
+          <span class="telemetry-label">EXIT</span>
+          <span class="telemetry-val" id="telemetry-exit">--</span>
         </div>
         <div class="telemetry-item">
-          <span class="telemetry-label">CORE</span>
-          <span class="telemetry-val" id="telemetry-core">Scanning...</span>
+          <span class="telemetry-label">SHIELD</span>
+          <span class="telemetry-val" id="telemetry-shield">WebRTC ON</span>
         </div>
       </div>
-    </main>
+    </section>
 
-    <!-- Server Drawer Modal -->
-    <div id="server-modal" class="drawer-modal hidden">
-      <div class="drawer-header">
-        <h3 class="drawer-title">Select Location</h3>
-        <button id="btn-close-servers" class="icon-btn-sm" aria-label="Close">✕</button>
+    <!-- Tab: Countries -->
+    <section id="tab-countries" class="tab-panel">
+      <div class="panel-header">
+        <h3>Locations</h3>
+        <button id="btn-ping-all" class="mini-pill-btn">Ping All</button>
       </div>
       <div class="search-box">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="11" cy="11" r="8"></circle>
           <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
         </svg>
-        <input type="text" id="server-search-input" placeholder="Search country or city..." autocomplete="off">
+        <input type="text" id="country-search-input" placeholder="Search country or city..." autocomplete="off">
       </div>
-      <div class="server-list" id="server-list-container">
-        <!-- Rendered dynamically -->
+      <div id="country-list-container" class="scroll-list"></div>
+    </section>
+
+    <!-- Tab: Profiles -->
+    <section id="tab-profiles" class="tab-panel">
+      <div class="panel-header">
+        <h3>Proton Profiles</h3>
+        <span class="sub-badge">1-Tap Presets</span>
       </div>
-    </div>
+      <div id="profiles-list-container" class="scroll-list"></div>
+    </section>
 
-    <!-- Settings Drawer Modal -->
-    <div id="settings-modal" class="drawer-modal hidden">
-      <div class="drawer-header">
-        <h3 class="drawer-title">Extension Settings</h3>
-        <button id="btn-close-settings" class="icon-btn-sm" aria-label="Close">✕</button>
+    <!-- Tab: Accounts & Login -->
+    <section id="tab-accounts" class="tab-panel">
+      <div class="panel-header">
+        <h3>Accounts & Sign In</h3>
+        <button id="btn-toggle-signin-panel" class="mini-pill-btn">+ Sign In</button>
       </div>
-      <div class="settings-content">
-        <div class="setting-group">
-          <label class="setting-label">Routing Mode</label>
-          <select id="setting-routing-mode" class="select-input">
-            <option value="auto">Auto (Desktop Core, Fallback Cloud Relay)</option>
-            <option value="core">Desktop Core Only (127.0.0.1:10810)</option>
-            <option value="relay">Cloud Relay Network Only</option>
-            <option value="custom">Custom Proxy Server</option>
-          </select>
+
+      <!-- Sign-In Container -->
+      <div id="signin-panel" class="glass-card signin-card hidden">
+        <div class="segmented-tabs">
+          <button id="seg-btn-password" class="seg-btn active">Email & Password</button>
+          <button id="seg-btn-qr" class="seg-btn">QR Code</button>
         </div>
 
-        <div id="custom-proxy-fields" class="setting-group hidden">
-          <label class="setting-label">Custom Proxy Host & Port</label>
-          <div class="inline-inputs">
-            <input type="text" id="setting-custom-host" placeholder="e.g. 192.168.1.100" class="text-input flex-2">
-            <input type="number" id="setting-custom-port" placeholder="8080" class="text-input flex-1">
-          </div>
-          <select id="setting-custom-scheme" class="select-input" style="margin-top: 8px;">
-            <option value="https">HTTPS</option>
-            <option value="socks5">SOCKS5</option>
-            <option value="http">HTTP</option>
-          </select>
-        </div>
-
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <span class="toggle-title">WebRTC Leak Shield</span>
-            <span class="toggle-desc">Blocks unproxied UDP to stop WebRTC IP leakage</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="setting-webrtc-shield" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <span class="toggle-title">Bypass Local Networks</span>
-            <span class="toggle-desc">Direct access to localhost, LAN & private IPs</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="setting-bypass-local" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="toggle-row">
-          <div class="toggle-info">
-            <span class="toggle-title">Auto-Connect on Startup</span>
-            <span class="toggle-desc">Secure browser automatically when Chrome starts</span>
-          </div>
-          <label class="switch">
-            <input type="checkbox" id="setting-auto-connect">
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting-group" style="margin-top: 14px;">
-          <label class="setting-label">Desktop Core Ports</label>
-          <div class="inline-inputs">
-            <div class="input-labeled">
-              <span>API Port</span>
-              <input type="number" id="setting-core-api-port" value="10820" class="text-input">
+        <!-- Password Sign-In Form -->
+        <div id="signin-password-view">
+          <div id="signin-step-credentials">
+            <input type="email" id="signin-email" class="text-input full-width" placeholder="Mozilla Account Email" autocomplete="email">
+            <div class="password-wrap">
+              <input type="password" id="signin-password" class="text-input full-width" placeholder="Password" autocomplete="current-password">
+              <button id="btn-toggle-pw" type="button" class="pw-eye" title="Show/Hide Password">👁</button>
             </div>
-            <div class="input-labeled">
-              <span>Proxy Port</span>
-              <input type="number" id="setting-core-proxy-port" value="10810" class="text-input">
+            <button id="btn-signin-submit" class="primary-btn full-width">Sign In to Mozilla</button>
+          </div>
+
+          <!-- Secondary Verification Step (2FA / Email Code / Email Link / Unblock / Captcha) -->
+          <div id="signin-step-verify" class="hidden">
+            <div id="verify-title" class="verify-title">Verification Required</div>
+            <div id="verify-desc" class="verify-desc">Enter the verification code sent to your email.</div>
+            <img id="verify-captcha-img" class="captcha-img hidden" alt="Captcha">
+            <input type="text" id="verify-code-input" class="text-input full-width" placeholder="Enter code">
+            <div class="verify-actions">
+              <button id="btn-verify-submit" class="primary-btn flex-2">Verify & Continue</button>
+              <button id="btn-verify-cancel" class="secondary-btn flex-1">Cancel</button>
             </div>
+            <button id="btn-email-link-confirmed" class="primary-btn full-width hidden">I Confirmed in Email</button>
+          </div>
+
+          <div id="signin-error" class="error-box hidden"></div>
+          <div id="signin-success" class="success-box hidden">Signed in successfully!</div>
+        </div>
+
+        <!-- QR Code Sign-In View -->
+        <div id="signin-qr-view" class="hidden">
+          <div class="qr-wrapper">
+            <div id="qr-svg-container" class="qr-box">Generating QR...</div>
+            <div class="qr-meta">
+              <span id="qr-status-text">Waiting for mobile scan...</span>
+              <span id="qr-countdown" class="qr-timer">05:00</span>
+            </div>
+            <p class="qr-hint">Open TeroVPN Mobile App → Settings → Scan QR Code to sync your account instantly via E2EE.</p>
+            <button id="btn-qr-refresh" class="secondary-btn full-width">Refresh QR Code</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Accounts List -->
+      <div id="accounts-list-container" class="scroll-list"></div>
+    </section>
+
+    <!-- Tab: Settings -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="panel-header">
+        <h3>Settings</h3>
+        <button id="btn-open-options-page" class="mini-pill-btn">Full View</button>
+      </div>
+      <div class="scroll-list settings-scroll">
+        <!-- Core Pairing Card -->
+        <div class="glass-card setting-card">
+          <div class="setting-card-title">Desktop Core Bridge</div>
+          <div class="setting-group">
+            <label class="setting-label">Routing Mode</label>
+            <select id="setting-routing-mode" class="select-input">
+              <option value="core">TeroVPN Core (127.0.0.1:10810)</option>
+              <option value="custom">Custom Proxy Server (HTTPS / SOCKS5)</option>
+            </select>
+          </div>
+
+          <div id="core-config-fields">
+            <div class="inline-inputs" style="margin-top:8px;">
+              <div class="input-labeled">
+                <span>API Port</span>
+                <input type="number" id="setting-core-api-port" value="10820" class="text-input">
+              </div>
+              <div class="input-labeled">
+                <span>Proxy Port</span>
+                <input type="number" id="setting-core-proxy-port" value="10810" class="text-input">
+              </div>
+            </div>
+            <div class="setting-group" style="margin-top:8px;">
+              <label class="setting-label">Core Auth Token (local-api.token)</label>
+              <input type="password" id="setting-core-token" placeholder="Paste token or import file below" class="text-input">
+              <div class="inline-inputs" style="margin-top:6px;">
+                <label class="secondary-btn flex-1 file-btn">
+                  Import File
+                  <input type="file" id="input-token-file" accept=".token,.txt,*" class="hidden">
+                </label>
+                <button id="btn-test-core" type="button" class="secondary-btn flex-1">Test Core</button>
+              </div>
+              <div id="core-test-result" class="mini-status hidden"></div>
+            </div>
+          </div>
+
+          <div id="custom-proxy-fields" class="hidden" style="margin-top:8px;">
+            <label class="setting-label">Custom Proxy Server</label>
+            <div class="inline-inputs">
+              <input type="text" id="setting-custom-host" placeholder="Host / IP" class="text-input flex-2">
+              <input type="number" id="setting-custom-port" placeholder="8080" class="text-input flex-1">
+            </div>
+            <select id="setting-custom-scheme" class="select-input" style="margin-top:6px;">
+              <option value="https">HTTPS</option>
+              <option value="socks5">SOCKS5</option>
+              <option value="http">HTTP</option>
+            </select>
           </div>
         </div>
 
-        <button id="btn-save-settings" class="primary-btn">Save Settings</button>
-      </div>
-    </div>
+        <!-- Protocol & Privacy Card -->
+        <div class="glass-card setting-card">
+          <div class="setting-card-title">Protocol & Privacy</div>
+          <div class="setting-group">
+            <label class="setting-label">Transport Protocol</label>
+            <select id="setting-transport" class="select-input">
+              <option value="auto">Smart (Auto)</option>
+              <option value="h3">MASQUE HTTP/3 (QUIC)</option>
+              <option value="h2">HTTP/2 TLS Tunnel</option>
+            </select>
+          </div>
+          <div class="setting-group" style="margin-top:8px;">
+            <label class="setting-label">DNS Preset</label>
+            <select id="setting-dns-preset" class="select-input">
+              <option value="system">System / Default</option>
+              <option value="cloudflare">Cloudflare (1.1.1.1)</option>
+              <option value="google">Google (8.8.8.8)</option>
+              <option value="quad9">Quad9 Security (9.9.9.9)</option>
+              <option value="adguard">AdGuard AdBlock</option>
+            </select>
+          </div>
 
-    <!-- Notification Toast -->
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">WebRTC Leak Shield</span>
+              <span class="toggle-desc">Blocks non-proxied UDP IP leaks</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-webrtc-shield" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Bypass Local Networks</span>
+              <span class="toggle-desc">Direct access for localhost & LAN</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-bypass-local" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <span class="toggle-title">Auto-Connect on Startup</span>
+              <span class="toggle-desc">Connect automatically when Chrome starts</span>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="setting-auto-connect">
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="setting-group" style="margin-top:8px;">
+            <label class="setting-label">Split Tunneling Bypass Domains</label>
+            <input type="text" id="setting-bypass-domains" placeholder="*.local, intranet.corp" class="text-input">
+          </div>
+        </div>
+
+        <button id="btn-save-settings" class="primary-btn full-width">Save Settings</button>
+      </div>
+    </section>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="tab-home">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        <span>Home</span>
+      </button>
+      <button class="nav-item" data-tab="tab-countries">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        <span>Countries</span>
+      </button>
+      <button class="nav-item" data-tab="tab-profiles">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+        </svg>
+        <span>Profiles</span>
+      </button>
+      <button class="nav-item" data-tab="tab-accounts">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span>Accounts</span>
+      </button>
+      <button class="nav-item" data-tab="tab-settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
     <div id="toast" class="toast hidden"></div>
   </div>
 

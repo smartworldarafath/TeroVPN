@@ -3,128 +3,153 @@
  * Version: 1.2.0
  */
 
-const optRoutingMode = document.getElementById('opt-routing-mode');
-const optCustomFields = document.getElementById('opt-custom-fields');
-const optCustomHost = document.getElementById('opt-custom-host');
-const optCustomPort = document.getElementById('opt-custom-port');
-const optCustomScheme = document.getElementById('opt-custom-scheme');
-const optCoreApiPort = document.getElementById('opt-core-api-port');
-const optCoreProxyPort = document.getElementById('opt-core-proxy-port');
-const optWebrtcShield = document.getElementById('opt-webrtc-shield');
-const optBypassLocal = document.getElementById('opt-bypass-local');
-const optAutoConnect = document.getElementById('opt-auto-connect');
-
-const btnTestCore = document.getElementById('btn-test-core');
-const btnTestIp = document.getElementById('btn-test-ip');
-const diagOutput = document.getElementById('diag-output');
-const btnSaveOptions = document.getElementById('btn-save-options');
-const btnResetDefaults = document.getElementById('btn-reset-defaults');
-const toast = document.getElementById('toast');
+const $ = (id) => document.getElementById(id);
 
 document.addEventListener('DOMContentLoaded', async () => {
   await loadOptions();
   initListeners();
 });
 
-async function loadOptions() {
-  const state = await chrome.storage.local.get(null);
-  optRoutingMode.value = state.routingMode || 'auto';
-  optCustomHost.value = state.customProxyHost || '';
-  optCustomPort.value = state.customProxyPort || 8080;
-  optCustomScheme.value = state.customProxyScheme || 'https';
-  optCoreApiPort.value = state.coreApiPort || 10820;
-  optCoreProxyPort.value = state.coreProxyPort || 10810;
-  optWebrtcShield.checked = state.webrtcShield !== false;
-  optBypassLocal.checked = state.bypassLocal !== false;
-  optAutoConnect.checked = !!state.autoConnect;
-
-  toggleCustom(optRoutingMode.value);
+function sendMsg(payload) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage(payload, (res) => resolve(res || {}));
+  });
 }
 
-function toggleCustom(mode) {
-  if (mode === 'custom') {
-    optCustomFields.classList.remove('hidden');
-  } else {
-    optCustomFields.classList.add('hidden');
-  }
+async function loadOptions() {
+  const state = await chrome.storage.local.get(null);
+  document.documentElement.setAttribute('data-theme', state.theme || 'dark');
+  $('opt-routing-mode').value = state.routingMode || 'core';
+  $('opt-core-api-port').value = state.coreApiPort || 10820;
+  $('opt-core-proxy-port').value = state.coreProxyPort || 10810;
+  $('opt-core-token').value = state.coreToken || '';
+  $('opt-custom-host').value = state.customProxyHost || '';
+  $('opt-custom-port').value = state.customProxyPort || 8080;
+  $('opt-custom-scheme').value = state.customProxyScheme || 'https';
+  $('opt-transport').value = state.transport || 'auto';
+  $('opt-dns-preset').value = state.dnsPreset || 'system';
+  $('opt-webrtc-shield').checked = state.webrtcShield !== false;
+  $('opt-bypass-local').checked = state.bypassLocal !== false;
+  $('opt-auto-connect').checked = Boolean(state.autoConnect);
+  $('opt-bypass-domains').value = (state.splitBypassDomains || []).join(', ');
+  toggleModeFields($('opt-routing-mode').value);
+}
+
+function toggleModeFields(mode) {
+  const isCustom = mode === 'custom';
+  $('opt-core-fields').classList.toggle('hidden', isCustom);
+  $('opt-custom-fields').classList.toggle('hidden', !isCustom);
 }
 
 function showToast(msg) {
+  const toast = $('toast');
   toast.textContent = msg;
   toast.classList.remove('hidden');
-  setTimeout(() => {
-    toast.classList.add('hidden');
-  }, 2200);
+  setTimeout(() => toast.classList.add('hidden'), 2400);
 }
 
 function initListeners() {
-  optRoutingMode.addEventListener('change', (e) => {
-    toggleCustom(e.target.value);
+  $('opt-routing-mode').addEventListener('change', (e) => {
+    toggleModeFields(e.target.value);
   });
 
-  btnSaveOptions.addEventListener('click', async () => {
+  $('opt-token-file').addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const token = String(reader.result || '').trim();
+      if (token) {
+        $('opt-core-token').value = token;
+        showToast('Token imported from file');
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  $('btn-save-options').addEventListener('click', async () => {
+    const rawDomains = $('opt-bypass-domains').value
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     const updated = {
-      routingMode: optRoutingMode.value,
-      customProxyHost: optCustomHost.value.trim(),
-      customProxyPort: Number(optCustomPort.value) || 8080,
-      customProxyScheme: optCustomScheme.value,
-      coreApiPort: Number(optCoreApiPort.value) || 10820,
-      coreProxyPort: Number(optCoreProxyPort.value) || 10810,
-      webrtcShield: optWebrtcShield.checked,
-      bypassLocal: optBypassLocal.checked,
-      autoConnect: optAutoConnect.checked
+      routingMode: $('opt-routing-mode').value,
+      coreApiPort: Number($('opt-core-api-port').value) || 10820,
+      coreProxyPort: Number($('opt-core-proxy-port').value) || 10810,
+      coreToken: $('opt-core-token').value.trim(),
+      customProxyHost: $('opt-custom-host').value.trim(),
+      customProxyPort: Number($('opt-custom-port').value) || 8080,
+      customProxyScheme: $('opt-custom-scheme').value,
+      transport: $('opt-transport').value,
+      dnsPreset: $('opt-dns-preset').value,
+      webrtcShield: $('opt-webrtc-shield').checked,
+      bypassLocal: $('opt-bypass-local').checked,
+      autoConnect: $('opt-auto-connect').checked,
+      splitBypassDomains: rawDomains
     };
 
-    chrome.runtime.sendMessage({ action: 'UPDATE_SETTINGS', settings: updated }, () => {
-      showToast('Preferences saved successfully!');
-    });
+    await sendMsg({ action: 'UPDATE_SETTINGS', settings: updated });
+    showToast('Preferences saved successfully!');
   });
 
-  btnResetDefaults.addEventListener('click', async () => {
-    optRoutingMode.value = 'auto';
-    optCustomHost.value = '';
-    optCustomPort.value = 8080;
-    optCustomScheme.value = 'https';
-    optCoreApiPort.value = 10820;
-    optCoreProxyPort.value = 10810;
-    optWebrtcShield.checked = true;
-    optBypassLocal.checked = true;
-    optAutoConnect.checked = false;
-    toggleCustom('auto');
-    showToast('Reset to defaults. Remember to click Save.');
+  $('btn-reset-defaults').addEventListener('click', () => {
+    $('opt-routing-mode').value = 'core';
+    $('opt-core-api-port').value = 10820;
+    $('opt-core-proxy-port').value = 10810;
+    $('opt-custom-host').value = '';
+    $('opt-custom-port').value = 8080;
+    $('opt-custom-scheme').value = 'https';
+    $('opt-transport').value = 'auto';
+    $('opt-dns-preset').value = 'system';
+    $('opt-webrtc-shield').checked = true;
+    $('opt-bypass-local').checked = true;
+    $('opt-auto-connect').checked = false;
+    $('opt-bypass-domains').value = '';
+    toggleModeFields('core');
+    showToast('Reset to defaults. Click Save Preferences to apply.');
   });
 
-  btnTestCore.addEventListener('click', async () => {
-    diagOutput.textContent = 'Probing local TeroVPN Core at 127.0.0.1...';
-    const port = Number(optCoreApiPort.value) || 10820;
+  $('btn-test-core').addEventListener('click', async () => {
+    const out = $('diag-output');
+    out.textContent = 'Probing TeroVPN Core on 127.0.0.1...';
+    const port = Number($('opt-core-api-port').value) || 10820;
+    const token = $('opt-core-token').value.trim();
 
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/api/status`);
-      if (res.ok) {
-        const data = await res.json();
-        diagOutput.textContent = `[SUCCESS] TeroVPN Desktop Core is ONLINE!\nEndpoint: http://127.0.0.1:${port}/api/status\nPhase: ${data.state?.phase || 'unknown'}\nProxy Listen: ${data.proxy?.listen || '127.0.0.1:10810'}\nExit Country: ${data.proxy?.country_code || 'none'}`;
-      } else {
-        diagOutput.textContent = `[WARNING] Core replied with HTTP ${res.status} ${res.statusText}.\nMake sure TeroVPN Desktop is running.`;
-      }
-    } catch (e) {
-      diagOutput.textContent = `[INFO] Desktop Core not detected at 127.0.0.1:${port} (${e.message}).\nExtension will automatically route traffic through TeroVPN Standalone Cloud Relays.`;
+    const res = await sendMsg({ action: 'TEST_CORE', port, token });
+    if (res.state === 'online') {
+      const s = res.status || {};
+      out.textContent =
+        `[SUCCESS] TeroVPN Core is ONLINE & AUTHORIZED\n` +
+        `Phase: ${s.state?.phase || 'unknown'}\n` +
+        `Proxy Listen: ${s.proxy?.listen || '127.0.0.1:10810'}\n` +
+        `Country: ${s.proxy?.country_name || s.proxy?.country_code || 'auto'}\n` +
+        `Transport: ${s.proxy?.transport || 'smart'}`;
+    } else if (res.state === 'unauthorized') {
+      out.textContent =
+        `[UNAUTHORIZED] Core responded on port ${port}, but X-Local-Token was rejected.\n` +
+        `Import your local-api.token file above and click Save Preferences.`;
+    } else {
+      out.textContent =
+        `[OFFLINE] Could not reach TeroVPN Core on 127.0.0.1:${port}.\n` +
+        `Please make sure TeroVPN Desktop is running.`;
     }
   });
 
-  btnTestIp.addEventListener('click', async () => {
-    diagOutput.textContent = 'Resolving current browser egress IP...';
-    try {
-      const start = Date.now();
-      const res = await fetch('https://api.ipify.org?format=json');
-      const latency = Date.now() - start;
-      if (res.ok) {
-        const json = await res.json();
-        diagOutput.textContent = `[SUCCESS] Current Egress Public IP: ${json.ip}\nResponse latency: ${latency} ms\nStatus: Securely Routed`;
-      } else {
-        diagOutput.textContent = `[ERROR] Failed to query IP service: ${res.status}`;
-      }
-    } catch (e) {
-      diagOutput.textContent = `[ERROR] Diagnostic check failed: ${e.message}`;
+  $('btn-test-ip').addEventListener('click', async () => {
+    const out = $('diag-output');
+    out.textContent = 'Checking browser egress IP...';
+    const start = Date.now();
+    const res = await sendMsg({ action: 'REFRESH_IP' });
+    const ms = Date.now() - start;
+    if (res && res.ip) {
+      out.textContent =
+        `[SUCCESS] Public Egress IP: ${res.ip}\n` +
+        `Location: ${res.city ? res.city + ', ' : ''}${res.country || 'Unknown'}\n` +
+        `ISP / Network: ${res.isp || 'Unknown'}\n` +
+        `Latency: ${ms} ms`;
+    } else {
+      out.textContent = '[ERROR] Unable to resolve public IP.';
     }
   });
 }
