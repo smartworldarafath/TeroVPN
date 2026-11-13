@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TeroVPN Client</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <img src="icons/icon32.png" alt="TeroVPN Logo" class="brand-logo">
+        <div class="brand-text">
+          <span class="brand-title">TeroVPN</span>
+          <span class="version-tag">v1.2.0</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="mode-badge" class="mode-badge" title="Active Routing Mode">AUTO</span>
+        <button id="btn-open-settings" class="icon-btn" title="Settings" aria-label="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main View -->
+    <main class="main-content">
+      <!-- Power Button Card -->
+      <div class="power-card">
+        <div class="power-button-wrapper">
+          <div id="glow-ring" class="glow-ring"></div>
+          <button id="btn-toggle-vpn" class="power-btn" aria-label="Toggle VPN Connection">
+            <svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+              <line x1="12" y1="2" x2="12" y2="12"></line>
+            </svg>
+          </button>
+        </div>
+
+        <div class="connection-status-block">
+          <div id="status-text" class="status-text disconnected">DISCONNECTED</div>
+          <div id="uptime-counter" class="uptime-counter">00:00:00</div>
+        </div>
+
+        <div class="ip-shield-bar">
+          <div class="ip-display" id="ip-display" title="Click to refresh IP">
+            <span class="ip-dot"></span>
+            <span id="ip-value">Checking IP...</span>
+          </div>
+          <div id="shield-indicator" class="shield-indicator active" title="WebRTC Leak Protection Active">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Shield</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Server Selection Card -->
+      <div id="btn-open-servers" class="server-card" role="button" tabindex="0">
+        <div class="server-flag-wrap">
+          <img id="active-flag" src="flags/nl.svg" alt="Flag" class="server-flag">
+        </div>
+        <div class="server-info">
+          <div class="server-country" id="active-country">Netherlands</div>
+          <div class="server-city" id="active-city">Amsterdam</div>
+        </div>
+        <div class="server-meta">
+          <span class="ping-pill" id="active-ping">18 ms</span>
+          <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Protocol Telemetry Grid -->
+      <div class="telemetry-grid">
+        <div class="telemetry-item">
+          <span class="telemetry-label">PROTOCOL</span>
+          <span class="telemetry-val" id="telemetry-protocol">MASQUE / HTTP3</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-label">ENCRYPTION</span>
+          <span class="telemetry-val">ChaCha20</span>
+        </div>
+        <div class="telemetry-item">
+          <span class="telemetry-label">CORE</span>
+          <span class="telemetry-val" id="telemetry-core">Scanning...</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- Server Drawer Modal -->
+    <div id="server-modal" class="drawer-modal hidden">
+      <div class="drawer-header">
+        <h3 class="drawer-title">Select Location</h3>
+        <button id="btn-close-servers" class="icon-btn-sm" aria-label="Close">✕</button>
+      </div>
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="server-search-input" placeholder="Search country or city..." autocomplete="off">
+      </div>
+      <div class="server-list" id="server-list-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Settings Drawer Modal -->
+    <div id="settings-modal" class="drawer-modal hidden">
+      <div class="drawer-header">
+        <h3 class="drawer-title">Extension Settings</h3>
+        <button id="btn-close-settings" class="icon-btn-sm" aria-label="Close">✕</button>
+      </div>
+      <div class="settings-content">
+        <div class="setting-group">
+          <label class="setting-label">Routing Mode</label>
+          <select id="setting-routing-mode" class="select-input">
+            <option value="auto">Auto (Desktop Core, Fallback Cloud Relay)</option>
+            <option value="core">Desktop Core Only (127.0.0.1:10810)</option>
+            <option value="relay">Cloud Relay Network Only</option>
+            <option value="custom">Custom Proxy Server</option>
+          </select>
+        </div>
+
+        <div id="custom-proxy-fields" class="setting-group hidden">
+          <label class="setting-label">Custom Proxy Host & Port</label>
+          <div class="inline-inputs">
+            <input type="text" id="setting-custom-host" placeholder="e.g. 192.168.1.100" class="text-input flex-2">
+            <input type="number" id="setting-custom-port" placeholder="8080" class="text-input flex-1">
+          </div>
+          <select id="setting-custom-scheme" class="select-input" style="margin-top: 8px;">
+            <option value="https">HTTPS</option>
+            <option value="socks5">SOCKS5</option>
+            <option value="http">HTTP</option>
+          </select>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-title">WebRTC Leak Shield</span>
+            <span class="toggle-desc">Blocks unproxied UDP to stop WebRTC IP leakage</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-webrtc-shield" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-title">Bypass Local Networks</span>
+            <span class="toggle-desc">Direct access to localhost, LAN & private IPs</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-bypass-local" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-title">Auto-Connect on Startup</span>
+            <span class="toggle-desc">Secure browser automatically when Chrome starts</span>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="setting-auto-connect">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-group" style="margin-top: 14px;">
+          <label class="setting-label">Desktop Core Ports</label>
+          <div class="inline-inputs">
+            <div class="input-labeled">
+              <span>API Port</span>
+              <input type="number" id="setting-core-api-port" value="10820" class="text-input">
+            </div>
+            <div class="input-labeled">
+              <span>Proxy Port</span>
+              <input type="number" id="setting-core-proxy-port" value="10810" class="text-input">
+            </div>
+          </div>
+        </div>
+
+        <button id="btn-save-settings" class="primary-btn">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -12,7 +12,8 @@
 
 <p align="center">
   <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><img src="https://img.shields.io/github/v/release/smartworldarafath/TeroVPN?color=6B42FF&label=Release&style=for-the-badge" alt="Latest Release"></a>
-  <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-6B42FF?style=for-the-badge" alt="Platforms">
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.0"><img src="https://img.shields.io/badge/Chrome%20Extension-v1.2.0%20(MV3)-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Extension"></a>
+  <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Chrome-6B42FF?style=for-the-badge" alt="Platforms">
   <img src="https://img.shields.io/badge/Transport-MASQUE%20HTTP%2F3%20QUIC%20RFC9298-2CFFCC?style=for-the-badge&logo=wireguard&logoColor=black" alt="WireGuard MASQUE">
   <img src="https://img.shields.io/badge/Network-Fastly%20Global%20Anycast-FF9900?style=for-the-badge&logo=fastly&logoColor=white" alt="Fastly Edge">
   <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License">
@@ -115,6 +116,18 @@ The system delivers native line-speed bandwidth, instant connection migration, m
         <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><strong>Get Android (.apk)</strong></a>
       </td>
     </tr>
+    <tr>
+      <td align="center">
+        <img src="https://img.icons8.com/color/1200/chrome--v1.png" width="36" height="36" alt="Chrome Extension" /><br>
+        <strong>Chrome Extension</strong>
+      </td>
+      <td>Google Chrome, Microsoft Edge, Brave, Opera (Chromium 88+)</td>
+      <td>ZIP Package (.zip)<br>Manifest V3</td>
+      <td>Native WebExtensions Proxy API with WebRTC Leak Shield, auto-bridge & cloud relays</td>
+      <td align="center">
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.0/TeroVPN-Chrome-Extension-v1.2.0.zip"><strong>Get Extension (.zip)</strong></a>
+      </td>
+    </tr>
   </tbody>
 </table>
 
@@ -215,6 +228,42 @@ Real-time geographic visualization rendered on the client dashboard:
 
 ---
 
+## 🌐 Chrome Extension (Manifest V3)
+
+The official **TeroVPN Chrome Extension** brings high-speed proxy routing and privacy shields directly to Chromium-based browsers (Google Chrome, Microsoft Edge, Brave, Opera, Vivaldi).
+
+### Key Features
+- **Dual-Engine Routing Architecture**:
+  - **Desktop Core Auto-Bridge**: When TeroVPN Desktop is running, the extension automatically discovers the local core (`127.0.0.1:10820` / `10810`), syncing your active connection and routing browser traffic through the native WireGuard/MASQUE tunnel.
+  - **Standalone Cloud Relays**: Works completely independently if the desktop app is not installed, routing traffic through TeroVPN's high-speed Anycast global relay network.
+- **WebRTC Leak Shield**: Actively enforces `disable_non_proxied_udp` via the Chromium Privacy API, preventing IP disclosures via WebRTC STUN/ICE queries.
+- **Smart Local Bypass**: Intelligently bypasses `localhost`, `127.0.0.1`, RFC 1918 private subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), and `.local` mDNS domains.
+- **Liquid Glass Interface**: Obsidian & neon purple aesthetic matching TeroVPN's mobile and desktop applications with live session uptime, connection status, latency ping badges, and country search.
+- **Global Exit Nodes**: One-click connection to 14+ high-speed locations (Netherlands, Germany, United States, United Kingdom, Japan, Singapore, Canada, Switzerland, France, Sweden, Bangladesh, Australia, South Korea, etc.).
+
+### Installation Guide
+
+#### Option A: Quick Install via Release ZIP (Recommended)
+1. Download **[TeroVPN-Chrome-Extension-v1.2.0.zip](https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.0/TeroVPN-Chrome-Extension-v1.2.0.zip)** from GitHub Releases.
+2. Extract the downloaded ZIP archive to a folder of your choice (e.g., `Documents/TeroVPN-Extension`).
+3. Open your browser and navigate to the Extensions management page:
+   - **Chrome**: `chrome://extensions`
+   - **Edge**: `edge://extensions`
+   - **Brave**: `brave://extensions`
+4. Toggle on **Developer mode** (top-right corner).
+5. Click **Load unpacked** (top-left button) and select the extracted folder (containing `manifest.json`).
+6. Click the extension puzzle icon in your browser toolbar, pin **TeroVPN**, and click the power button to connect!
+
+#### Option B: Load from Source Repository
+```bash
+git clone https://github.com/smartworldarafath/TeroVPN.git
+cd TeroVPN
+# Extension source code is located in the extension/ directory
+# Follow steps 3-6 above and select the 'extension' directory
+```
+
+---
+
 ## Source Compilation
 
 ### System Prerequisites
@@ -276,6 +325,14 @@ TeroVPN/
 │   ├── branding/             # Official app icons and brand assets
 │   │   └── platforms/        # Official operating system platform marks
 │   └── screenshots/          # Application interface captures
+├── extension/                # Official Chrome / Chromium Browser Extension (Manifest V3)
+│   ├── flags/                # High-res SVG national country flags
+│   ├── icons/                # Extension action & store icons (16, 32, 48, 128px)
+│   ├── background.js         # Service worker & proxy engine controller
+│   ├── proxy-rules.js        # Dynamic PAC script generator & routing rules
+│   ├── servers.js            # Global high-speed Anycast exit node directory
+│   ├── popup.html / popup.js # Liquid Glass interface & connection controller
+│   └── manifest.json         # Manifest V3 specification
 ├── linux/
 │   └── appimage/             # AppRun and desktop entry for AppImage builds
 ├── windows/

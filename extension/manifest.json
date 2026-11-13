@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "TeroVPN - Secure High-Speed Proxy & VPN",
+  "version": "1.2.0",
+  "description": "Next-generation high-speed proxy and secure VPN client for Chrome. Powered by TeroVPN with WebRTC leak shield and one-click smart routing.",
+  "author": "smartworldarafath",
+  "homepage_url": "https://github.com/smartworldarafath/TeroVPN",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png"
+    },
+    "default_title": "TeroVPN (Disconnected)",
+    "default_popup": "popup.html"
+  },
+  "permissions": [
+    "proxy",
+    "storage",
+    "alarms",
+    "privacy"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}
