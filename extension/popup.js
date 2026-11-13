@@ -16,6 +16,7 @@ let qrCountdownTimer = null;
 let activeQrSession = null;
 let activeSignInId = null;
 let emailLinkPollTimer = null;
+let userSelectedAuthTab = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
   initNavigation();
@@ -375,15 +376,30 @@ function renderProfiles() {
 
 // ---------------- Accounts & Sign-In Tab ----------------
 function renderAccounts(accounts, coreState = 'offline') {
+  const isCoreOnline = coreState === 'online';
   const offlineBanner = $('signin-core-offline-banner');
   if (offlineBanner) {
-    offlineBanner.classList.toggle('hidden', coreState === 'online');
+    offlineBanner.classList.toggle('hidden', isCoreOnline);
+  }
+  const credFields = $('signin-credentials-fields');
+  if (credFields) {
+    credFields.classList.toggle('hidden', !isCoreOnline);
+  }
+  if (!isCoreOnline) {
+    $('signin-error').classList.add('hidden');
   }
   const container = $('accounts-list-container');
   container.innerHTML = '';
 
   if (!accounts || accounts.length === 0) {
     $('signin-panel').classList.remove('hidden');
+    if (!isCoreOnline && !userSelectedAuthTab && !$('seg-btn-qr').classList.contains('active')) {
+      $('seg-btn-qr').classList.add('active');
+      $('seg-btn-password').classList.remove('active');
+      $('signin-qr-view').classList.remove('hidden');
+      $('signin-password-view').classList.add('hidden');
+      startQrFlow();
+    }
     container.innerHTML = '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:11.5px;">No accounts signed in yet. Use the Sign In panel above.</div>';
     return;
   }
@@ -440,6 +456,7 @@ function initAccountsListeners() {
   });
 
   $('seg-btn-password').addEventListener('click', () => {
+    userSelectedAuthTab = true;
     $('seg-btn-password').classList.add('active');
     $('seg-btn-qr').classList.remove('active');
     $('signin-password-view').classList.remove('hidden');
@@ -448,6 +465,7 @@ function initAccountsListeners() {
   });
 
   $('seg-btn-qr').addEventListener('click', () => {
+    userSelectedAuthTab = true;
     $('seg-btn-qr').classList.add('active');
     $('seg-btn-password').classList.remove('active');
     $('signin-qr-view').classList.remove('hidden');
@@ -468,6 +486,10 @@ function initAccountsListeners() {
 
   $('btn-switch-to-qr')?.addEventListener('click', () => {
     $('seg-btn-qr').click();
+  });
+
+  $('btn-download-desktop')?.addEventListener('click', () => {
+    chrome.tabs.create({ url: 'https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.0' });
   });
 
   $('btn-retry-core-signin')?.addEventListener('click', async () => {
