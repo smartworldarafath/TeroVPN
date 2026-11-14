@@ -17,7 +17,7 @@ foreach ($browser in $browsers) {
     Start-Sleep -Seconds 3
 
     if (-not $proc.HasExited) {
-        Write-Host "✅ SUCCESS: $bName successfully loaded unpacked TeroVPN v1.2.0 extension!"
+        Write-Host "✅ SUCCESS: $bName successfully loaded unpacked TeroVPN v1.2.5 extension!"
         $proc.Kill()
     } else {
         Write-Host "❌ FAILED: $bName exited prematurely with code $($proc.ExitCode)"

@@ -46,7 +46,7 @@ class AppUpdateScreen extends StatefulWidget {
 
 class _AppUpdateScreenState extends State<AppUpdateScreen> {
 
-  static const String currentVersion = '1.1.9';
+  static const String currentVersion = '1.2.5';
 
 
 

@@ -1,9 +1,12 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../../core/android_core.dart';
 import '../countries/country_manager.dart';
 import '../components/signin_dialog.dart';
 import '../components/country_flag.dart';
@@ -54,22 +57,29 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     } catch (_) {}
   }
 
-  Future<void> _selectProfile(VpnProfile profile, {bool autoConnect = false}) async {
+  Future<void> _selectProfile(VpnProfile profile, {bool autoConnect = true}) async {
     setState(() => _activeProfileTitle = profile.name);
     await AppPreferences.setSelectedProfile(profile.name);
 
-    String targetCountry = profile.countryCode;
-    if (targetCountry == 'fastest') {
-      final fastest = CountryManager.instance.getFastestCountry();
-      targetCountry = fastest.code;
-    }
-
-    await AppPreferences.setSelectedLocation(targetCountry);
-    await widget.controller.setLocation(targetCountry.toLowerCase());
-    widget.onProfileSelected(targetCountry);
+    final bestCountry = CountryManager.instance.getBestCountryForProfile(profile);
+    final String targetCountry = bestCountry.code;
 
     if (autoConnect || widget.controller.isVpnOn) {
-      if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+      if (!kIsWeb && Platform.isAndroid) {
+        final vpnAllowed = await AndroidCore.ensureMandatoryVpnPermission();
+        if (!vpnAllowed) {
+          if (mounted) {
+            TopDockToast.show(
+              context,
+              title: 'VPN Permission Required',
+              message: 'Please allow VPN Connection Request to connect.',
+              icon: Icons.security_rounded,
+              iconColor: const Color(0xFFFF4D4F),
+            );
+          }
+          return;
+        }
+      } else if (!kIsWeb && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
         if (mounted) {
           await PermissionsSetupScreen.showAsModal(context);
         }
@@ -81,7 +91,21 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
         if (mounted) SignInDialog.show(context, widget.controller);
         return;
       }
-      if (!widget.controller.isVpnOn) {
+    }
+
+    await AppPreferences.setDefaultConnectionType(targetCountry);
+    await AppPreferences.setSelectedLocation(targetCountry);
+    await AppPreferences.setLastConnection(targetCountry);
+    await AppPreferences.addRecentLocation(targetCountry);
+    await widget.controller.setLocation(targetCountry.toLowerCase());
+    widget.onProfileSelected(targetCountry);
+
+    if (autoConnect || widget.controller.isVpnOn) {
+      if (widget.controller.isVpnOn) {
+        await widget.controller.setOn(false);
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        await widget.controller.setOn(true);
+      } else {
         await widget.controller.setOn(true);
       }
     }
@@ -89,8 +113,8 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     if (mounted) {
       TopDockToast.show(
         context,
-        title: 'Profile Activated',
-        message: '${profile.name} (${targetCountry.toUpperCase()}) connected',
+        title: 'Profile Connected: ${profile.name}',
+        message: 'Smart routing via ${bestCountry.name} (${bestCountry.realtimeSpeedMbps.toStringAsFixed(0)} Mbps)',
         icon: Icons.vpn_lock_rounded,
         iconColor: profile.color,
       );
@@ -345,7 +369,10 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
                       ),
                       const SizedBox(height: 3),
                       Text(
-                        profile.subtitle,
+                        () {
+                          final best = CountryManager.instance.getBestCountryForProfile(profile);
+                          return '${best.name} · ${profile.subtitle}';
+                        }(),
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,

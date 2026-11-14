@@ -1,7 +1,10 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../../core/android_core.dart';
 import '../components/liquid_glass_card.dart';
 import '../components/liquid_glass_atmosphere.dart';
 import '../components/filter_chip_button.dart';
@@ -313,15 +316,30 @@ class _CountriesScreenState extends State<CountriesScreen>
                               isFastest: true,
                               isSelected: isFastestSelected,
                               onTap: () async {
-                                if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                if (!kIsWeb && Platform.isAndroid) {
+                                  final vpnAllowed = await AndroidCore.ensureMandatoryVpnPermission();
+                                  if (!vpnAllowed) {
+                                    if (context.mounted) {
+                                      TopDockToast.show(
+                                        context,
+                                        title: 'VPN Permission Required',
+                                        message: 'Please allow VPN Connection Request to connect.',
+                                        icon: Icons.security_rounded,
+                                        iconColor: const Color(0xFFFF4D4F),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                } else if (!kIsWeb && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
                                   await PermissionsSetupScreen.showAsModal(context);
                                   if (!AppPermissionsService.instance.areCorePermissionsGranted) {
                                     return;
                                   }
                                 }
-                                final fastest = CountryManager.instance.getFastestCountry();
+                                final fastest = CountryManager.instance.getRealtimeFastestCountry();
                                 await AppPreferences.setDefaultConnectionType('fastest');
                                 await AppPreferences.setSelectedLocation(fastest.code);
+                                await AppPreferences.addRecentLocation(fastest.code);
                                 await widget.controller.setLocation(fastest.code.toLowerCase());
                                 if (widget.controller.hasAccount) {
                                   if (widget.controller.isConnected) {
@@ -333,12 +351,12 @@ class _CountriesScreenState extends State<CountriesScreen>
                                     widget.controller.setOn(true);
                                   }
                                 }
-                                widget.onCountrySelected('fastest');
+                                widget.onCountrySelected(fastest.code);
                                 if (context.mounted) {
                                   TopDockToast.show(
                                     context,
                                     title: 'Connected to Fastest Country',
-                                    message: '${fastest.name} · ${fastest.pingMs} ms (Load: ${fastest.load}%)',
+                                    message: '${fastest.name} · ${fastest.realtimeSpeedMbps.toStringAsFixed(0)} Mbps (${fastest.pingMs} ms)',
                                     icon: Icons.bolt_rounded,
                                     iconColor: const Color(0xFF00E676),
                                   );
@@ -359,17 +377,40 @@ class _CountriesScreenState extends State<CountriesScreen>
                             pingMs: country.pingMs,
                             isSelected: isSelected,
                             onTap: () async {
-                              if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                              if (!kIsWeb && Platform.isAndroid) {
+                                final vpnAllowed = await AndroidCore.ensureMandatoryVpnPermission();
+                                if (!vpnAllowed) {
+                                  if (context.mounted) {
+                                    TopDockToast.show(
+                                      context,
+                                      title: 'VPN Permission Required',
+                                      message: 'Please allow VPN Connection Request to connect.',
+                                      icon: Icons.security_rounded,
+                                      iconColor: const Color(0xFFFF4D4F),
+                                    );
+                                  }
+                                  return;
+                                }
+                              } else if (!kIsWeb && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
                                 await PermissionsSetupScreen.showAsModal(context);
                                 if (!AppPermissionsService.instance.areCorePermissionsGranted) {
                                   return;
                                 }
                               }
+                              await AppPreferences.setDefaultConnectionType(country.code);
                               await AppPreferences.setSelectedLocation(country.code);
                               await AppPreferences.setLastConnection(country.code);
+                              await AppPreferences.addRecentLocation(country.code);
                               await widget.controller.setLocation(country.code.toLowerCase());
-                              if (widget.controller.hasAccount && !widget.controller.isConnected) {
-                                widget.controller.setOn(true);
+                              if (widget.controller.hasAccount) {
+                                if (widget.controller.isConnected) {
+                                  widget.controller.setOn(false);
+                                  Future.delayed(const Duration(milliseconds: 200), () {
+                                    widget.controller.setOn(true);
+                                  });
+                                } else {
+                                  widget.controller.setOn(true);
+                                }
                               }
                               widget.onCountrySelected(country.code);
                               if (context.mounted) {

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../core/core_controller.dart';
 import '../../core/models.dart';
@@ -8,7 +9,6 @@ import '../components/signin_dialog.dart';
 import '../components/details_sheet.dart';
 import '../home/default_connection_sheet.dart';
 import '../home/proton_world_map.dart';
-import '../countries/country_data.dart';
 import '../countries/country_manager.dart';
 import '../../core/app_permissions_service.dart';
 import '../permissions/permissions_setup_screen.dart';
@@ -220,26 +220,19 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
         final savedCode = AppPreferences.selectedLocation;
         final proxy = status?.proxy;
         final countryCode = proxy?.countryCode.isNotEmpty == true ? proxy!.countryCode : savedCode;
-        final matchedCountry = kFastlyCountries.firstWhere(
-          (c) => c.code.toUpperCase() == countryCode.toUpperCase(),
-          orElse: () => const CountryItem(code: 'NL', name: 'Netherlands', cities: 'Amsterdam', load: 32, pingMs: 18),
-        );
-        final countryName = proxy?.countryName.isNotEmpty == true
+        final matchedCountry = CountryManager.instance.getCountryByCode(countryCode);
+        final countryName = (isConnected && proxy?.countryName.isNotEmpty == true)
             ? proxy!.countryName
-            : (countryCode.toLowerCase() == 'fastest' ? 'Fastest country' : matchedCountry.name);
-        final cityName = proxy?.cityName.isNotEmpty == true
+            : (countryCode.toLowerCase() == 'fastest' ? 'Fastest (${matchedCountry.name})' : matchedCountry.name);
+        final cityName = (isConnected && proxy?.cityName.isNotEmpty == true)
             ? proxy!.cityName
-            : (countryCode.toLowerCase() == 'fastest' ? 'Auto Anycast Routing' : '${matchedCountry.cities.split(',').first} #1');
+            : (countryCode.toLowerCase() == 'fastest'
+                ? '${matchedCountry.cities.split(',').first.trim()} · Realtime Fastest'
+                : '${matchedCountry.cities.split(',').first.trim()} #1');
 
-        final recentCodes = AppPreferences.recentLocations.isNotEmpty
-            ? AppPreferences.recentLocations
-            : ['NL', 'DE', 'US'];
+        final recentCodes = AppPreferences.recentLocations;
         final recentItems = recentCodes.take(5).map((code) {
-          final item = kFastlyCountries.firstWhere(
-            (c) => c.code.toUpperCase() == code.toUpperCase(),
-            orElse: () => CountryItem(code: code, name: code, cities: 'Edge', load: 30, pingMs: 20),
-          );
-          return item;
+          return CountryManager.instance.getCountryByCode(code);
         }).toList();
 
         final currentIp = isConnected
@@ -457,7 +450,7 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                   if (isVpnOn || isConnected || isConnecting) {
                                     widget.controller.setOn(false);
                                   } else {
-                                    if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                    if (!identical(0, 0.0) && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
                                       await PermissionsSetupScreen.showAsModal(context);
                                       if (!context.mounted) return;
                                       if (!AppPermissionsService.instance.areCorePermissionsGranted) {
@@ -469,10 +462,12 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                       SignInDialog.show(context, widget.controller);
                                       return;
                                     }
-                                    final fastest = CountryManager.instance.getFastestCountry();
+                                    final fastest = CountryManager.instance.getRealtimeFastestCountry();
                                     await widget.controller.setLocation(fastest.code.toLowerCase());
                                     await AppPreferences.setSelectedLocation(fastest.code);
-                                    widget.controller.setOn(true);
+                                    try {
+                                      await widget.controller.setOn(true);
+                                    } catch (_) {}
                                   }
                                 },
                                 child: FittedBox(
@@ -816,7 +811,7 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                       await widget.controller.setLocation(item.code.toLowerCase());
                                       await AppPreferences.setSelectedLocation(item.code);
                                       if (!isVpnOn) {
-                                        if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                                        if (!identical(0, 0.0) && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
                                           if (context.mounted) {
                                             await PermissionsSetupScreen.showAsModal(context);
                                           }
@@ -830,7 +825,9 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                           }
                                           return;
                                         }
-                                        widget.controller.setOn(true);
+                                        try {
+                                          await widget.controller.setOn(true);
+                                        } catch (_) {}
                                       }
                                     },
                                   ),

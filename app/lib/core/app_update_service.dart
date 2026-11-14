@@ -31,7 +31,7 @@ class AppUpdateService extends ChangeNotifier {
   static final AppUpdateService instance = AppUpdateService._();
   AppUpdateService._();
 
-  static const String currentVersion = '1.2.0';
+  static const String currentVersion = '1.2.5';
 
   ReleaseInfo? latestRelease;
   bool isChecking = false;

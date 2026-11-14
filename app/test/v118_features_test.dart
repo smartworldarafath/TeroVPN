@@ -16,10 +16,10 @@ void main() {
 
   group('v1.1.9 Cross-Device QR Auto-Login & Version Tests', () {
     test('Version is bumped to 1.1.9', () {
-      expect(AppUpdateService.currentVersion, '1.2.0');
-      expect(AppUpdateService.isNewerVersion('v1.2.1', '1.2.0'), true);
-      expect(AppUpdateService.isNewerVersion('v1.2.0', '1.2.0'), false);
-      expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.0'), false);
+      expect(AppUpdateService.currentVersion, '1.2.5');
+      expect(AppUpdateService.isNewerVersion('v1.2.6', '1.2.5'), true);
+      expect(AppUpdateService.isNewerVersion('v1.2.5', '1.2.5'), false);
+      expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.5'), false);
     });
 
     test('Cross-device QR authorization transmits password and persists session', () async {
@@ -39,8 +39,8 @@ void main() {
 
       final phoneAccount = Account(
         id: 'acc_sync_test_888',
-        email: 'the.vertex.us@gmail.com',
-        name: 'Vertex User',
+        email: 'mock.user@example.com',
+        name: 'Mock User',
         active: true,
       );
 
@@ -61,7 +61,7 @@ void main() {
 
       final authorized = await desktopAuthFuture;
       expect(authorized, isNotNull);
-      expect(authorized!.email, 'the.vertex.us@gmail.com');
+      expect(authorized!.email, 'mock.user@example.com');
 
       // Verify session stored password
       final savedSession = QrAuthSyncService.getSession(session.sessionId);
@@ -73,8 +73,8 @@ void main() {
       await AppPreferences.setSavedAuthPassword(phoneAccount.email, 'TEST_SECURE_AUTH_PASS_123');
 
       expect(AppPreferences.savedActiveAccount, isNotNull);
-      expect(AppPreferences.savedActiveAccount!['email'], 'the.vertex.us@gmail.com');
-      expect(AppPreferences.getSavedAuthPassword('the.vertex.us@gmail.com'), 'TEST_SECURE_AUTH_PASS_123');
+      expect(AppPreferences.savedActiveAccount!['email'], 'mock.user@example.com');
+      expect(AppPreferences.getSavedAuthPassword('mock.user@example.com'), 'TEST_SECURE_AUTH_PASS_123');
 
       QrAuthSyncService.cancelSession(session.sessionId);
     });
@@ -82,14 +82,14 @@ void main() {
     test('CoreController initializes with saved QR active account', () async {
       await AppPreferences.setSavedActiveAccount({
         'id': 'acc_qr_saved_1',
-        'email': 'the.vertex.us@gmail.com',
-        'name': 'Vertex',
+        'email': 'mock.user@example.com',
+        'name': 'Mock User',
         'active': true,
       });
 
       final controller = CoreController(() => throw UnimplementedError());
       expect(controller.hasAccount, true);
-      expect(controller.activeAccount?.email, 'the.vertex.us@gmail.com');
+      expect(controller.activeAccount?.email, 'mock.user@example.com');
     });
   });
 }

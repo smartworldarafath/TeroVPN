@@ -1,8 +1,10 @@
-import 'dart:ui' as ui;
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
 import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
+import '../../core/android_core.dart';
 import '../components/country_flag.dart';
 import '../components/top_dock_toast.dart';
 import 'country_manager.dart';
@@ -41,42 +43,21 @@ class CountryDetailsSheet extends StatefulWidget {
           onServerSelected: onServerSelected,
         );
 
-        if (isLiquid) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 28, sigmaY: 28),
-              child: Container(
-                height: MediaQuery.of(context).size.height * 0.75,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0xFF161324).withValues(alpha: 0.88)
-                      : Colors.white.withValues(alpha: 0.92),
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark
-                          ? Colors.white.withValues(alpha: 0.12)
-                          : Colors.white.withValues(alpha: 0.95),
-                      width: 1.2,
-                    ),
-                  ),
-                ),
-                child: content,
-              ),
-            ),
-          );
-        }
-
         return Container(
           height: MediaQuery.of(context).size.height * 0.75,
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF181526) : Colors.white,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            color: isLiquid
+                ? (isDark
+                      ? const Color(0xFF161324).withValues(alpha: 0.96)
+                      : Colors.white.withValues(alpha: 0.98))
+                : (isDark ? const Color(0xFF181526) : Colors.white),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
             border: Border(
               top: BorderSide(
-                color: isDark ? const Color(0xFF2E2A42) : const Color(0xFFE5E3ED),
-                width: 1,
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.12)
+                    : const Color(0xFFE5E3ED),
+                width: 1.2,
               ),
             ),
           ),
@@ -494,25 +475,49 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
             color: Colors.transparent,
             child: InkWell(
               onTap: () async {
-                if (!AppPermissionsService.instance.areCorePermissionsGranted) {
+                if (!kIsWeb && Platform.isAndroid) {
+                  final vpnAllowed = await AndroidCore.ensureMandatoryVpnPermission();
+                  if (!vpnAllowed) {
+                    if (mounted) {
+                      TopDockToast.show(
+                        context,
+                        title: 'VPN Permission Required',
+                        message: 'Please allow VPN Connection Request to connect.',
+                        icon: Icons.security_rounded,
+                        iconColor: const Color(0xFFFF4D4F),
+                      );
+                    }
+                    return;
+                  }
+                } else if (!kIsWeb && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
+                  if (!mounted) return;
                   await PermissionsSetupScreen.showAsModal(context);
                   if (!AppPermissionsService.instance.areCorePermissionsGranted) {
                     return;
                   }
                 }
+                await AppPreferences.setDefaultConnectionType(widget.country.code);
                 await AppPreferences.setSelectedLocation(widget.country.code);
                 await AppPreferences.setLastConnection(widget.country.code);
+                await AppPreferences.addRecentLocation(widget.country.code);
                 await widget.controller.setLocation(widget.country.code.toLowerCase());
-                if (widget.controller.hasAccount && !widget.controller.isConnected) {
-                  widget.controller.setOn(true);
+                if (widget.controller.hasAccount) {
+                  if (widget.controller.isConnected) {
+                    widget.controller.setOn(false);
+                    Future.delayed(const Duration(milliseconds: 200), () {
+                      widget.controller.setOn(true);
+                    });
+                  } else {
+                    widget.controller.setOn(true);
+                  }
                 }
                 widget.onServerSelected(name);
                 if (mounted) {
                   Navigator.of(context).pop();
                   TopDockToast.show(
                     context,
-                    title: 'Connecting to Server',
-                    message: ' ·  ms (Load: %)',
+                    title: 'Connecting to ${widget.country.name} ($name)',
+                    message: '$ping ms · Load: $load%',
                     icon: Icons.dns_rounded,
                   );
                 }

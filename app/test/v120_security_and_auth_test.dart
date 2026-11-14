@@ -223,19 +223,19 @@ void main() {
   });
 
   group('v1.2.0 Version Bumping Consistency Tests', () {
-    test('All configuration and code references report v1.2.0', () {
-      expect(AppUpdateService.currentVersion, '1.2.0');
+    test('All configuration and code references report v1.2.5', () {
+      expect(AppUpdateService.currentVersion, '1.2.5');
 
       final pubspec = File('pubspec.yaml').readAsStringSync();
-      expect(pubspec.contains('version: 1.2.0+20'), isTrue);
+      expect(pubspec.contains('version: 1.2.5+25'), isTrue);
 
       final iss = File('../windows/installer/terovpn_setup.iss').readAsStringSync();
-      expect(iss.contains('MyAppVersion "1.2.0"'), isTrue);
-      expect(iss.contains('TeroVPN-v1.2.0-Windows-Setup'), isTrue);
+      expect(iss.contains('MyAppVersion "1.2.5"'), isTrue);
+      expect(iss.contains('TeroVPN-v1.2.5-Windows-Setup'), isTrue);
 
       final workflow = File('../.github/workflows/desktop.yml').readAsStringSync();
-      expect(workflow.contains('APP_VERSION=1.2.0'), isTrue);
-      expect(workflow.contains('TeroVPN-v1.2.0-Windows-x64'), isTrue);
+      expect(workflow.contains('APP_VERSION=1.2.5'), isTrue);
+      expect(workflow.contains('TeroVPN-v1.2.5-Windows-x64'), isTrue);
     });
   });
 }

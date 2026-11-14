@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TeroVPN - Secure High-Speed Proxy & VPN",
-  "version": "1.2.0",
+  "version": "1.2.5",
   "description": "Next-generation high-speed proxy and secure VPN client for Chrome. Powered by TeroVPN with WebRTC leak shield and one-click smart routing.",
   "author": "smartworldarafath",
   "homepage_url": "https://github.com/smartworldarafath/TeroVPN",

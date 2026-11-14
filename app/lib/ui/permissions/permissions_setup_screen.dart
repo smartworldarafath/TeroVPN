@@ -87,16 +87,19 @@ class _PermissionsSetupScreenState extends State<PermissionsSetupScreen> {
                     child: const Icon(Icons.shield_rounded, color: Colors.white, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  Text(
-                    'Permissions & System Access',
-                    style: TextStyle(
-                      color: textPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.3,
+                  Expanded(
+                    child: Text(
+                      'Permissions & System Access',
+                      style: TextStyle(
+                        color: textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                     decoration: BoxDecoration(

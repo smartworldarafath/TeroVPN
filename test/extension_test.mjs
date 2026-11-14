@@ -53,7 +53,7 @@ console.log('--- 1. Manifest V3 & File Integrity ---');
 test('manifest.json exists and has valid Manifest V3 fields', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '1.2.0');
+  assert.equal(manifest.version, '1.2.5');
   assert.ok(manifest.permissions.includes('proxy'));
   assert.ok(manifest.permissions.includes('storage'));
   assert.ok(manifest.permissions.includes('privacy'));
@@ -101,7 +101,7 @@ test('Every default location has a valid SVG flag', () => {
 console.log('\n--- 3. QR Code Generator & AES-256 E2EE Sync ---');
 
 const { generateQrMatrix, renderQrSvg } = await import('../extension/qrcode.js');
-const { createQrPairingSession, encryptPayload, decryptPayload } = await import('../extension/qr-sync.js');
+const { createQrPairingSession, encryptPayload, decryptPayload, stopRelayStreamForSession } = await import('../extension/qr-sync.js');
 
 test('Pure JS QR Code generator produces valid matrix and SVG for terovpn://pair URI', () => {
   const sampleUri = 'terovpn://pair?sid=tero_0123456789abcdef_123456&k=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=&relay=ntfy.sh&t=1700000000000';
@@ -114,6 +114,7 @@ test('Pure JS QR Code generator produces valid matrix and SVG for terovpn://pair
 
 await runAsyncTest('E2EE QR Pairing Session & AES-256-CBC + HMAC-SHA256 round-trip', async () => {
   const session = await createQrPairingSession();
+  stopRelayStreamForSession(session.sessionId);
   assert.ok(session.sessionId.startsWith('tero_'));
   assert.ok(session.secretKey.length >= 40);
   assert.ok(session.payload.startsWith('terovpn://pair?sid='));

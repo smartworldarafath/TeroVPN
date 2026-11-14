@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
@@ -42,15 +43,53 @@ class _SignInDialogState extends State<SignInDialog> {
   String? _errorMessage;
 
   SignInState? _state;
-  Timer? _emailLinkPollTimer;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    if (! identical(0, 0.0) && Platform.isAndroid) {
+      AndroidCore.setMozillaBrowserSessionListener(_onMozillaBrowserSession);
+    }
+  }
 
   @override
   void dispose() {
-    _emailLinkPollTimer?.cancel();
+    _pollTimer?.cancel();
+    if (!identical(0, 0.0) && Platform.isAndroid) {
+      AndroidCore.setMozillaBrowserSessionListener(null);
+    }
     _emailController.dispose();
     _passwordController.dispose();
     _codeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _onMozillaBrowserSession(String email, String sessionToken) async {
+    if (!mounted) return;
+    final targetEmail = email.trim().isNotEmpty
+        ? email.trim()
+        : _emailController.text.trim();
+    if (targetEmail.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final state = await widget.controller.startBrowserSignIn(
+        targetEmail,
+        sessionToken,
+      );
+      _handleState(state);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   Future<void> _submitInitial() async {
@@ -76,6 +115,7 @@ class _SignInDialogState extends State<SignInDialog> {
       final state = await widget.controller.startSignIn(email, password);
       _handleState(state);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -86,7 +126,11 @@ class _SignInDialogState extends State<SignInDialog> {
   Future<void> _submitAnswer() async {
     final code = _codeController.text.trim();
     if (code.isEmpty) {
-      setState(() => _errorMessage = 'Please enter the verification code.');
+      setState(() {
+        _errorMessage = _state?.step == SignInStep.needCaptcha
+            ? 'Please enter the characters shown in the image.'
+            : 'Please enter the verification code sent to your Gmail.';
+      });
       return;
     }
 
@@ -101,6 +145,7 @@ class _SignInDialogState extends State<SignInDialog> {
       final state = await widget.controller.answerSignIn(_state!.id, code);
       _handleState(state);
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -117,15 +162,14 @@ class _SignInDialogState extends State<SignInDialog> {
     });
 
     try {
-      // First try answering with 'continue' (Fastly/Mozilla convention)
       final state = await widget.controller.answerSignIn(_state!.id, 'continue');
       _handleState(state);
     } catch (_) {
-      // Otherwise immediately poll current sign in state
       try {
         final state = await widget.controller.signInState(_state!.id);
         _handleState(state);
       } catch (e) {
+        if (!mounted) return;
         setState(() {
           _isLoading = false;
           _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -135,48 +179,79 @@ class _SignInDialogState extends State<SignInDialog> {
   }
 
   Future<void> _openBrowserSignIn() async {
+    final email = _emailController.text.trim();
     try {
-      final uri = await widget.controller.dashboardLink();
-      final urlString = uri.toString();
       if (Platform.isAndroid) {
-        await AndroidCore.openUrl(urlString);
-      } else if (Platform.isWindows) {
-        await Process.run('cmd', ['/c', 'start', '', urlString]);
-      } else if (Platform.isLinux) {
-        await Process.run('xdg-open', [urlString]);
-      } else if (Platform.isMacOS) {
-        await Process.run('open', [urlString]);
+        await AndroidCore.openMozillaWebViewSignIn(email);
+      } else {
+        final uri = Uri.https('accounts.firefox.com', '/', {
+          'context': 'fx_desktop_v3',
+          'service': 'sync',
+          'action': 'email',
+          if (email.isNotEmpty) 'email': email,
+        });
+        final urlString = uri.toString();
+        if (Platform.isWindows) {
+          await Process.run('cmd', ['/c', 'start', '', urlString]);
+        } else if (Platform.isLinux) {
+          await Process.run('xdg-open', [urlString]);
+        } else if (Platform.isMacOS) {
+          await Process.run('open', [urlString]);
+        }
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'Could not open browser: $e';
+        _errorMessage = 'Could not open Mozilla sign-in: $e';
       });
     }
   }
 
+  void _resetToCredentials() {
+    _pollTimer?.cancel();
+    final oldId = _state?.id;
+    if (oldId != null && _state?.finished == false) {
+      widget.controller.cancelSignIn(oldId).ignore();
+    }
+    setState(() {
+      _state = null;
+      _isLoading = false;
+      _errorMessage = null;
+      _codeController.clear();
+    });
+  }
+
   void _handleState(SignInState state) {
+    if (!mounted) return;
+    final previousStep = _state?.step;
     _state = state;
 
     if (state.step == SignInStep.working) {
-      _pollSignInState(state.id);
+      setState(() {
+        _isLoading = true;
+      });
+      _startPolling(state.id);
       return;
     }
 
     if (state.step == SignInStep.needEmailLink) {
       setState(() {
         _isLoading = false;
-        _errorMessage = null;
+        _errorMessage = state.error.isNotEmpty ? state.error : null;
       });
-      // Start polling for email link confirmation automatically
-      _startEmailLinkPolling(state.id);
+      _startPolling(state.id);
       return;
-    } else {
-      _emailLinkPollTimer?.cancel();
     }
 
+    _pollTimer?.cancel();
+
     if (state.step == SignInStep.done) {
-      _emailLinkPollTimer?.cancel();
-      final email = _emailController.text.trim();
+      if (!identical(0, 0.0) && Platform.isAndroid) {
+        AndroidCore.closeMozillaWebViewSignIn();
+      }
+      final email = state.email.isNotEmpty
+          ? state.email
+          : _emailController.text.trim();
       final password = _passwordController.text;
       if (email.isNotEmpty && password.isNotEmpty) {
         AppPreferences.setSavedAccountPassword(email, password);
@@ -184,89 +259,98 @@ class _SignInDialogState extends State<SignInDialog> {
       setState(() {
         _isLoading = false;
         _isSuccess = true;
+        _errorMessage = null;
       });
       widget.controller.refresh(accountsToo: true);
       Future.delayed(const Duration(milliseconds: 900), () {
         if (mounted) Navigator.of(context).pop(true);
       });
-    } else if (state.step == SignInStep.failed) {
-      _emailLinkPollTimer?.cancel();
-      setState(() {
-        _isLoading = false;
-        _errorMessage = state.message.isNotEmpty
-            ? state.message
-            : _friendlyError(state.errorCode);
-      });
+    } else if (state.step == SignInStep.failed ||
+        state.step == SignInStep.cancelled) {
+      final errText = state.error.isNotEmpty
+          ? state.error
+          : (state.errorCode.isNotEmpty
+                ? _friendlyError(state.errorCode)
+                : (state.message.isNotEmpty
+                      ? state.message
+                      : 'Sign-in failed. Please verify your credentials.'));
+      // If email or password was wrong, return to credentials form so user can edit immediately
+      if (state.errorCode == SignInError.wrongPassword ||
+          state.errorCode == SignInError.noAccount) {
+        setState(() {
+          _state = null;
+          _isLoading = false;
+          _errorMessage = _friendlyError(state.errorCode);
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = errText;
+        });
+      }
     } else if (state.needsAnswer) {
-      _emailLinkPollTimer?.cancel();
+      if (previousStep != state.step) {
+        _codeController.clear();
+      }
       setState(() {
         _isLoading = false;
+        _errorMessage = state.error.isNotEmpty
+            ? state.error
+            : (state.errorCode.isNotEmpty
+                  ? _friendlyError(state.errorCode)
+                  : null);
       });
-      _codeController.clear();
     } else {
-      _emailLinkPollTimer?.cancel();
       setState(() => _isLoading = false);
     }
   }
 
-  void _startEmailLinkPolling(String id) {
-    _emailLinkPollTimer?.cancel();
-    _emailLinkPollTimer = Timer.periodic(const Duration(seconds: 2), (timer) async {
+  void _startPolling(String id) {
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(milliseconds: 800), (timer) async {
       if (!mounted) {
         timer.cancel();
         return;
       }
       try {
-        final state = await widget.controller.signInState(id);
-        if (state.step != SignInStep.needEmailLink && state.step != SignInStep.working) {
+        final next = await widget.controller.signInState(id);
+        if (!mounted) return;
+        if (next.step != SignInStep.working &&
+            next.step != SignInStep.needEmailLink) {
           timer.cancel();
-          _handleState(state);
+          _handleState(next);
+        } else if (next.message != _state?.message) {
+          setState(() => _state = next);
         }
       } catch (_) {}
     });
   }
 
-  Future<void> _pollSignInState(String id) async {
-    while (mounted && _isLoading) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      try {
-        final state = await widget.controller.signInState(id);
-        if (state.step != SignInStep.working) {
-          _handleState(state);
-          break;
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _errorMessage = e.toString().replaceFirst('Exception: ', '');
-          });
-        }
-        break;
-      }
-    }
-  }
-
   String _friendlyError(String code) {
     switch (code) {
       case SignInError.wrongPassword:
-        return 'Incorrect password. Please try again.';
+        return 'Incorrect password. Please check your password and try again.';
       case SignInError.noAccount:
-        return 'No Firefox Account found with this email.';
+        return 'No Firefox Account found with this email address.';
+      case SignInError.noPassword:
+        return 'This account uses Google/Apple sign-in and has no password set.';
       case SignInError.wrongCode:
-        return 'Invalid verification code. Please check and re-enter.';
+        return 'Invalid or expired Gmail verification code. Please check the latest email from Mozilla.';
       case SignInError.wrongTotp:
-        return 'Invalid authenticator code. Please check and re-enter.';
+        return 'Invalid authenticator code. Please check your 2FA app and re-enter.';
       case SignInError.unblockCodeRejected:
-        return 'Authorization unblock code was rejected or expired.';
+        return 'Unblock code was rejected or expired. Check your latest email from Mozilla.';
       case SignInError.tooManyAttempts:
-        return 'Too many sign-in attempts. Please try again later.';
+        return 'Too many sign-in attempts. Please wait a few minutes and try again.';
       case SignInError.tooManyCodes:
-        return 'Too many incorrect codes entered. Please wait before retrying.';
+        return 'Too many incorrect codes entered. Please start sign-in again.';
       case SignInError.timedOut:
-        return 'Sign in request timed out. Please try again.';
+        return 'Sign-in request timed out. Please try again.';
       case SignInError.network:
-        return 'Network connection error to auth server.';
+        return 'Network connection error reaching Mozilla Accounts.';
+      case SignInError.blocked:
+      case SignInError.tokenBlocked:
+        return 'Mozilla security check requested browser verification. Tap "Sign In with Official Mozilla WebView" below.';
       default:
         return 'Sign-in failed. Please verify your credentials.';
     }
@@ -275,12 +359,20 @@ class _SignInDialogState extends State<SignInDialog> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final isEmailLinkStep = _state != null && _state!.step == SignInStep.needEmailLink;
+    final isEmailLinkStep =
+        _state != null && _state!.step == SignInStep.needEmailLink;
     final isVerificationStep = _state != null && _state!.needsAnswer;
+    final isFailedStep =
+        _state != null &&
+        (_state!.step == SignInStep.failed ||
+            _state!.step == SignInStep.cancelled);
     final isDark = ThemeManager.instance.isDarkMode;
+    final targetEmail = (_state?.email.isNotEmpty == true)
+        ? _state!.email
+        : _emailController.text.trim();
 
     String headerTitle = 'Sign In with Firefox Account';
-    String headerSubtitle = 'Firefox Account credentials for Fastly MASQUE';
+    String headerSubtitle = 'Mozilla Account authentication for Fastly MASQUE';
     IconData headerIcon = Icons.account_circle_rounded;
 
     if (_isSuccess) {
@@ -288,30 +380,37 @@ class _SignInDialogState extends State<SignInDialog> {
       headerSubtitle = 'Session authenticated with Fastly MASQUE backend';
       headerIcon = Icons.check_circle_rounded;
     } else if (isEmailLinkStep) {
-      headerTitle = 'Confirm Sign In via Email';
-      headerSubtitle = 'Mozilla sent a confirmation link to your email';
+      headerTitle = 'Confirm Sign In via Gmail';
+      headerSubtitle = 'Open the confirmation link sent to $targetEmail';
       headerIcon = Icons.mark_email_read_rounded;
     } else if (isVerificationStep) {
       if (_state?.step == SignInStep.needUnblockCode) {
         headerTitle = 'Account Unblock Code';
-        headerSubtitle = 'Enter the authorization code sent to your email';
+        headerSubtitle =
+            'Mozilla sent an 8-character unblock code to your Gmail ($targetEmail)';
         headerIcon = Icons.lock_open_rounded;
       } else if (_state?.step == SignInStep.needTotp) {
         headerTitle = 'Two-Factor Authentication';
         headerSubtitle = 'Enter the 6-digit code from your authenticator app';
         headerIcon = Icons.phonelink_lock_rounded;
       } else if (_state?.step == SignInStep.needCaptcha) {
-        headerTitle = 'Security Verification';
-        headerSubtitle = 'Enter the characters shown in the image below';
+        headerTitle = 'Mozilla Security Check';
+        headerSubtitle =
+            'Type the characters shown in the image below to proceed to Gmail verification';
         headerIcon = Icons.security_rounded;
       } else {
-        headerTitle = 'Verification Code';
-        headerSubtitle = 'Enter the 6-digit code sent to your email';
-        headerIcon = Icons.verified_user_rounded;
+        headerTitle = 'Gmail Verification Code';
+        headerSubtitle =
+            'Enter the 6-digit verification code sent to your Gmail ($targetEmail)';
+        headerIcon = Icons.mark_email_unread_rounded;
       }
     }
 
-    return Padding(
+    final isNumericCode =
+        _state?.step == SignInStep.needEmailCode ||
+        _state?.step == SignInStep.needTotp;
+
+    return SingleChildScrollView(
       padding: EdgeInsets.only(
         left: 24,
         right: 24,
@@ -350,7 +449,9 @@ class _SignInDialogState extends State<SignInDialog> {
                 child: Center(
                   child: Icon(
                     headerIcon,
-                    color: _isSuccess ? ProtonColors.connected : const Color(0xFF6B42FF),
+                    color: _isSuccess
+                        ? ProtonColors.connected
+                        : const Color(0xFF6B42FF),
                     size: 26,
                   ),
                 ),
@@ -415,11 +516,12 @@ class _SignInDialogState extends State<SignInDialog> {
           const SizedBox(height: 20),
 
           if (isEmailLinkStep) ...[
-            // Email link confirmation UI
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1B1630) : const Color(0xFFF7F6FB),
+                color: isDark
+                    ? const Color(0xFF1B1630)
+                    : const Color(0xFFF7F6FB),
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: const Color(0xFF6B42FF).withValues(alpha: 0.3),
@@ -434,7 +536,7 @@ class _SignInDialogState extends State<SignInDialog> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Check your email',
+                    'Check your Gmail inbox',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
@@ -443,7 +545,7 @@ class _SignInDialogState extends State<SignInDialog> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'We sent a sign-in confirmation link to:\n${_emailController.text.trim()}',
+                    'Mozilla sent a sign-in confirmation link to:\n$targetEmail',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
@@ -459,7 +561,9 @@ class _SignInDialogState extends State<SignInDialog> {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF8B6BFF)),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Color(0xFF8B6BFF),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -477,48 +581,106 @@ class _SignInDialogState extends State<SignInDialog> {
               ),
             ),
           ] else if (isVerificationStep) ...[
-            // Code Input Step
-            if (_state?.captcha.isNotEmpty == true) ...[
-              Center(
-                child: Image.memory(
-                  base64Decode(_state!.captcha.split(',').last),
-                  height: 60,
+            if (_state?.step == SignInStep.needEmailCode) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1B1630)
+                      : const Color(0xFFF3F0FF),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF6B42FF).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.mail_lock_rounded,
+                      color: Color(0xFF8B6BFF),
+                      size: 22,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'We sent a 6-digit verification code to $targetEmail. Please check your Gmail inbox (and Spam folder) and enter the code below.',
+                        style: ProtonTypography.bodySmall.copyWith(
+                          color: ThemeManager.instance.textPrimaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+            ] else if (_state?.step == SignInStep.needCaptcha &&
+                _state?.captcha.isNotEmpty == true) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Image.memory(
+                    base64Decode(_state!.captcha.split(',').last),
+                    height: 84,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
             ],
 
             TextField(
+              key: ValueKey(_state?.step ?? 'code_input'),
               controller: _codeController,
-              keyboardType: _state?.step == SignInStep.needUnblockCode
-                  ? TextInputType.text
-                  : TextInputType.number,
-              textCapitalization: _state?.step == SignInStep.needUnblockCode
-                  ? TextCapitalization.characters
-                  : TextCapitalization.none,
+              keyboardType: isNumericCode
+                  ? TextInputType.number
+                  : TextInputType.visiblePassword,
+              inputFormatters: isNumericCode
+                  ? [FilteringTextInputFormatter.digitsOnly]
+                  : null,
+              textCapitalization: _state?.step == SignInStep.needEmailCode
+                  ? TextCapitalization.none
+                  : TextCapitalization.characters,
               autofocus: true,
               style: ProtonTypography.titleLarge.copyWith(
-                letterSpacing: _state?.step == SignInStep.needUnblockCode ? 2 : 4,
+                letterSpacing: isNumericCode ? 6 : 2,
                 color: ThemeManager.instance.textPrimaryColor,
               ),
               textAlign: TextAlign.center,
+              onSubmitted: (_) => _submitAnswer(),
               decoration: InputDecoration(
-                hintText: _state?.step == SignInStep.needUnblockCode
-                    ? 'Enter unblock code'
-                    : 'Enter 6-digit code',
+                hintText: switch (_state?.step) {
+                  SignInStep.needCaptcha => 'Enter characters shown above',
+                  SignInStep.needUnblockCode =>
+                    'Enter unblock code from Gmail',
+                  SignInStep.needTotp => 'Enter 6-digit authenticator code',
+                  _ => 'Enter 6-digit code from Gmail',
+                },
                 hintStyle: ProtonTypography.bodyLarge.copyWith(
                   color: ThemeManager.instance.textMutedColor,
-                  letterSpacing: 1,
+                  letterSpacing: 0.5,
                 ),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
+                fillColor: isDark
+                    ? const Color(0xFF131122)
+                    : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -537,17 +699,29 @@ class _SignInDialogState extends State<SignInDialog> {
               ),
               decoration: InputDecoration(
                 labelText: 'Email Address',
-                labelStyle: TextStyle(color: ThemeManager.instance.textSecondaryColor),
-                prefixIcon: Icon(Icons.email_outlined, color: ThemeManager.instance.textSecondaryColor, size: 20),
+                labelStyle: TextStyle(
+                  color: ThemeManager.instance.textSecondaryColor,
+                ),
+                prefixIcon: Icon(
+                  Icons.email_outlined,
+                  color: ThemeManager.instance.textSecondaryColor,
+                  size: 20,
+                ),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
+                fillColor: isDark
+                    ? const Color(0xFF131122)
+                    : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -560,30 +734,46 @@ class _SignInDialogState extends State<SignInDialog> {
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
+              onSubmitted: (_) => _submitInitial(),
               style: ProtonTypography.bodyLarge.copyWith(
                 color: ThemeManager.instance.textPrimaryColor,
               ),
               decoration: InputDecoration(
                 labelText: 'Password',
-                labelStyle: TextStyle(color: ThemeManager.instance.textSecondaryColor),
-                prefixIcon: Icon(Icons.lock_outline_rounded, color: ThemeManager.instance.textSecondaryColor, size: 20),
+                labelStyle: TextStyle(
+                  color: ThemeManager.instance.textSecondaryColor,
+                ),
+                prefixIcon: Icon(
+                  Icons.lock_outline_rounded,
+                  color: ThemeManager.instance.textSecondaryColor,
+                  size: 20,
+                ),
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                    _obscurePassword
+                        ? Icons.visibility_off_outlined
+                        : Icons.visibility_outlined,
                     color: ThemeManager.instance.textSecondaryColor,
                     size: 20,
                   ),
-                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                  onPressed: () =>
+                      setState(() => _obscurePassword = !_obscurePassword),
                 ),
                 filled: true,
-                fillColor: isDark ? const Color(0xFF131122) : const Color(0xFFF4F3F8),
+                fillColor: isDark
+                    ? const Color(0xFF131122)
+                    : const Color(0xFFF4F3F8),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: ThemeManager.instance.cardBorderColor),
+                  borderSide: BorderSide(
+                    color: ThemeManager.instance.cardBorderColor,
+                  ),
                 ),
                 focusedBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
@@ -602,74 +792,124 @@ class _SignInDialogState extends State<SignInDialog> {
               onPressed: _isLoading
                   ? null
                   : (isEmailLinkStep
-                      ? _confirmEmailLink
-                      : (isVerificationStep ? _submitAnswer : _submitInitial)),
+                        ? _confirmEmailLink
+                        : (isVerificationStep
+                              ? _submitAnswer
+                              : (isFailedStep
+                                    ? _resetToCredentials
+                                    : _submitInitial))),
               style: ElevatedButton.styleFrom(
-                backgroundColor: _isSuccess ? ProtonColors.connected : const Color(0xFF6B42FF),
+                backgroundColor: _isSuccess
+                    ? ProtonColors.connected
+                    : const Color(0xFF6B42FF),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
               child: _isLoading
-                  ? const Row(
+                  ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(
+                        const SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
                           ),
                         ),
-                        SizedBox(width: 12),
-                        Text('Signing in...', style: TextStyle(fontWeight: FontWeight.w700)),
+                        const SizedBox(width: 12),
+                        Text(
+                          (_state?.message.isNotEmpty == true)
+                              ? _state!.message
+                              : 'Signing in...',
+                          style: const TextStyle(fontWeight: FontWeight.w700),
+                        ),
                       ],
                     )
                   : (_isSuccess
-                      ? const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_rounded, color: Colors.white, size: 20),
-                            SizedBox(width: 8),
-                            Text('Sign In Complete', style: TextStyle(fontWeight: FontWeight.w700)),
-                          ],
-                        )
-                      : Text(
-                          isEmailLinkStep
-                              ? 'I Confirmed in Email'
-                              : (isVerificationStep ? 'Verify Code' : 'Sign In'),
-                          style: ProtonTypography.labelLarge,
-                        )),
+                        ? const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Sign In Complete',
+                                style: TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          )
+                        : Text(
+                            isEmailLinkStep
+                                ? 'I Confirmed in Gmail'
+                                : (isVerificationStep
+                                      ? (_state?.step == SignInStep.needCaptcha
+                                            ? 'Continue to Gmail Code'
+                                            : 'Verify Code')
+                                      : (isFailedStep
+                                            ? 'Try Again'
+                                            : 'Sign In')),
+                            style: ProtonTypography.labelLarge,
+                          )),
             ),
           ),
 
-          const SizedBox(height: 16),
+          if (isVerificationStep || isEmailLinkStep) ...[
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: _isLoading ? null : _resetToCredentials,
+              icon: const Icon(Icons.refresh_rounded, size: 16),
+              label: const Text('Start Over / Change Email'),
+              style: TextButton.styleFrom(
+                foregroundColor: ThemeManager.instance.textSecondaryColor,
+              ),
+            ),
+          ],
 
-          // Browser Sign-In Fallback Button
+          const SizedBox(height: 12),
+
+          // Official Mozilla WebView Sign-In Button
           OutlinedButton.icon(
             onPressed: _openBrowserSignIn,
-            icon: const Icon(Icons.open_in_browser_rounded, size: 18),
-            label: const Text('Sign In via Web Browser Fallback'),
+            icon: const Icon(Icons.verified_user_outlined, size: 18),
+            label: Text(
+              Platform.isAndroid
+                  ? 'Sign In with Official Mozilla WebView'
+                  : 'Sign In via Mozilla Accounts Browser',
+            ),
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF8B6BFF),
-              side: BorderSide(color: const Color(0xFF8B6BFF).withValues(alpha: 0.5)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              minimumSize: const Size.fromHeight(42),
+              side: BorderSide(
+                color: const Color(0xFF8B6BFF).withValues(alpha: 0.5),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              minimumSize: const Size.fromHeight(44),
             ),
           ),
 
           if (!isVerificationStep && !isEmailLinkStep) ...[
             const SizedBox(height: 14),
-            // Don't have a Firefox Account link
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
                   "Don't have a Firefox Account? ",
-                  style: ProtonTypography.bodySmall.copyWith(color: ThemeManager.instance.textSecondaryColor),
+                  style: ProtonTypography.bodySmall.copyWith(
+                    color: ThemeManager.instance.textSecondaryColor,
+                  ),
                 ),
                 GestureDetector(
-                  onTap: () => AndroidCore.openUrl('https://accounts.firefox.com/signup'),
+                  onTap: () =>
+                      AndroidCore.openUrl('https://accounts.firefox.com/signup'),
                   child: const Text(
                     'Create Account',
                     style: TextStyle(
@@ -682,10 +922,11 @@ class _SignInDialogState extends State<SignInDialog> {
               ],
             ),
             const SizedBox(height: 8),
-            // Forgot password link
             Center(
               child: GestureDetector(
-                onTap: () => AndroidCore.openUrl('https://accounts.firefox.com/reset_password'),
+                onTap: () => AndroidCore.openUrl(
+                  'https://accounts.firefox.com/reset_password',
+                ),
                 child: Text(
                   'Forgot password?',
                   style: ProtonTypography.bodySmall.copyWith(

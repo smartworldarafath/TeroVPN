@@ -29,6 +29,8 @@ import java.util.concurrent.Executors
  * its HTTP API on loopback.
  */
 class MainActivity : FlutterActivity() {
+    private var androidChannel: MethodChannel? = null
+    private var fxaWebDialog: android.app.Dialog? = null
     /** Waits for the user's answer to the VPN permission. */
     private var pendingOn: Result? = null
     /** Waits for the user's answer to the Camera permission. */
@@ -143,7 +145,9 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app/android").setMethodCallHandler { call, result ->
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "app/android")
+        androidChannel = channel
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "dataDir" -> result.success(CoreService.dataDir(this).absolutePath)
                 "startCore" -> {
@@ -438,6 +442,18 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "openMozillaWebViewSignIn" -> {
+                    val email = call.argument<String>("email") ?: ""
+                    showMozillaWebViewSignIn(email)
+                    result.success(true)
+                }
+                "closeMozillaWebViewSignIn" -> {
+                    try {
+                        fxaWebDialog?.dismiss()
+                        fxaWebDialog = null
+                    } catch (_: Throwable) {}
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -685,5 +701,155 @@ class MainActivity : FlutterActivity() {
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
         }
+    }
+
+    @android.annotation.SuppressLint("SetJavaScriptEnabled")
+    private fun showMozillaWebViewSignIn(prefillEmail: String) {
+        try {
+            fxaWebDialog?.dismiss()
+        } catch (_: Throwable) {}
+
+        val dialog = android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
+        val root = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.VERTICAL
+            setBackgroundColor(android.graphics.Color.parseColor("#0D0B18"))
+        }
+
+        val header = android.widget.LinearLayout(this).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER_VERTICAL
+            setPadding(36, 48, 36, 28)
+            setBackgroundColor(android.graphics.Color.parseColor("#161326"))
+        }
+
+        val titleView = android.widget.TextView(this).apply {
+            text = "Mozilla Account Sign-In"
+            textSize = 16f
+            setTextColor(android.graphics.Color.WHITE)
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            layoutParams = android.widget.LinearLayout.LayoutParams(0, android.widget.LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val closeBtn = android.widget.TextView(this).apply {
+            text = "Close"
+            textSize = 14f
+            setTextColor(android.graphics.Color.parseColor("#A78BFA"))
+            setPadding(24, 12, 12, 12)
+            setOnClickListener {
+                dialog.dismiss()
+            }
+        }
+
+        header.addView(titleView)
+        header.addView(closeBtn)
+        root.addView(header)
+
+        val webView = android.webkit.WebView(this).apply {
+            layoutParams = android.widget.LinearLayout.LayoutParams(
+                android.widget.LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            settings.userAgentString = "Mozilla/5.0 (Android 14; Mobile; rv:145.0) Gecko/145.0 Firefox/145.0"
+        }
+
+        val hookJs = """
+            (function () {
+              if (window.__teroHooked) return;
+              window.__teroHooked = true;
+              var onChannel = function (e) {
+                var d = e.detail;
+                if (typeof d === 'string') { try { d = JSON.parse(d); } catch (err) { return; } }
+                if (d && d.message && window.TeroFxaBridge) {
+                  window.TeroFxaBridge.postMessage(JSON.stringify(d));
+                }
+              };
+              window.addEventListener('WebChannelMessageToChrome', onChannel);
+              document.addEventListener('WebChannelMessageToChrome', onChannel);
+              window.__teroReply = function (id, messageId, command, data) {
+                var detail = { id: id, message: { messageId: messageId, command: command, data: data } };
+                window.dispatchEvent(new CustomEvent('WebChannelMessageToContent', { detail: detail }));
+                document.dispatchEvent(new CustomEvent('WebChannelMessageToContent', { detail: detail }));
+              };
+            })();
+        """.trimIndent()
+
+        webView.addJavascriptInterface(object {
+            @android.webkit.JavascriptInterface
+            fun postMessage(rawJson: String) {
+                try {
+                    val obj = org.json.JSONObject(rawJson)
+                    val id = obj.optString("id", "account_updates")
+                    val msg = obj.optJSONObject("message") ?: return
+                    val command = msg.optString("command", "")
+                    val messageId = msg.optString("messageId", "")
+                    when (command) {
+                        "fxaccounts:fxa_status" -> {
+                            val replyJs = "window.__teroReply(" +
+                                org.json.JSONObject.quote(id) + "," +
+                                org.json.JSONObject.quote(messageId) + "," +
+                                org.json.JSONObject.quote(command) + "," +
+                                "{\"capabilities\":{},\"signedInUser\":null})"
+                            main.post { webView.evaluateJavascript(replyJs, null) }
+                        }
+                        "fxaccounts:can_link_account" -> {
+                            val replyJs = "window.__teroReply(" +
+                                org.json.JSONObject.quote(id) + "," +
+                                org.json.JSONObject.quote(messageId) + "," +
+                                org.json.JSONObject.quote(command) + "," +
+                                "{\"ok\":true})"
+                            main.post { webView.evaluateJavascript(replyJs, null) }
+                        }
+                        "fxaccounts:login", "fxaccounts:oauth_login" -> {
+                            val data = msg.optJSONObject("data") ?: return
+                            val sessionToken = data.optString("sessionToken", data.optString("token", ""))
+                            val email = data.optString("email", prefillEmail)
+                            if (sessionToken.length == 64) {
+                                main.post {
+                                    androidChannel?.invokeMethod(
+                                        "onMozillaBrowserSession",
+                                        mapOf("email" to email, "sessionToken" to sessionToken)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
+        }, "TeroFxaBridge")
+
+        webView.webViewClient = object : android.webkit.WebViewClient() {
+            override fun onPageStarted(view: android.webkit.WebView?, url: String?, favicon: Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                view?.evaluateJavascript(hookJs, null)
+            }
+
+            override fun onPageFinished(view: android.webkit.WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                view?.evaluateJavascript(hookJs, null)
+            }
+        }
+
+        val urlBuilder = Uri.parse("https://accounts.firefox.com/").buildUpon()
+            .appendQueryParameter("context", "fx_desktop_v3")
+            .appendQueryParameter("service", "sync")
+            .appendQueryParameter("action", "email")
+        if (prefillEmail.isNotBlank()) {
+            urlBuilder.appendQueryParameter("email", prefillEmail.trim())
+        }
+        webView.loadUrl(urlBuilder.build().toString())
+
+        root.addView(webView)
+        dialog.setContentView(root)
+        dialog.setOnDismissListener {
+            try {
+                webView.destroy()
+            } catch (_: Throwable) {}
+            if (fxaWebDialog === dialog) fxaWebDialog = null
+        }
+        fxaWebDialog = dialog
+        dialog.show()
     }
 }

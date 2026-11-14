@@ -161,6 +161,9 @@ class AppPermissionsService extends ChangeNotifier {
     ),
   ];
 
+  static bool get _isFlutterTest =>
+      !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
+
   /// Loads permissions from persistent storage and validates against real OS state.
   Future<void> init() async {
     final saved = AppPreferences.grantedPermissions;
@@ -172,7 +175,7 @@ class AppPermissionsService extends ChangeNotifier {
       }
     }
 
-    if (!kIsWeb && Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows && !_isFlutterTest) {
       await _validateRealWindowsSystemState();
     }
     notifyListeners();
@@ -245,8 +248,12 @@ class AppPermissionsService extends ChangeNotifier {
   bool isGranted(AppPermissionType type) => _granted.contains(type);
 
   /// Whether all essential core permissions required to connect are granted.
-  bool get areCorePermissionsGranted =>
-      corePermissions.every((p) => _granted.contains(p));
+  bool get areCorePermissionsGranted {
+    if (!kIsWeb && !Platform.isWindows) {
+      return true;
+    }
+    return corePermissions.every((p) => _granted.contains(p));
+  }
 
   /// Count of granted permissions.
   int get grantedCount => _granted.length;
@@ -282,7 +289,7 @@ class AppPermissionsService extends ChangeNotifier {
 
   /// Grant all core permissions at once.
   Future<void> grantAllCore() async {
-    if (!kIsWeb && Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows && !_isFlutterTest) {
       await _executeElevatedWindowsSetup();
     }
     for (final p in corePermissions) {
@@ -293,7 +300,7 @@ class AppPermissionsService extends ChangeNotifier {
 
   /// Grant all 10 permissions at once.
   Future<void> grantAllPermissions() async {
-    if (!kIsWeb && Platform.isWindows) {
+    if (!kIsWeb && Platform.isWindows && !_isFlutterTest) {
       await _executeElevatedWindowsSetup();
     }
     for (final p in AppPermissionType.values) {
@@ -326,23 +333,27 @@ class AppPermissionsService extends ChangeNotifier {
       case AppPermissionType.firewallAccess:
       case AppPermissionType.virtualDriver:
         // Execute real elevated UAC prompt to add firewall rules and register tun adapter
-        await _executeElevatedWindowsSetup();
+        if (!_isFlutterTest) {
+          await _executeElevatedWindowsSetup();
+        }
         break;
 
       case AppPermissionType.backgroundService:
-        try {
-          Process.runSync('reg', [
-            'add',
-            r'HKCU\Software\Microsoft\Windows\CurrentVersion\Run',
-            '/v',
-            'TeroVPN',
-            '/t',
-            'REG_SZ',
-            '/d',
-            '"$exePath" --background',
-            '/f',
-          ], runInShell: true);
-        } catch (_) {}
+        if (!_isFlutterTest) {
+          try {
+            Process.runSync('reg', [
+              'add',
+              r'HKCU\Software\Microsoft\Windows\CurrentVersion\Run',
+              '/v',
+              'TeroVPN',
+              '/t',
+              'REG_SZ',
+              '/d',
+              '"$exePath" --background',
+              '/f',
+            ], runInShell: true);
+          } catch (_) {}
+        }
         break;
 
       case AppPermissionType.dnsControl:
@@ -367,27 +378,31 @@ class AppPermissionsService extends ChangeNotifier {
       case AppPermissionType.notifications:
         await AppPreferences.setShowSpeedNotification(true);
         await AppPreferences.setNotifyUpdates(true);
-        try {
-          Process.runSync('reg', [
-            'add',
-            r'HKCU\Software\Classes\AppUserModelId\TeroVPN.App',
-            '/v',
-            'DisplayName',
-            '/t',
-            'REG_SZ',
-            '/d',
-            'TeroVPN',
-            '/f',
-          ], runInShell: true);
-        } catch (_) {}
+        if (!_isFlutterTest) {
+          try {
+            Process.runSync('reg', [
+              'add',
+              r'HKCU\Software\Classes\AppUserModelId\TeroVPN.App',
+              '/v',
+              'DisplayName',
+              '/t',
+              'REG_SZ',
+              '/d',
+              'TeroVPN',
+              '/f',
+            ], runInShell: true);
+          } catch (_) {}
+        }
         break;
 
       case AppPermissionType.nearbyDevices:
         await AppPreferences.setLanBypass(true);
-        try {
-          final s = await ServerSocket.bind(InternetAddress.anyIPv4, 45781);
-          await s.close();
-        } catch (_) {}
+        if (!_isFlutterTest) {
+          try {
+            final s = await ServerSocket.bind(InternetAddress.anyIPv4, 45781);
+            await s.close();
+          } catch (_) {}
+        }
         break;
 
       case AppPermissionType.appDiagnostics:

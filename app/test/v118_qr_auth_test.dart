@@ -70,7 +70,7 @@ void main() {
       final phoneAccount = Account(
         id: 'mobile_acc_101',
         email: 'mock.user@example.com',
-        name: 'the.vertex.us',
+        name: 'mock.user',
         password: 'DUMMY_MOCK_PASSWORD_123',
       );
 

@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
   static const _keySelectedLocation = 'selected_location';
-  static const _keyRecentLocations = 'recent_locations';
+  static const _keyRecentLocations = 'recent_connected_locations_v125';
   static const _keySelectedProtocol = 'selected_protocol';
   static const _keySelectedProfile = 'selected_profile';
   static const _keyNetShield = 'netshield_enabled';
@@ -58,23 +58,23 @@ class AppPreferences {
 
   static Future<void> setSelectedLocation(String code) async {
     await _prefs?.setString(_keySelectedLocation, code);
-    await addRecentLocation(code);
   }
 
-  // Recent Locations
+  // Recent Locations (empty on fresh install; populated when user connects to a country, max 5)
   static List<String> get recentLocations {
     final list = _prefs?.getStringList(_keyRecentLocations);
     if (list == null || list.isEmpty) {
-      return ['NL', 'DE', 'US'];
+      return const [];
     }
-    return list;
+    return list.take(5).toList();
   }
 
   static Future<void> addRecentLocation(String code) async {
-    if (code.isEmpty || code.toLowerCase() == 'fastest') return;
-    final list = recentLocations.toSet().toList();
-    list.remove(code.toUpperCase());
-    list.insert(0, code.toUpperCase());
+    final clean = code.trim().toUpperCase();
+    if (clean.isEmpty || clean == 'FASTEST' || clean == 'AUTO') return;
+    final list = recentLocations.toList();
+    list.remove(clean);
+    list.insert(0, clean);
     if (list.length > 5) {
       list.removeRange(5, list.length);
     }

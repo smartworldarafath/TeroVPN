@@ -117,11 +117,6 @@ function renderAll(state) {
     bannerText.textContent = 'Core found! Import local-api.token to control it.';
     bannerBtn.textContent = 'Pair';
     bannerBtn.onclick = () => switchTab('tab-settings');
-  } else if (state.routingMode !== 'custom' && state.coreState === 'offline') {
-    banner.classList.remove('hidden');
-    bannerText.textContent = 'Start TeroVPN Desktop or configure Custom Proxy.';
-    bannerBtn.textContent = 'Settings';
-    bannerBtn.onclick = () => switchTab('tab-settings');
   } else if (accounts.length === 0 && state.routingMode !== 'custom') {
     banner.classList.remove('hidden');
     bannerText.textContent = 'Sign in with Mozilla or QR Code to connect.';
@@ -375,32 +370,21 @@ function renderProfiles() {
 }
 
 // ---------------- Accounts & Sign-In Tab ----------------
-function renderAccounts(accounts, coreState = 'offline') {
-  const isCoreOnline = coreState === 'online';
+function renderAccounts(accounts) {
   const offlineBanner = $('signin-core-offline-banner');
   if (offlineBanner) {
-    offlineBanner.classList.toggle('hidden', isCoreOnline);
+    offlineBanner.classList.add('hidden');
   }
   const credFields = $('signin-credentials-fields');
   if (credFields) {
-    credFields.classList.toggle('hidden', !isCoreOnline);
-  }
-  if (!isCoreOnline) {
-    $('signin-error').classList.add('hidden');
+    credFields.classList.remove('hidden');
   }
   const container = $('accounts-list-container');
   container.innerHTML = '';
 
   if (!accounts || accounts.length === 0) {
     $('signin-panel').classList.remove('hidden');
-    if (!isCoreOnline && !userSelectedAuthTab && !$('seg-btn-qr').classList.contains('active')) {
-      $('seg-btn-qr').classList.add('active');
-      $('seg-btn-password').classList.remove('active');
-      $('signin-qr-view').classList.remove('hidden');
-      $('signin-password-view').classList.add('hidden');
-      startQrFlow();
-    }
-    container.innerHTML = '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:11.5px;">No accounts signed in yet. Use the Sign In panel above.</div>';
+    container.innerHTML = '<div style="text-align:center; padding:14px; color:var(--text-muted); font-size:11.5px;">No accounts signed in yet. Sign in with Mozilla Email & Password or scan the QR Code with your phone.</div>';
     return;
   }
 
@@ -489,7 +473,7 @@ function initAccountsListeners() {
   });
 
   $('btn-download-desktop')?.addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.0' });
+    chrome.tabs.create({ url: 'https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.5' });
   });
 
   $('btn-retry-core-signin')?.addEventListener('click', async () => {
@@ -579,21 +563,27 @@ function handleSignInState(state) {
     $('verify-title').textContent = '2FA Authenticator Code';
     $('verify-desc').textContent = 'Enter the 6-digit code from your authenticator app.';
     $('verify-code-input').placeholder = '6-digit TOTP code';
+    $('verify-code-input').setAttribute('inputmode', 'numeric');
   } else if (state.step === 'need_unblock_code') {
     $('verify-title').textContent = 'Mozilla Unblock Code';
-    $('verify-desc').textContent = 'Enter the alphanumeric unblock code sent to your email.';
-    $('verify-code-input').placeholder = 'Unblock code';
+    $('verify-desc').textContent = 'Enter the 8-character alphanumeric unblock code sent to your Gmail.';
+    $('verify-code-input').placeholder = '8-character unblock code';
+    $('verify-code-input').setAttribute('inputmode', 'text');
   } else if (state.step === 'need_captcha') {
     $('verify-title').textContent = 'Security Check (CAPTCHA)';
-    $('verify-desc').textContent = 'Enter the characters shown below.';
+    $('verify-desc').textContent = 'Enter the characters shown in the image below.';
+    $('verify-code-input').placeholder = 'Enter characters shown above';
+    $('verify-code-input').setAttribute('inputmode', 'text');
     if (state.captcha_image) {
       $('verify-captcha-img').src = state.captcha_image;
       $('verify-captcha-img').classList.remove('hidden');
     }
   } else {
-    $('verify-title').textContent = 'Email Verification Code';
-    $('verify-desc').textContent = 'Enter the verification code sent to your email.';
-    $('verify-code-input').placeholder = 'Verification code';
+    $('verify-title').textContent = '6-Digit Gmail Verification Code';
+    $('verify-desc').textContent = 'Mozilla sent a 6-digit security code to your Gmail. Enter that 6-digit code below.';
+    $('verify-code-input').placeholder = 'Enter 6-digit code from Gmail';
+    $('verify-code-input').setAttribute('inputmode', 'numeric');
+    $('verify-captcha-img').classList.add('hidden');
   }
 }
 
@@ -684,12 +674,15 @@ async function startQrFlow() {
       }
       await refreshState();
     }
-  }, 2000);
+  }, 800);
 }
 
 function stopQrTimers() {
   if (qrPollTimer) { clearInterval(qrPollTimer); qrPollTimer = null; }
   if (qrCountdownTimer) { clearInterval(qrCountdownTimer); qrCountdownTimer = null; }
+  if (activeQrSession?.sessionId) {
+    sendMsg({ action: 'QR_STOP_SESSION', sessionId: activeQrSession.sessionId }).catch(() => {});
+  }
 }
 
 // ---------------- Settings Tab ----------------

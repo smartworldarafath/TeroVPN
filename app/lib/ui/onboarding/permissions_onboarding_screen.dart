@@ -24,12 +24,22 @@ class _PermissionsOnboardingScreenState
   bool _nearbyGranted = false;
   bool _usageGranted = false;
   bool _isLoading = true;
+  bool _didAutoPrompt = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _refreshPermissions();
+    _initAndAutoPrompt();
+  }
+
+  Future<void> _initAndAutoPrompt() async {
+    await _refreshPermissions();
+    if (!mounted || _didAutoPrompt || kIsWeb || !Platform.isAndroid) return;
+    _didAutoPrompt = true;
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    if (!mounted) return;
+    await _grantAll(includeUsageIfAllOthersGranted: false);
   }
 
   @override
@@ -90,20 +100,41 @@ class _PermissionsOnboardingScreenState
     await AndroidCore.requestUsageAccessPermission();
   }
 
-  Future<void> _grantAll() async {
+  Future<void> _grantAll({bool includeUsageIfAllOthersGranted = true}) async {
     if (!_vpnGranted) {
       await AndroidCore.requestVpnPermission();
+      await _refreshPermissions();
     }
     if (!_notifGranted) {
       await AndroidCore.requestNotificationPermission();
+      await _refreshPermissions();
     }
     if (!_nearbyGranted) {
       await AndroidCore.requestNearbyPermission();
+      await _refreshPermissions();
+    }
+    if (includeUsageIfAllOthersGranted && !_usageGranted) {
+      await AndroidCore.requestUsageAccessPermission();
     }
     await _refreshPermissions();
   }
 
-  void _finish() {
+  Future<void> _finish() async {
+    if (!kIsWeb && Platform.isAndroid && !_vpnGranted) {
+      final granted = await AndroidCore.requestVpnPermission();
+      await _refreshPermissions();
+      if (!granted && !_vpnGranted) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'VPN Connection Request permission is mandatory to connect to TeroVPN.',
+              ),
+            ),
+          );
+        }
+      }
+    }
     AppPreferences.setPermissionsOnboardingDone(true);
     widget.onFinished();
   }
@@ -241,15 +272,15 @@ class _PermissionsOnboardingScreenState
 
                     // Actions
                     const SizedBox(height: 16),
-                    if (!_vpnGranted || !_notifGranted || !_nearbyGranted)
+                    if (!_vpnGranted || !_notifGranted || !_nearbyGranted || !_usageGranted)
                       SizedBox(
                         width: double.infinity,
                         height: 52,
                         child: ElevatedButton.icon(
-                          onPressed: _grantAll,
+                          onPressed: () => _grantAll(),
                           icon: const Icon(Icons.flash_on_rounded, size: 20),
                           label: const Text(
-                            'Grant Recommended Permissions',
+                            'Grant All Required Permissions',
                             style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                           ),
                           style: ElevatedButton.styleFrom(

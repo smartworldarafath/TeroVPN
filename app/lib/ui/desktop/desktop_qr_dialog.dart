@@ -34,24 +34,18 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
   @override
   void initState() {
     super.initState();
-    _session = QrAuthSyncService.createSession(deviceName: 'TeroVPN Desktop');
+    _session = QrAuthSyncService.createSession(
+      deviceName: 'TeroVPN Desktop',
+      onServerBound: () {
+        if (mounted) setState(() {});
+      },
+    );
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
 
-    _initSessionWithLocalIp();
     _listenForAuthorization();
-  }
-
-  void _initSessionWithLocalIp() async {
-    final asyncSession = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Desktop');
-    if (mounted) {
-      setState(() {
-        _session = asyncSession;
-      });
-      _listenForAuthorization();
-    }
   }
 
   @override
@@ -93,36 +87,68 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
     final effectivePassword = (password != null && password.isNotEmpty)
         ? password
         : (account.password ?? AppPreferences.getSavedAuthPassword(email) ?? '');
+    final token = account.reasonDetail.trim();
+    final isHexSessionToken = RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(token);
+
+    final readyAccount = Account(
+      id: account.id.isNotEmpty ? account.id : 'sync_${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      name: account.name.isNotEmpty
+          ? account.name
+          : (email.contains('@') ? email.split('@').first : 'User'),
+      active: true,
+      enabled: true,
+      status: AccountStatus.ready,
+      password: effectivePassword.isNotEmpty ? effectivePassword : account.password,
+      reasonDetail: token,
+    );
 
     // 1. Immediately persist active account in AppPreferences
-    await AppPreferences.setSavedActiveAccount(account.toJson());
+    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (effectivePassword.isNotEmpty) {
       await AppPreferences.setSavedAuthPassword(email, effectivePassword);
     }
 
     // 2. Synthesize into controller accounts immediately
     widget.controller.setAccounts(AccountList.fromJson({
-      'accounts': [account.toJson()],
+      'accounts': [readyAccount.toJson()],
       'switch_threshold_percent': 10.0,
     }));
 
-    // 3. Attempt real core activation or sign-in if password available
+    // 3. Attempt real core activation or direct browser session token exchange
     bool accountActivated = false;
     try {
       final existingAccounts = widget.controller.accounts?.accounts ?? [];
-      Account? existing;
       for (final a in existingAccounts) {
-        if (a.email.toLowerCase() == email.toLowerCase()) {
-          existing = a;
+        if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
+          await widget.controller.activate(existingAccounts.firstWhere((x) => x.id == a.id));
+          await widget.controller.refresh(accountsToo: true);
+          accountActivated = true;
           break;
         }
       }
-      if (existing != null) {
-        await widget.controller.activate(existing);
-        await widget.controller.refresh(accountsToo: true);
-        accountActivated = true;
-      }
     } catch (_) {}
+
+    if (!accountActivated && isHexSessionToken) {
+      try {
+        final state = await widget.controller.startBrowserSignIn(email, token);
+        if (state.step == SignInStep.done) {
+          accountActivated = true;
+        } else if (state.step == SignInStep.working) {
+          for (var i = 0; i < 12; i++) {
+            await Future.delayed(const Duration(milliseconds: 300));
+            final pollState = await widget.controller.signInState(state.id);
+            if (pollState.step == SignInStep.done) {
+              accountActivated = true;
+              break;
+            } else if (pollState.step != SignInStep.working) {
+              await widget.controller.cancelSignIn(state.id).catchError((_) {});
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+    }
 
     if (!accountActivated && effectivePassword.isNotEmpty) {
       try {
@@ -130,18 +156,21 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
         if (state.step == SignInStep.done) {
           accountActivated = true;
         } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 20; i++) {
+          for (var i = 0; i < 10; i++) {
             await Future.delayed(const Duration(milliseconds: 300));
             try {
               final pollState = await widget.controller.signInState(state.id);
               if (pollState.step == SignInStep.done) {
                 accountActivated = true;
                 break;
-              } else if (pollState.step == SignInStep.failed) {
+              } else if (pollState.step != SignInStep.working) {
+                await widget.controller.cancelSignIn(state.id).catchError((_) {});
                 break;
               }
             } catch (_) {}
           }
+        } else if (state.needsAnswer) {
+          await widget.controller.cancelSignIn(state.id).catchError((_) {});
         }
       } catch (_) {}
     }
@@ -155,7 +184,7 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
 
     if (!widget.controller.hasAccount) {
       widget.controller.setAccounts(AccountList.fromJson({
-        'accounts': [account.toJson()],
+        'accounts': [readyAccount.toJson()],
         'switch_threshold_percent': 10.0,
       }));
     }

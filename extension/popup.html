@@ -14,7 +14,7 @@
         <img src="icons/icon32.png" alt="TeroVPN Logo" class="brand-logo">
         <div class="brand-text">
           <span class="brand-title">TeroVPN</span>
-          <span class="version-tag">v1.2.0</span>
+          <span class="version-tag">v1.2.5</span>
         </div>
       </div>
       <div class="header-actions">
@@ -178,10 +178,10 @@
 
           <!-- Secondary Verification Step (2FA / Email Code / Email Link / Unblock / Captcha) -->
           <div id="signin-step-verify" class="hidden">
-            <div id="verify-title" class="verify-title">Verification Required</div>
-            <div id="verify-desc" class="verify-desc">Enter the verification code sent to your email.</div>
+            <div id="verify-title" class="verify-title">6-Digit Gmail Verification Code</div>
+            <div id="verify-desc" class="verify-desc">Mozilla sent a 6-digit security code to your Gmail. Enter that 6-digit code below.</div>
             <img id="verify-captcha-img" class="captcha-img hidden" alt="Captcha">
-            <input type="text" id="verify-code-input" class="text-input full-width" placeholder="Enter code">
+            <input type="text" id="verify-code-input" class="text-input full-width" placeholder="Enter 6-digit code from Gmail" autocomplete="one-time-code">
             <div class="verify-actions">
               <button id="btn-verify-submit" class="primary-btn flex-2">Verify & Continue</button>
               <button id="btn-verify-cancel" class="secondary-btn flex-1">Cancel</button>

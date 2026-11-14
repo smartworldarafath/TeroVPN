@@ -1,5 +1,6 @@
 package com.terovpn.android
 
+import com.arman.firefoxvpn.Tun2Socks
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -72,7 +73,13 @@ class CoreService : VpnService() {
                 turnOff(this@CoreService)
                 return
             }
+            if (usesVpn(this@CoreService) && Tun2Socks.ended()) {
+                Log.e(TAG, "the VPN's tunnel ended; turning the VPN off")
+                turnOff(this@CoreService)
+                return
+            }
             val code = when {
+                mobile.Mobile.connectPending() -> ""
                 offline -> NO_NETWORK
                 mobile.Mobile.running() -> mobile.Mobile.exitCountry()
                 else -> ""
@@ -188,14 +195,21 @@ class CoreService : VpnService() {
                 if (usesVpn(this)) {
                     if (!startTunnel()) turnOff(this)
                 } else {
-                    mobile.Mobile.stopTun()
+                    stopTunnel()
                 }
             }
             return START_STICKY
         }
         startInForeground()
         startCore(this, on = true)
-        if (!mobile.Mobile.isOn()) mobile.Mobile.setOn(true)
+        if (!mobile.Mobile.isOn()) {
+            if (intent == null) {
+                mobile.Mobile.setOn(true)
+            } else {
+                turnOff(this)
+                return START_NOT_STICKY
+            }
+        }
         if (usesVpn(this) && !startTunnel()) {
             turnOff(this)
             return START_NOT_STICKY
@@ -219,7 +233,7 @@ class CoreService : VpnService() {
         main.removeCallbacks(watchCountry)
         getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
         stopWatchingNetwork()
-        mobile.Mobile.stopTun()
+        stopTunnel()
         on = false
         connected = false
         QuickTile.refresh(this)
@@ -233,9 +247,11 @@ class CoreService : VpnService() {
             return false
         }
         return try {
+            val mtu = mobile.Mobile.tunMTU().takeIf { it > 0 } ?: MTU
+            val config = mobile.Mobile.tunConfig(mtu)
             val builder = Builder()
                 .setSession(getString(R.string.app_name))
-                .setMtu(MTU)
+                .setMtu(mtu)
                 .addAddress("172.19.0.1", 30)
                 .addRoute("0.0.0.0", 0)
                 .addDnsServer("172.19.0.2")
@@ -244,10 +260,13 @@ class CoreService : VpnService() {
             applyApps(builder)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
             val tun = builder.establish() ?: return false
-            mobile.Mobile.startTun(tun.detachFd())
+            if (!Tun2Socks.start(config, tun)) {
+                Log.e(TAG, "the VPN's tunnel did not start")
+                return false
+            }
             tunnelUpAt = System.currentTimeMillis()
             true
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             Log.e(TAG, "the VPN did not start", e)
             Toast.makeText(this, e.message ?: e.toString(), Toast.LENGTH_LONG).show()
             false
@@ -498,9 +517,14 @@ class CoreService : VpnService() {
             ConnectWidget.updateAll(context)
         }
 
+        private fun stopTunnel() {
+            Tun2Socks.stop()
+            if (mobile.Mobile.running()) mobile.Mobile.stopTun()
+        }
+
         fun turnOff(context: Context) {
+            stopTunnel()
             if (mobile.Mobile.running()) {
-                mobile.Mobile.stopTun()
                 mobile.Mobile.setOn(false)
             }
             on = false
@@ -546,6 +570,7 @@ class CoreService : VpnService() {
 
         @Synchronized
         fun stopCore() {
+            Tun2Socks.stop()
             if (mobile.Mobile.running()) mobile.Mobile.stop()
         }
     }

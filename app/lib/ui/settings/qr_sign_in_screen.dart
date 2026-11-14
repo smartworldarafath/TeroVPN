@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../theme/proton_typography.dart';
 import '../../theme/theme_manager.dart';
@@ -59,6 +62,9 @@ class _QrSignInScreenState extends State<QrSignInScreen>
   void dispose() {
     _laserController.dispose();
     _sessionPollTimer?.cancel();
+    if (_activeQrSession != null) {
+      QrAuthSyncService.cancelSession(_activeQrSession!.sessionId);
+    }
     _scannerController?.dispose();
     super.dispose();
   }
@@ -87,13 +93,18 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     });
   }
 
-  Future<void> _initShowQrSession() async {
+  void _initShowQrSession() {
     _sessionPollTimer?.cancel();
-    final session = await QrAuthSyncService.createSessionAsync(deviceName: 'TeroVPN Mobile');
-    if (!mounted) return;
-    setState(() {
-      _activeQrSession = session;
-    });
+    if (_activeQrSession != null) {
+      QrAuthSyncService.cancelSession(_activeQrSession!.sessionId);
+    }
+    final session = QrAuthSyncService.createSession(
+      deviceName: 'TeroVPN Mobile',
+      onServerBound: () {
+        if (mounted) setState(() {});
+      },
+    );
+    _activeQrSession = session;
 
     // Background listener for incoming authorization from another device
     QrAuthSyncService.waitForAuthorization(session.sessionId).then((account) {
@@ -103,44 +114,102 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     });
   }
 
+  Future<String?> _extractLocalCoreSessionToken(String email) async {
+    try {
+      final supportDir = await getApplicationSupportDirectory();
+      final coreDir = Directory('${supportDir.path}/core');
+      if (!await coreDir.exists()) return null;
+      final hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
+      await for (final entity in coreDir.list(recursive: true, followLinks: false)) {
+        if (entity is File && entity.path.endsWith('.json')) {
+          try {
+            final content = await entity.readAsString();
+            if (!content.contains('session_token')) continue;
+            final decoded = jsonDecode(content);
+            if (decoded is Map) {
+              final token = decoded['session_token'] as String? ?? '';
+              final accEmail = (decoded['email'] as String? ?? '').toLowerCase();
+              if (hex64.hasMatch(token) && (accEmail.isEmpty || accEmail == email.toLowerCase())) {
+                return token;
+              }
+            }
+          } catch (_) {}
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> _handleIncomingAuthorization(Account account) async {
     setState(() => _isAuthorizing = true);
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 500));
 
     final email = account.email.trim();
     String password = (account.password != null && account.password!.isNotEmpty)
         ? account.password!
         : (AppPreferences.getSavedAccountPassword(email) ?? '');
+    final token = account.reasonDetail.trim();
+    final isHexSessionToken = RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(token);
+
+    final readyAccount = Account(
+      id: account.id.isNotEmpty ? account.id : 'sync_${DateTime.now().millisecondsSinceEpoch}',
+      email: email,
+      name: account.name.isNotEmpty
+          ? account.name
+          : (email.contains('@') ? email.split('@').first : 'User'),
+      active: true,
+      enabled: true,
+      status: AccountStatus.ready,
+      password: password.isNotEmpty ? password : account.password,
+      reasonDetail: token,
+    );
 
     // 1. Immediately persist active account in AppPreferences
-    await AppPreferences.setSavedActiveAccount(account.toJson());
+    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (password.isNotEmpty) {
       await AppPreferences.setSavedAccountPassword(email, password);
     }
 
     // 2. Synthesize into controller accounts immediately
     widget.controller.setAccounts(AccountList.fromJson({
-      'accounts': [account.toJson()],
+      'accounts': [readyAccount.toJson()],
       'switch_threshold_percent': 10.0,
     }));
 
-    // 3. Attempt real core activation or sign-in if password available
+    // 3. Attempt real core activation or direct browser session token exchange
     bool accountActivated = false;
     try {
       final existingAccounts = widget.controller.accounts?.accounts ?? [];
-      Account? existing;
       for (final a in existingAccounts) {
-        if (a.email.toLowerCase() == email.toLowerCase()) {
-          existing = a;
+        if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
+          await widget.controller.activate(a);
+          await widget.controller.refresh(accountsToo: true);
+          accountActivated = true;
           break;
         }
       }
-      if (existing != null) {
-        await widget.controller.activate(existing);
-        await widget.controller.refresh(accountsToo: true);
-        accountActivated = true;
-      }
     } catch (_) {}
+
+    if (!accountActivated && isHexSessionToken) {
+      try {
+        final state = await widget.controller.startBrowserSignIn(email, token);
+        if (state.step == SignInStep.done) {
+          accountActivated = true;
+        } else if (state.step == SignInStep.working) {
+          for (var i = 0; i < 12; i++) {
+            await Future.delayed(const Duration(milliseconds: 350));
+            final pollState = await widget.controller.signInState(state.id);
+            if (pollState.step == SignInStep.done) {
+              accountActivated = true;
+              break;
+            } else if (pollState.step != SignInStep.working) {
+              await widget.controller.cancelSignIn(state.id).catchError((_) {});
+              break;
+            }
+          }
+        }
+      } catch (_) {}
+    }
 
     if (!accountActivated && password.isNotEmpty) {
       try {
@@ -148,26 +217,26 @@ class _QrSignInScreenState extends State<QrSignInScreen>
         if (state.step == SignInStep.done) {
           accountActivated = true;
         } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 30; i++) {
-            await Future.delayed(const Duration(milliseconds: 500));
+          for (var i = 0; i < 10; i++) {
+            await Future.delayed(const Duration(milliseconds: 350));
             try {
               final pollState = await widget.controller.signInState(state.id);
               if (pollState.step == SignInStep.done) {
                 accountActivated = true;
                 break;
-              } else if (pollState.step == SignInStep.failed) {
+              } else if (pollState.step != SignInStep.working) {
+                await widget.controller.cancelSignIn(state.id).catchError((_) {});
                 break;
               }
             } catch (_) {}
           }
+        } else if (state.needsAnswer) {
+          await widget.controller.cancelSignIn(state.id).catchError((_) {});
         }
       } catch (_) {}
     }
 
     try {
-      if (password.isNotEmpty) {
-        await AppPreferences.setSavedAccountPassword(email, password);
-      }
       if (accountActivated) {
         await widget.controller.refresh(accountsToo: true);
         final list = widget.controller.accounts?.accounts ?? [];
@@ -182,12 +251,19 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       }
     } catch (_) {}
 
+    if (!widget.controller.hasAccount) {
+      widget.controller.setAccounts(AccountList.fromJson({
+        'accounts': [readyAccount.toJson()],
+        'switch_threshold_percent': 10.0,
+      }));
+    }
+
     if (mounted) {
       setState(() => _isAuthorizing = false);
       TopDockToast.show(
         context,
         title: 'Sign In Successful! 🎉',
-        message: 'Logged in as ${account.email} via QR authorization',
+        message: 'Logged in as ${readyAccount.email} via QR authorization',
         icon: Icons.check_circle_rounded,
         iconColor: const Color(0xFF00E676),
       );
@@ -207,20 +283,17 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     final token = uri?.queryParameters['token'] ?? uri?.queryParameters['sid'];
 
     if (activeAccount == null && email != null && email.isNotEmpty) {
-      await Future.delayed(const Duration(milliseconds: 1000));
-      await widget.controller.startSignIn(email, token ?? 'authorized_qr_user');
-      await widget.controller.refresh(accountsToo: true);
-      if (mounted) {
-        setState(() => _isAuthorizing = false);
-        TopDockToast.show(
-          context,
-          title: 'Sign In Successful! 🎉',
-          message: 'Signed in as $email on this phone',
-          icon: Icons.check_circle_rounded,
-          iconColor: const Color(0xFF00E676),
-        );
-        Navigator.of(context).pop();
-      }
+      await Future.delayed(const Duration(milliseconds: 600));
+      final incomingAcc = Account(
+        id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
+        email: email,
+        name: email.split('@').first,
+        active: true,
+        enabled: true,
+        status: AccountStatus.ready,
+        reasonDetail: token ?? 'authorized_qr_user',
+      );
+      await _handleIncomingAuthorization(incomingAcc);
       return;
     }
 
@@ -252,27 +325,23 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     final port = portStr != null ? int.tryParse(portStr) : null;
     final secretKey = uri?.queryParameters['k'];
 
-    String? password = AppPreferences.getSavedAuthPassword(activeAccount.email);
-    if (password == null || password.isEmpty) {
-      if (mounted) {
-        setState(() => _isAuthorizing = false);
-        password = await _promptPasswordIfMissing(context, activeAccount.email);
-        if (password == null || password.isEmpty) {
-          return;
-        }
-        await AppPreferences.setSavedAuthPassword(activeAccount.email, password);
-        setState(() => _isAuthorizing = true);
-      }
-    }
+    final String password = (activeAccount.password != null && activeAccount.password!.isNotEmpty)
+        ? activeAccount.password!
+        : (AppPreferences.getSavedAuthPassword(activeAccount.email) ?? '');
 
-    // Smooth authorizing simulation & sync across LAN and global cloud relay
-    await Future.delayed(const Duration(milliseconds: 800));
+    final String? coreSessionToken = await _extractLocalCoreSessionToken(activeAccount.email);
+    final String effectiveToken = (coreSessionToken != null && coreSessionToken.isNotEmpty)
+        ? coreSessionToken
+        : (activeAccount.reasonDetail.isNotEmpty ? activeAccount.reasonDetail : 'auth_qr_remote');
+
+    // Deliver encrypted credentials & session token across LAN and global live relay stream
     await QrAuthSyncService.authorizeRemoteSession(
       sessionId: sessionId,
       account: activeAccount,
       ip: ip,
       port: port,
       password: password,
+      token: effectiveToken,
       secretKey: secretKey,
     );
 
@@ -287,70 +356,6 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       );
       Navigator.of(context).pop();
     }
-  }
-
-  Future<String?> _promptPasswordIfMissing(BuildContext context, String email) async {
-    final passwordController = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: ThemeManager.instance.surfaceColor,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: ThemeManager.instance.cardBorderColor),
-        ),
-        title: Text(
-          'Confirm Desktop Sign In',
-          style: TextStyle(
-            color: ThemeManager.instance.textPrimaryColor,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Enter password for $email to authorize and sign into Desktop:',
-              style: TextStyle(
-                color: ThemeManager.instance.textSecondaryColor,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: passwordController,
-              obscureText: true,
-              autofocus: true,
-              style: TextStyle(color: ThemeManager.instance.textPrimaryColor),
-              decoration: InputDecoration(
-                hintText: 'Enter password',
-                hintStyle: TextStyle(color: ThemeManager.instance.textSecondaryColor.withValues(alpha: 0.5)),
-                filled: true,
-                fillColor: ThemeManager.instance.surfaceDarkColor,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
-            child: Text('Cancel', style: TextStyle(color: ThemeManager.instance.textSecondaryColor)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF6B42FF),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(passwordController.text),
-            child: const Text('Authorize', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
   String _maskEmail(String email) {

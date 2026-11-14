@@ -1,6 +1,6 @@
 /* ==========================================================================
    TeroVPN Chrome Extension - Liquid Glass Theme (Dark & Light)
-   Version: 1.2.0
+   Version: 1.2.5
    ========================================================================== */
 
 :root, [data-theme="dark"] {
@@ -171,7 +171,40 @@ body {
   color: var(--text-primary);
 }
 
-/* ---------------- Tab Panels ---------------- */
+/* ---------------- Tab Panels & Smooth Transitions ---------------- */
+@keyframes tabSlideFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.992);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes subViewFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlowConnected {
+  0%, 100% {
+    box-shadow: 0 0 22px rgba(16, 185, 129, 0.38);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(16, 185, 129, 0.62);
+    transform: scale(1.03);
+  }
+}
+
 .tab-panel {
   display: none;
   flex: 1;
@@ -179,10 +212,20 @@ body {
   padding: 12px 14px 8px 14px;
   gap: 10px;
   overflow: hidden;
+  will-change: transform, opacity;
 }
 
 .tab-panel.active {
   display: flex;
+  animation: tabSlideFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+#signin-password-view,
+#signin-qr-view,
+#signin-step-credentials,
+#signin-step-verify,
+.signin-card {
+  animation: subViewFadeIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .panel-header {
@@ -274,6 +317,7 @@ body {
   border-color: var(--accent-emerald);
   border-style: solid;
   box-shadow: var(--shadow-glow-connected);
+  animation: pulseGlowConnected 2.4s ease-in-out infinite;
 }
 
 @keyframes spinRing {
@@ -818,6 +862,17 @@ input:checked + .slider:before { transform: translateX(16px); }
   font-weight: 700;
   cursor: pointer;
   margin-top: 6px;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(107, 66, 255, 0.38);
+  filter: brightness(1.06);
+}
+
+.primary-btn:active {
+  transform: scale(0.98);
 }
 
 .secondary-btn {
@@ -830,6 +885,17 @@ input:checked + .slider:before { transform: translateX(16px); }
   font-weight: 600;
   cursor: pointer;
   text-align: center;
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1), background 0.18s ease, border-color 0.18s ease;
+}
+
+.secondary-btn:hover {
+  background: var(--bg-surface-hover);
+  border-color: rgba(107, 66, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.secondary-btn:active {
+  transform: scale(0.98);
 }
 
 .file-btn { display: flex; align-items: center; justify-content: center; }

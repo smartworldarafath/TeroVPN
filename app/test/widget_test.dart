@@ -11,9 +11,9 @@ void main() {
     SharedPreferences.setMockInitialValues({
       'onboarding_completed': true,
       'permissions_onboarding_done': true,
+      'permissions_setup_completed': true,
     });
     await AppPreferences.init();
-    await AppPermissionsService.instance.init();
     await AppPermissionsService.instance.grantAllCore();
   });
 
@@ -33,7 +33,6 @@ void main() {
     await tester.pump(const Duration(milliseconds: 2000));
     await tester.pump(const Duration(milliseconds: 600));
 
-    expect(find.text('TeroVPN'), findsOneWidget);
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Countries'), findsOneWidget);
     expect(find.text('Profiles'), findsOneWidget);

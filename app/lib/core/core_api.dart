@@ -278,6 +278,16 @@ class CoreApi {
         }),
       );
 
+  Future<SignInState> startBrowserSignIn(
+    String email,
+    String sessionToken,
+  ) async => SignInState.fromJson(
+    await _json('POST', '/api/signin/browser', {
+      'email': email,
+      'session_token': sessionToken,
+    }),
+  );
+
   /// Signs an account in again with its stored password; 409 when the core
   /// has none, and the user must type it.
   Future<SignInState> startSignInAgain(String accountId) async =>

@@ -383,5 +383,56 @@ class AndroidCore {
       await _channel.invokeMethod<void>('openAppSettings');
     } catch (_) {}
   }
+
+  static void Function(String email, String sessionToken)? _onBrowserSession;
+
+  static void setMozillaBrowserSessionListener(
+    void Function(String email, String sessionToken)? listener,
+  ) {
+    _onBrowserSession = listener;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'onMozillaBrowserSession') {
+        final args = call.arguments;
+        if (args is Map) {
+          final email = '${args['email'] ?? ''}';
+          final token = '${args['sessionToken'] ?? ''}';
+          if (token.isNotEmpty) {
+            _onBrowserSession?.call(email, token);
+          }
+        }
+      }
+    });
+  }
+
+  /// Opens the native Android WebView for Mozilla Account sign-in with WebChannel bridge.
+  static Future<bool> openMozillaWebViewSignIn(String email) async {
+    try {
+      return await _channel.invokeMethod<bool>('openMozillaWebViewSignIn', {
+            'email': email,
+          }) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Closes the native Android WebView for Mozilla Account sign-in if open.
+  static Future<void> closeMozillaWebViewSignIn() async {
+    try {
+      await _channel.invokeMethod<void>('closeMozillaWebViewSignIn');
+    } catch (_) {}
+  }
+
+  /// Ensures VPN permission is granted before connecting.
+  /// If not granted, prompts the system VPN dialog and returns true only if granted.
+  static Future<bool> ensureMandatoryVpnPermission() async {
+    try {
+      final granted = await isVpnPermissionGranted();
+      if (granted) return true;
+      return await requestVpnPermission();
+    } catch (_) {
+      return false;
+    }
+  }
 }
 

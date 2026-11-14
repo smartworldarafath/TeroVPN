@@ -60,11 +60,7 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
     setState(() => _activeProfileTitle = profile.name);
     await AppPreferences.setSelectedProfile(profile.name);
 
-    String targetCountry = profile.countryCode;
-    if (targetCountry == 'fastest') {
-      final fastest = CountryManager.instance.getFastestCountry();
-      targetCountry = fastest.code;
-    }
+    String targetCountry = CountryManager.instance.getBestCountryForProfile(profile).code;
 
     await AppPreferences.setSelectedLocation(targetCountry);
     await widget.controller.setLocation(targetCountry.toLowerCase());

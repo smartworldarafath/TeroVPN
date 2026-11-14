@@ -18,14 +18,13 @@ void main() {
     expect(fastest.pingMs, isPositive);
     expect(fastest.code.isNotEmpty, isTrue);
 
-    // Verify all countries have valid ping and load
+    // Verify all countries have valid ping, load, and real-time speed
     for (final c in manager.countries) {
       expect(c.pingMs, greaterThan(0));
       expect(c.load, greaterThanOrEqualTo(0));
-      // Fastest country score must be <= any other country
-      final fastestScore = fastest.pingMs + (fastest.load * 0.15);
-      final score = c.pingMs + (c.load * 0.15);
-      expect(fastestScore, lessThanOrEqualTo(score + 0.001));
+      expect(c.realtimeSpeedMbps, greaterThan(0));
+      // Fastest country real-time internet loading speed must be >= any other country
+      expect(fastest.realtimeSpeedMbps, greaterThanOrEqualTo(c.realtimeSpeedMbps - 0.001));
     }
   });
 

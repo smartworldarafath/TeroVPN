@@ -451,6 +451,8 @@ class ConnectionTest {
   final String exitCity;
   final String exitNetwork;
   final String exitError;
+
+  String get exitIp => exitIpv4.isNotEmpty ? exitIpv4 : exitIpv6;
 }
 
 /// `GET /api/status`.
@@ -631,6 +633,8 @@ abstract final class SignInError {
   static const tooManyCodes = 'too_many_codes';
   static const timedOut = 'timed_out';
   static const network = 'network';
+  static const blocked = 'blocked';
+  static const tokenBlocked = 'token_blocked';
 }
 
 class SignInState {

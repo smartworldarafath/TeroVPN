@@ -94,9 +94,9 @@ void main() {
   });
 
   test('AppUpdateService version bump to 1.1.9', () {
-    expect(AppUpdateService.currentVersion, '1.2.0');
-    expect(AppUpdateService.isNewerVersion('v1.2.1', '1.2.0'), true);
-    expect(AppUpdateService.isNewerVersion('v1.2.0', '1.2.0'), false);
-    expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.0'), false);
+    expect(AppUpdateService.currentVersion, '1.2.5');
+    expect(AppUpdateService.isNewerVersion('v1.2.6', '1.2.5'), true);
+    expect(AppUpdateService.isNewerVersion('v1.2.5', '1.2.5'), false);
+    expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.5'), false);
   });
 }
