@@ -442,6 +442,37 @@ class MainActivity : FlutterActivity() {
                         result.success(false)
                     }
                 }
+                "openMailApp" -> {
+                    var opened = false
+                    try {
+                        val gmIntent = packageManager.getLaunchIntentForPackage("com.google.android.gm")?.apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        if (gmIntent != null) {
+                            startActivity(gmIntent)
+                            opened = true
+                        }
+                    } catch (_: Throwable) {}
+                    if (!opened) {
+                        try {
+                            val mailIntent = Intent(Intent.ACTION_MAIN).apply {
+                                addCategory(Intent.CATEGORY_APP_EMAIL)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivity(mailIntent)
+                            opened = true
+                        } catch (_: Throwable) {}
+                    }
+                    if (!opened) {
+                        try {
+                            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://mail.google.com")).apply {
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            })
+                            opened = true
+                        } catch (_: Throwable) {}
+                    }
+                    result.success(opened)
+                }
                 "openMozillaWebViewSignIn" -> {
                     val email = call.argument<String>("email") ?: ""
                     showMozillaWebViewSignIn(email)

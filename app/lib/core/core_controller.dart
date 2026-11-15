@@ -458,6 +458,40 @@ class CoreController extends ChangeNotifier {
   Future<void> cancelSignIn(String id) =>
       _require().cancelSignIn(id);
 
+  /// Exports signed-in accounts/session bundle from Go core as base64 zip.
+  Future<String?> exportBackupBase64() async {
+    final api = _api;
+    if (api == null) return null;
+    return api.exportBackupBase64();
+  }
+
+  /// Imports a core backup archive base64 string, activates [preferredEmail]
+  /// if found, and refreshes account state from core.
+  Future<bool> importBackupBase64(
+    String data, {
+    String? preferredEmail,
+  }) async {
+    final api = _api;
+    if (api == null || data.trim().isEmpty) return false;
+    try {
+      await api.importBackupBase64(data.trim());
+      await refresh(accountsToo: true);
+      if (preferredEmail != null && preferredEmail.trim().isNotEmpty) {
+        final target = preferredEmail.trim().toLowerCase();
+        for (final acc in accounts?.accounts ?? const <Account>[]) {
+          if (acc.email.toLowerCase() == target) {
+            await activate(acc);
+            await refresh(accountsToo: true);
+            break;
+          }
+        }
+      }
+      return hasAccount;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> openFolder() => _act(() => _require().openFolder());
 
   /// A fresh sign-in link to the web dashboard.

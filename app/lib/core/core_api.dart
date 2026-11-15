@@ -306,6 +306,34 @@ class CoreApi {
   Future<void> cancelSignIn(String id) =>
       _json('DELETE', '/api/signin/${_seg(id)}');
 
+  /// Exports all signed-in accounts and device keys from the core as a
+  /// base64-encoded ZIP archive (`GET /api/backup`), or null if empty/unavailable.
+  Future<String?> exportBackupBase64() async {
+    final uri = endpoint.baseUri.replace(path: '/api/backup');
+    try {
+      final req = await _client.getUrl(uri).timeout(_normal);
+      req.headers.set('X-Local-Token', endpoint.token);
+      final res = await req.close().timeout(_slow);
+      final bytes = await res
+          .fold<BytesBuilder>(BytesBuilder(), (b, chunk) => b..add(chunk))
+          .timeout(_slow);
+      final raw = bytes.takeBytes();
+      if (res.statusCode == 200 && raw.isNotEmpty) {
+        return base64Encode(raw);
+      }
+      return null;
+    } on IOException {
+      return null;
+    } on TimeoutException {
+      return null;
+    }
+  }
+
+  /// Imports a base64-encoded core backup archive (`POST /api/backup/import`)
+  /// so transferred accounts work immediately without re-entering credentials.
+  Future<Map<String, Object?>> importBackupBase64(String data) =>
+      _json('POST', '/api/backup/import', {'data': data}, _slow);
+
   /// The core's config.json as raw JSON, so a save keeps every field the
   /// app does not know.
   Future<Map<String, Object?>> settings() async {

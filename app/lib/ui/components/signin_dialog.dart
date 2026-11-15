@@ -39,23 +39,33 @@ class _SignInDialogState extends State<SignInDialog> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isCompletingSignIn = false;
   bool _isSuccess = false;
   String? _errorMessage;
 
   SignInState? _state;
+  String? _retainedVerificationStep;
   Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
-    if (! identical(0, 0.0) && Platform.isAndroid) {
+    _codeController.addListener(_onCodeChanged);
+    if (!identical(0, 0.0) && Platform.isAndroid) {
       AndroidCore.setMozillaBrowserSessionListener(_onMozillaBrowserSession);
+    }
+  }
+
+  void _onCodeChanged() {
+    if (mounted) {
+      setState(() {});
     }
   }
 
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _codeController.removeListener(_onCodeChanged);
     if (!identical(0, 0.0) && Platform.isAndroid) {
       AndroidCore.setMozillaBrowserSessionListener(null);
     }
@@ -123,13 +133,26 @@ class _SignInDialogState extends State<SignInDialog> {
     }
   }
 
+  Future<void> _openMailApp() async {
+    final opened = await AndroidCore.openMailApp();
+    if (!opened && mounted) {
+      setState(() {
+        _errorMessage =
+            'Could not open mail app automatically. Please open your email inbox manually.';
+      });
+    }
+  }
+
   Future<void> _submitAnswer() async {
     final code = _codeController.text.trim();
+    final activeStep = _state?.needsAnswer == true
+        ? _state!.step
+        : (_retainedVerificationStep ?? SignInStep.needEmailCode);
     if (code.isEmpty) {
       setState(() {
-        _errorMessage = _state?.step == SignInStep.needCaptcha
+        _errorMessage = activeStep == SignInStep.needCaptcha
             ? 'Please enter the characters shown in the image.'
-            : 'Please enter the verification code sent to your Gmail.';
+            : 'Please enter the verification code sent to your email.';
       });
       return;
     }
@@ -142,13 +165,75 @@ class _SignInDialogState extends State<SignInDialog> {
     });
 
     try {
-      final state = await widget.controller.answerSignIn(_state!.id, code);
+      // If the prior flow already finished/closed in Go core (e.g. timed out while user
+      // was checking email), refresh state first before answering to avoid raw
+      // "this sign-in is not waiting for input" dead-ends.
+      var targetState = _state!;
+      if (!targetState.needsAnswer) {
+        try {
+          targetState = await widget.controller.signInState(targetState.id);
+        } catch (_) {}
+      }
+
+      if (targetState.step == SignInStep.done) {
+        _handleState(targetState);
+        return;
+      }
+
+      if (!targetState.needsAnswer) {
+        final email = _emailController.text.trim();
+        final password = _passwordController.text;
+        if (email.isNotEmpty && password.isNotEmpty) {
+          final restarted = await widget.controller.startSignIn(email, password);
+          if (restarted.needsAnswer &&
+              (restarted.step == SignInStep.needEmailCode ||
+                  restarted.step == SignInStep.needUnblockCode ||
+                  restarted.step == SignInStep.needTotp)) {
+            final submitted = await widget.controller.answerSignIn(
+              restarted.id,
+              code,
+            );
+            _handleState(submitted);
+            return;
+          }
+          _handleState(restarted);
+          return;
+        }
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _errorMessage =
+              'Incorrect or expired verification code. Please check your inbox and try again.';
+        });
+        return;
+      }
+
+      final state = await widget.controller.answerSignIn(targetState.id, code);
       _handleState(state);
     } catch (e) {
       if (!mounted) return;
+      final raw = e.toString().replaceFirst('Exception: ', '');
+      final lower = raw.toLowerCase();
+      if (lower.contains('not waiting for input')) {
+        try {
+          final latest = await widget.controller.signInState(_state!.id);
+          if (latest.step == SignInStep.done) {
+            _handleState(latest);
+            return;
+          }
+        } catch (_) {}
+        if (!mounted) return;
+        setState(() {
+          _isLoading = false;
+          _retainedVerificationStep ??= activeStep;
+          _errorMessage =
+              'Incorrect or expired verification code. Please check your inbox and try again.';
+        });
+        return;
+      }
       setState(() {
         _isLoading = false;
-        _errorMessage = e.toString().replaceFirst('Exception: ', '');
+        _errorMessage = raw;
       });
     }
   }
@@ -215,7 +300,9 @@ class _SignInDialogState extends State<SignInDialog> {
     }
     setState(() {
       _state = null;
+      _retainedVerificationStep = null;
       _isLoading = false;
+      _isCompletingSignIn = false;
       _errorMessage = null;
       _codeController.clear();
     });
@@ -235,6 +322,7 @@ class _SignInDialogState extends State<SignInDialog> {
     }
 
     if (state.step == SignInStep.needEmailLink) {
+      _retainedVerificationStep = SignInStep.needEmailLink;
       setState(() {
         _isLoading = false;
         _errorMessage = state.error.isNotEmpty ? state.error : null;
@@ -257,48 +345,82 @@ class _SignInDialogState extends State<SignInDialog> {
         AppPreferences.setSavedAccountPassword(email, password);
       }
       setState(() {
-        _isLoading = false;
-        _isSuccess = true;
+        _isCompletingSignIn = true;
+        _isLoading = true;
+        _isSuccess = false;
         _errorMessage = null;
       });
       widget.controller.refresh(accountsToo: true);
-      Future.delayed(const Duration(milliseconds: 900), () {
-        if (mounted) Navigator.of(context).pop(true);
+      Future.delayed(const Duration(milliseconds: 1600), () {
+        if (!mounted) return;
+        setState(() {
+          _isCompletingSignIn = false;
+          _isLoading = false;
+          _isSuccess = true;
+        });
+        Future.delayed(const Duration(milliseconds: 600), () {
+          if (mounted) Navigator.of(context).pop(true);
+        });
       });
     } else if (state.step == SignInStep.failed ||
         state.step == SignInStep.cancelled) {
-      final errText = state.error.isNotEmpty
-          ? state.error
-          : (state.errorCode.isNotEmpty
-                ? _friendlyError(state.errorCode)
-                : (state.message.isNotEmpty
-                      ? state.message
-                      : 'Sign-in failed. Please verify your credentials.'));
       // If email or password was wrong, return to credentials form so user can edit immediately
       if (state.errorCode == SignInError.wrongPassword ||
           state.errorCode == SignInError.noAccount) {
+        _retainedVerificationStep = null;
         setState(() {
           _state = null;
           _isLoading = false;
           _errorMessage = _friendlyError(state.errorCode);
         });
+      } else if (state.errorCode == SignInError.wrongCode ||
+          state.errorCode == SignInError.unblockCodeRejected ||
+          state.errorCode == SignInError.wrongTotp ||
+          state.errorCode == SignInError.tooManyCodes ||
+          _retainedVerificationStep != null) {
+        final msg =
+            (state.errorCode == SignInError.wrongCode ||
+                state.errorCode == SignInError.unblockCodeRejected)
+            ? 'Incorrect verification code. Please check your inbox and try again.'
+            : (state.errorCode.isNotEmpty
+                  ? _friendlyError(state.errorCode)
+                  : (state.error.isNotEmpty
+                        ? state.error
+                        : 'Incorrect verification code. Please check your inbox and try again.'));
+        setState(() {
+          _isLoading = false;
+          _errorMessage = msg;
+        });
       } else {
+        final errText = state.error.isNotEmpty
+            ? state.error
+            : (state.errorCode.isNotEmpty
+                  ? _friendlyError(state.errorCode)
+                  : (state.message.isNotEmpty
+                        ? state.message
+                        : 'Sign-in failed. Please verify your credentials.'));
         setState(() {
           _isLoading = false;
           _errorMessage = errText;
         });
       }
     } else if (state.needsAnswer) {
+      _retainedVerificationStep = state.step;
       if (previousStep != state.step) {
         _codeController.clear();
       }
+      final msg =
+          (state.errorCode == SignInError.wrongCode ||
+              state.errorCode == SignInError.unblockCodeRejected)
+          ? 'Incorrect verification code. Please check your inbox and try again.'
+          : (state.error.isNotEmpty
+                ? state.error
+                : (state.errorCode.isNotEmpty
+                      ? _friendlyError(state.errorCode)
+                      : null));
       setState(() {
         _isLoading = false;
-        _errorMessage = state.error.isNotEmpty
-            ? state.error
-            : (state.errorCode.isNotEmpty
-                  ? _friendlyError(state.errorCode)
-                  : null);
+        _errorMessage = msg;
       });
     } else {
       setState(() => _isLoading = false);
@@ -335,11 +457,11 @@ class _SignInDialogState extends State<SignInDialog> {
       case SignInError.noPassword:
         return 'This account uses Google/Apple sign-in and has no password set.';
       case SignInError.wrongCode:
-        return 'Invalid or expired Gmail verification code. Please check the latest email from Mozilla.';
+        return 'Incorrect verification code. Please check your inbox and try again.';
       case SignInError.wrongTotp:
         return 'Invalid authenticator code. Please check your 2FA app and re-enter.';
       case SignInError.unblockCodeRejected:
-        return 'Unblock code was rejected or expired. Check your latest email from Mozilla.';
+        return 'Incorrect verification code. Please check your inbox and try again.';
       case SignInError.tooManyAttempts:
         return 'Too many sign-in attempts. Please wait a few minutes and try again.';
       case SignInError.tooManyCodes:
@@ -359,10 +481,20 @@ class _SignInDialogState extends State<SignInDialog> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final activeVerificationStep = _state?.needsAnswer == true
+        ? _state!.step
+        : _retainedVerificationStep;
     final isEmailLinkStep =
         _state != null && _state!.step == SignInStep.needEmailLink;
-    final isVerificationStep = _state != null && _state!.needsAnswer;
+    final isVerificationStep =
+        !_isCompletingSignIn &&
+        !_isSuccess &&
+        _state != null &&
+        (_state!.needsAnswer ||
+            (_retainedVerificationStep != null &&
+                _retainedVerificationStep != SignInStep.needEmailLink));
     final isFailedStep =
+        !isVerificationStep &&
         _state != null &&
         (_state!.step == SignInStep.failed ||
             _state!.step == SignInStep.cancelled);
@@ -370,6 +502,7 @@ class _SignInDialogState extends State<SignInDialog> {
     final targetEmail = (_state?.email.isNotEmpty == true)
         ? _state!.email
         : _emailController.text.trim();
+    final hasTypedCode = _codeController.text.trim().isNotEmpty;
 
     String headerTitle = 'Sign In with Firefox Account';
     String headerSubtitle = 'Mozilla Account authentication for Fastly MASQUE';
@@ -379,36 +512,41 @@ class _SignInDialogState extends State<SignInDialog> {
       headerTitle = 'Sign In Complete!';
       headerSubtitle = 'Session authenticated with Fastly MASQUE backend';
       headerIcon = Icons.check_circle_rounded;
+    } else if (_isCompletingSignIn) {
+      headerTitle = 'Signing In...';
+      headerSubtitle = 'Finalizing secure session for $targetEmail';
+      headerIcon = Icons.verified_user_rounded;
     } else if (isEmailLinkStep) {
-      headerTitle = 'Confirm Sign In via Gmail';
-      headerSubtitle = 'Open the confirmation link sent to $targetEmail';
+      headerTitle = 'Confirm Sign In via Email';
+      headerSubtitle =
+          'A verification link has been sent to your email. Please check your inbox.';
       headerIcon = Icons.mark_email_read_rounded;
     } else if (isVerificationStep) {
-      if (_state?.step == SignInStep.needUnblockCode) {
-        headerTitle = 'Account Unblock Code';
+      if (activeVerificationStep == SignInStep.needUnblockCode) {
+        headerTitle = 'Email Verification';
         headerSubtitle =
-            'Mozilla sent an 8-character unblock code to your Gmail ($targetEmail)';
+            'A verification code has been sent to your email. Please check your inbox.';
         headerIcon = Icons.lock_open_rounded;
-      } else if (_state?.step == SignInStep.needTotp) {
+      } else if (activeVerificationStep == SignInStep.needTotp) {
         headerTitle = 'Two-Factor Authentication';
         headerSubtitle = 'Enter the 6-digit code from your authenticator app';
         headerIcon = Icons.phonelink_lock_rounded;
-      } else if (_state?.step == SignInStep.needCaptcha) {
+      } else if (activeVerificationStep == SignInStep.needCaptcha) {
         headerTitle = 'Mozilla Security Check';
         headerSubtitle =
-            'Type the characters shown in the image below to proceed to Gmail verification';
+            'Enter the characters shown in the image below, or use Official Mozilla WebView below.';
         headerIcon = Icons.security_rounded;
       } else {
-        headerTitle = 'Gmail Verification Code';
+        headerTitle = 'Email Verification';
         headerSubtitle =
-            'Enter the 6-digit verification code sent to your Gmail ($targetEmail)';
+            'A verification code has been sent to your email. Please check your inbox.';
         headerIcon = Icons.mark_email_unread_rounded;
       }
     }
 
     final isNumericCode =
-        _state?.step == SignInStep.needEmailCode ||
-        _state?.step == SignInStep.needTotp;
+        activeVerificationStep == SignInStep.needEmailCode ||
+        activeVerificationStep == SignInStep.needTotp;
 
     return SingleChildScrollView(
       padding: EdgeInsets.only(
@@ -581,7 +719,8 @@ class _SignInDialogState extends State<SignInDialog> {
               ),
             ),
           ] else if (isVerificationStep) ...[
-            if (_state?.step == SignInStep.needEmailCode) ...[
+            if (activeVerificationStep == SignInStep.needEmailCode ||
+                activeVerificationStep == SignInStep.needUnblockCode) ...[
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 14,
@@ -606,7 +745,7 @@ class _SignInDialogState extends State<SignInDialog> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'We sent a 6-digit verification code to $targetEmail. Please check your Gmail inbox (and Spam folder) and enter the code below.',
+                        'A verification code has been sent to your email. Please check your inbox.',
                         style: ProtonTypography.bodySmall.copyWith(
                           color: ThemeManager.instance.textPrimaryColor,
                         ),
@@ -616,7 +755,7 @@ class _SignInDialogState extends State<SignInDialog> {
                 ),
               ),
               const SizedBox(height: 14),
-            ] else if (_state?.step == SignInStep.needCaptcha &&
+            ] else if (activeVerificationStep == SignInStep.needCaptcha &&
                 _state?.captcha.isNotEmpty == true) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -636,7 +775,7 @@ class _SignInDialogState extends State<SignInDialog> {
             ],
 
             TextField(
-              key: ValueKey(_state?.step ?? 'code_input'),
+              key: ValueKey(activeVerificationStep ?? 'code_input'),
               controller: _codeController,
               keyboardType: isNumericCode
                   ? TextInputType.number
@@ -644,7 +783,8 @@ class _SignInDialogState extends State<SignInDialog> {
               inputFormatters: isNumericCode
                   ? [FilteringTextInputFormatter.digitsOnly]
                   : null,
-              textCapitalization: _state?.step == SignInStep.needEmailCode
+              textCapitalization:
+                  activeVerificationStep == SignInStep.needEmailCode
                   ? TextCapitalization.none
                   : TextCapitalization.characters,
               autofocus: true,
@@ -653,14 +793,19 @@ class _SignInDialogState extends State<SignInDialog> {
                 color: ThemeManager.instance.textPrimaryColor,
               ),
               textAlign: TextAlign.center,
-              onSubmitted: (_) => _submitAnswer(),
+              onSubmitted: (_) {
+                if (hasTypedCode) {
+                  _submitAnswer();
+                } else if (activeVerificationStep != SignInStep.needCaptcha) {
+                  _openMailApp();
+                }
+              },
               decoration: InputDecoration(
-                hintText: switch (_state?.step) {
+                hintText: switch (activeVerificationStep) {
                   SignInStep.needCaptcha => 'Enter characters shown above',
-                  SignInStep.needUnblockCode =>
-                    'Enter unblock code from Gmail',
+                  SignInStep.needUnblockCode => 'Enter verification code',
                   SignInStep.needTotp => 'Enter 6-digit authenticator code',
-                  _ => 'Enter 6-digit code from Gmail',
+                  _ => 'Enter 6-digit verification code',
                 },
                 hintStyle: ProtonTypography.bodyLarge.copyWith(
                   color: ThemeManager.instance.textMutedColor,
@@ -789,12 +934,19 @@ class _SignInDialogState extends State<SignInDialog> {
           SizedBox(
             height: 50,
             child: ElevatedButton(
-              onPressed: _isLoading
+              onPressed: (_isLoading || _isCompletingSignIn)
                   ? null
                   : (isEmailLinkStep
-                        ? _confirmEmailLink
+                        ? () async {
+                            await _openMailApp();
+                            await _confirmEmailLink();
+                          }
                         : (isVerificationStep
-                              ? _submitAnswer
+                              ? ((activeVerificationStep !=
+                                            SignInStep.needCaptcha &&
+                                        !hasTypedCode)
+                                    ? _openMailApp
+                                    : _submitAnswer)
                               : (isFailedStep
                                     ? _resetToCredentials
                                     : _submitInitial))),
@@ -807,7 +959,7 @@ class _SignInDialogState extends State<SignInDialog> {
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: _isLoading
+              child: (_isLoading || _isCompletingSignIn)
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -823,9 +975,11 @@ class _SignInDialogState extends State<SignInDialog> {
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          (_state?.message.isNotEmpty == true)
-                              ? _state!.message
-                              : 'Signing in...',
+                          _isCompletingSignIn
+                              ? 'Signing in...'
+                              : ((_state?.message.isNotEmpty == true)
+                                    ? _state!.message
+                                    : 'Signing in...'),
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                       ],
@@ -848,11 +1002,13 @@ class _SignInDialogState extends State<SignInDialog> {
                           )
                         : Text(
                             isEmailLinkStep
-                                ? 'I Confirmed in Gmail'
+                                ? 'Continue to Mail Code'
                                 : (isVerificationStep
-                                      ? (_state?.step == SignInStep.needCaptcha
-                                            ? 'Continue to Gmail Code'
-                                            : 'Verify Code')
+                                      ? ((activeVerificationStep !=
+                                                  SignInStep.needCaptcha &&
+                                              !hasTypedCode)
+                                            ? 'Continue to Mail Code'
+                                            : 'Verify')
                                       : (isFailedStep
                                             ? 'Try Again'
                                             : 'Sign In')),
@@ -860,6 +1016,29 @@ class _SignInDialogState extends State<SignInDialog> {
                           )),
             ),
           ),
+
+          if (_isCompletingSignIn) ...[
+            const SizedBox(height: 12),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.08, end: 1.0),
+              duration: const Duration(milliseconds: 1550),
+              curve: Curves.easeInOutCubic,
+              builder: (context, value, _) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: value,
+                    minHeight: 5,
+                    backgroundColor: const Color(0xFF6B42FF)
+                        .withValues(alpha: 0.16),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Color(0xFF6B42FF),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
 
           if (isVerificationStep || isEmailLinkStep) ...[
             const SizedBox(height: 10),

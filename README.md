@@ -12,7 +12,7 @@
 
 <p align="center">
   <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><img src="https://img.shields.io/github/v/release/smartworldarafath/TeroVPN?color=6B42FF&label=Release&style=for-the-badge" alt="Latest Release"></a>
-  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.5"><img src="https://img.shields.io/badge/Chrome%20Extension-v1.2.5%20(MV3)-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Extension"></a>
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.9"><img src="https://img.shields.io/badge/Chrome%20Extension-v1.2.9%20(MV3)-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Extension"></a>
   <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Chrome-6B42FF?style=for-the-badge" alt="Platforms">
   <img src="https://img.shields.io/badge/Transport-MASQUE%20HTTP%2F3%20QUIC%20RFC9298-2CFFCC?style=for-the-badge&logo=wireguard&logoColor=black" alt="WireGuard MASQUE">
   <img src="https://img.shields.io/badge/Network-Fastly%20Global%20Anycast-FF9900?style=for-the-badge&logo=fastly&logoColor=white" alt="Fastly Edge">
@@ -125,7 +125,7 @@ The system delivers native line-speed bandwidth, instant connection migration, m
       <td>ZIP Package (.zip)<br>Manifest V3</td>
       <td>Native WebExtensions Proxy API with WebRTC Leak Shield, auto-bridge & cloud relays</td>
       <td align="center">
-        <a href="https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.5/TeroVPN-Chrome-Extension-v1.2.5.zip"><strong>Get Extension (.zip)</strong></a>
+        <a href="https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.9/TeroVPN-Chrome-Extension-v1.2.9.zip"><strong>Get Extension (.zip)</strong></a>
       </td>
     </tr>
   </tbody>
@@ -244,7 +244,7 @@ The official **TeroVPN Chrome Extension** brings high-speed proxy routing and pr
 ### Installation Guide
 
 #### Option A: Quick Install via Release ZIP (Recommended)
-1. Download **[TeroVPN-Chrome-Extension-v1.2.5.zip](https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.5/TeroVPN-Chrome-Extension-v1.2.5.zip)** from GitHub Releases.
+1. Download **[TeroVPN-Chrome-Extension-v1.2.9.zip](https://github.com/smartworldarafath/TeroVPN/releases/download/v1.2.9/TeroVPN-Chrome-Extension-v1.2.9.zip)** from GitHub Releases.
 2. Extract the downloaded ZIP archive to a folder of your choice (e.g., `Documents/TeroVPN-Extension`).
 3. Open your browser and navigate to the Extensions management page:
    - **Chrome**: `chrome://extensions`

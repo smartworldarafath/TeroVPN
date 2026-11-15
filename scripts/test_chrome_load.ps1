@@ -1,4 +1,5 @@
 $extPath = (Resolve-Path "$PSScriptRoot\..\extension").Path
+$extVer = (Get-Content "$extPath\manifest.json" | ConvertFrom-Json).version
 
 $browsers = @(
     'C:\Program Files\Google\Chrome\Application\chrome.exe',
@@ -17,7 +18,7 @@ foreach ($browser in $browsers) {
     Start-Sleep -Seconds 3
 
     if (-not $proc.HasExited) {
-        Write-Host "✅ SUCCESS: $bName successfully loaded unpacked TeroVPN v1.2.5 extension!"
+        Write-Host "✅ SUCCESS: $bName successfully loaded unpacked TeroVPN v$extVer extension!"
         $proc.Kill()
     } else {
         Write-Host "❌ FAILED: $bName exited prematurely with code $($proc.ExitCode)"

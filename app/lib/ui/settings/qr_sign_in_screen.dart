@@ -109,45 +109,76 @@ class _QrSignInScreenState extends State<QrSignInScreen>
     // Background listener for incoming authorization from another device
     QrAuthSyncService.waitForAuthorization(session.sessionId).then((account) {
       if (account != null && mounted) {
-        _handleIncomingAuthorization(account);
+        _handleIncomingAuthorization(account, sessionId: session.sessionId);
       }
     });
   }
 
   Future<String?> _extractLocalCoreSessionToken(String email) async {
+    final hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
+    final candidateDirs = <String>{};
+    final statusDir = widget.controller.status?.dataDir ?? '';
+    if (statusDir.isNotEmpty) {
+      candidateDirs.add(statusDir);
+    }
+    if (Platform.isAndroid) {
+      try {
+        final nativeDir = await AndroidCore.dataDir();
+        if (nativeDir.isNotEmpty) candidateDirs.add(nativeDir);
+      } catch (_) {}
+    }
     try {
       final supportDir = await getApplicationSupportDirectory();
-      final coreDir = Directory('${supportDir.path}/core');
-      if (!await coreDir.exists()) return null;
-      final hex64 = RegExp(r'^[0-9a-fA-F]{64}$');
-      await for (final entity in coreDir.list(recursive: true, followLinks: false)) {
-        if (entity is File && entity.path.endsWith('.json')) {
-          try {
-            final content = await entity.readAsString();
-            if (!content.contains('session_token')) continue;
-            final decoded = jsonDecode(content);
-            if (decoded is Map) {
-              final token = decoded['session_token'] as String? ?? '';
-              final accEmail = (decoded['email'] as String? ?? '').toLowerCase();
-              if (hex64.hasMatch(token) && (accEmail.isEmpty || accEmail == email.toLowerCase())) {
-                return token;
-              }
-            }
-          } catch (_) {}
-        }
-      }
+      candidateDirs.add('${supportDir.path}/core');
+      candidateDirs.add(supportDir.path);
     } catch (_) {}
+
+    for (final dirPath in candidateDirs) {
+      try {
+        final dir = Directory(dirPath);
+        if (!await dir.exists()) continue;
+        await for (final entity in dir.list(recursive: true, followLinks: false)) {
+          if (entity is File && entity.path.endsWith('.json')) {
+            try {
+              final content = await entity.readAsString();
+              if (!content.contains('session_token') && !content.contains('sessionToken')) {
+                continue;
+              }
+              final decoded = jsonDecode(content);
+              if (decoded is Map) {
+                final token =
+                    (decoded['session_token'] as String? ??
+                            decoded['sessionToken'] as String? ??
+                            '')
+                        .trim();
+                final accEmail = (decoded['email'] as String? ?? '').toLowerCase();
+                if (hex64.hasMatch(token) &&
+                    (accEmail.isEmpty || accEmail == email.toLowerCase())) {
+                  return token;
+                }
+              }
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
+    }
     return null;
   }
 
-  Future<void> _handleIncomingAuthorization(Account account) async {
+  Future<void> _handleIncomingAuthorization(
+    Account account, {
+    String? sessionId,
+  }) async {
     setState(() => _isAuthorizing = true);
-    await Future.delayed(const Duration(milliseconds: 500));
 
+    final session = sessionId != null ? QrAuthSyncService.getSession(sessionId) : null;
     final email = account.email.trim();
-    String password = (account.password != null && account.password!.isNotEmpty)
-        ? account.password!
-        : (AppPreferences.getSavedAccountPassword(email) ?? '');
+    String password = (session?.password != null && session!.password!.isNotEmpty)
+        ? session.password!
+        : ((account.password != null && account.password!.isNotEmpty)
+              ? account.password!
+              : (AppPreferences.getSavedAccountPassword(email) ?? ''));
+    final String? backupB64 = session?.backupB64;
     final token = account.reasonDetail.trim();
     final isHexSessionToken = RegExp(r'^[0-9a-fA-F]{64}$').hasMatch(token);
 
@@ -164,62 +195,48 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       reasonDetail: token,
     );
 
-    // 1. Immediately persist active account in AppPreferences
-    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (password.isNotEmpty) {
       await AppPreferences.setSavedAccountPassword(email, password);
     }
 
-    // 2. Synthesize into controller accounts immediately
-    widget.controller.setAccounts(AccountList.fromJson({
-      'accounts': [readyAccount.toJson()],
-      'switch_threshold_percent': 10.0,
-    }));
+    Future<bool> activateRealAccount() async {
+      bool accountActivated = false;
 
-    // 3. Attempt real core activation or direct browser session token exchange
-    bool accountActivated = false;
-    try {
-      final existingAccounts = widget.controller.accounts?.accounts ?? [];
-      for (final a in existingAccounts) {
-        if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
-          await widget.controller.activate(a);
-          await widget.controller.refresh(accountsToo: true);
-          accountActivated = true;
-          break;
-        }
+      // 1. Prefer complete encrypted core backup bundle (works even from Official WebView login!)
+      if (backupB64 != null && backupB64.isNotEmpty) {
+        try {
+          accountActivated = await widget.controller.importBackupBase64(
+            backupB64,
+            preferredEmail: email,
+          );
+        } catch (_) {}
       }
-    } catch (_) {}
 
-    if (!accountActivated && isHexSessionToken) {
-      try {
-        final state = await widget.controller.startBrowserSignIn(email, token);
-        if (state.step == SignInStep.done) {
-          accountActivated = true;
-        } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 12; i++) {
-            await Future.delayed(const Duration(milliseconds: 350));
-            final pollState = await widget.controller.signInState(state.id);
-            if (pollState.step == SignInStep.done) {
+      // 2. Check if this email already exists natively in Go core
+      if (!accountActivated) {
+        try {
+          await widget.controller.refresh(accountsToo: true);
+          final existingAccounts = widget.controller.accounts?.accounts ?? [];
+          for (final a in existingAccounts) {
+            if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
+              await widget.controller.activate(a);
+              await widget.controller.refresh(accountsToo: true);
               accountActivated = true;
-              break;
-            } else if (pollState.step != SignInStep.working) {
-              await widget.controller.cancelSignIn(state.id).catchError((_) {});
               break;
             }
           }
-        }
-      } catch (_) {}
-    }
+        } catch (_) {}
+      }
 
-    if (!accountActivated && password.isNotEmpty) {
-      try {
-        final state = await widget.controller.startSignIn(email, password);
-        if (state.step == SignInStep.done) {
-          accountActivated = true;
-        } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 10; i++) {
-            await Future.delayed(const Duration(milliseconds: 350));
-            try {
+      // 3. Exchange valid 64-hex session token directly via core browser sign-in
+      if (!accountActivated && isHexSessionToken) {
+        try {
+          final state = await widget.controller.startBrowserSignIn(email, token);
+          if (state.step == SignInStep.done) {
+            accountActivated = true;
+          } else if (state.step == SignInStep.working) {
+            for (var i = 0; i < 12; i++) {
+              await Future.delayed(const Duration(milliseconds: 350));
               final pollState = await widget.controller.signInState(state.id);
               if (pollState.step == SignInStep.done) {
                 accountActivated = true;
@@ -228,29 +245,63 @@ class _QrSignInScreenState extends State<QrSignInScreen>
                 await widget.controller.cancelSignIn(state.id).catchError((_) {});
                 break;
               }
-            } catch (_) {}
+            }
           }
-        } else if (state.needsAnswer) {
-          await widget.controller.cancelSignIn(state.id).catchError((_) {});
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
+
+      // 4. Fallback to credential sign-in if password was carried
+      if (!accountActivated && password.isNotEmpty) {
+        try {
+          final state = await widget.controller.startSignIn(email, password);
+          if (state.step == SignInStep.done) {
+            accountActivated = true;
+          } else if (state.step == SignInStep.working) {
+            for (var i = 0; i < 10; i++) {
+              await Future.delayed(const Duration(milliseconds: 350));
+              try {
+                final pollState = await widget.controller.signInState(state.id);
+                if (pollState.step == SignInStep.done) {
+                  accountActivated = true;
+                  break;
+                } else if (pollState.step != SignInStep.working) {
+                  await widget.controller.cancelSignIn(state.id).catchError((_) {});
+                  break;
+                }
+              } catch (_) {}
+            }
+          } else if (state.needsAnswer) {
+            await widget.controller.cancelSignIn(state.id).catchError((_) {});
+          }
+        } catch (_) {}
+      }
+
+      if (accountActivated) {
+        try {
+          await widget.controller.refresh(accountsToo: true);
+          final list = widget.controller.accounts?.accounts ?? [];
+          for (final a in list) {
+            if (a.email.toLowerCase() == email.toLowerCase()) {
+              await widget.controller.activate(a);
+              await widget.controller.refreshQuota(a);
+              break;
+            }
+          }
+          await widget.controller.refresh(accountsToo: true);
+        } catch (_) {}
+      }
+
+      return accountActivated;
     }
 
-    try {
-      if (accountActivated) {
-        await widget.controller.refresh(accountsToo: true);
-        final list = widget.controller.accounts?.accounts ?? [];
-        for (final a in list) {
-          if (a.email.toLowerCase() == email.toLowerCase()) {
-            await widget.controller.activate(a);
-            await widget.controller.refreshQuota(a);
-            break;
-          }
-        }
-        await widget.controller.refresh(accountsToo: true);
-      }
-    } catch (_) {}
+    // Run real core activation alongside 1.4s loading animation (1-2s smooth transition)
+    final results = await Future.wait<Object?>([
+      activateRealAccount(),
+      Future.delayed(const Duration(milliseconds: 1450)),
+    ]);
+    final activated = results[0] == true;
 
+    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (!widget.controller.hasAccount) {
       widget.controller.setAccounts(AccountList.fromJson({
         'accounts': [readyAccount.toJson()],
@@ -262,47 +313,28 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       setState(() => _isAuthorizing = false);
       TopDockToast.show(
         context,
-        title: 'Sign In Successful! 🎉',
-        message: 'Logged in as ${readyAccount.email} via QR authorization',
+        title: activated ? 'Sign In Successful!' : 'Account Linked via QR',
+        message: 'Logged in as ${readyAccount.email}',
         icon: Icons.check_circle_rounded,
         iconColor: const Color(0xFF00E676),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 
   Future<void> _handleScanSuccess(String scannedPayload) async {
-    setState(() {
-      _isScanning = false;
-      _isAuthorizing = true;
-    });
+    if (_isAuthorizing) return;
 
     final activeAccount = widget.controller.activeAccount;
-    final uri = Uri.tryParse(scannedPayload);
-    final email = uri?.queryParameters['email'];
-    final token = uri?.queryParameters['token'] ?? uri?.queryParameters['sid'];
-
-    if (activeAccount == null && email != null && email.isNotEmpty) {
-      await Future.delayed(const Duration(milliseconds: 600));
-      final incomingAcc = Account(
-        id: 'sync_${DateTime.now().millisecondsSinceEpoch}',
-        email: email,
-        name: email.split('@').first,
-        active: true,
-        enabled: true,
-        status: AccountStatus.ready,
-        reasonDetail: token ?? 'authorized_qr_user',
-      );
-      await _handleIncomingAuthorization(incomingAcc);
-      return;
-    }
-
-    if (activeAccount == null) {
-      setState(() => _isAuthorizing = false);
+    if (!widget.controller.hasAccount || activeAccount == null) {
+      setState(() {
+        _isScanning = false;
+        _isAuthorizing = false;
+      });
       TopDockToast.show(
         context,
         title: 'Sign In Required',
-        message: 'Sign in first to authorize other devices.',
+        message: 'Sign in on this device first before scanning a device QR code.',
         icon: Icons.error_outline_rounded,
         iconColor: Colors.orangeAccent,
       );
@@ -312,14 +344,29 @@ class _QrSignInScreenState extends State<QrSignInScreen>
       return;
     }
 
-    // Extract session ID and optional local network endpoint
-    String sessionId = 'demo_desktop_session';
-    if (uri != null && uri.queryParameters.containsKey('sid')) {
-      sessionId = uri.queryParameters['sid']!;
-    } else if (uri != null && uri.queryParameters.containsKey('session')) {
-      sessionId = uri.queryParameters['session']!;
+    final uri = Uri.tryParse(scannedPayload.trim());
+    final rawSid = uri?.queryParameters['sid'] ?? uri?.queryParameters['session'];
+    if (rawSid == null || rawSid.trim().isEmpty) {
+      setState(() {
+        _isScanning = false;
+        _isAuthorizing = false;
+      });
+      TopDockToast.show(
+        context,
+        title: 'Invalid QR Code',
+        message: 'Please scan the QR code shown inside TeroVPN on your laptop, phone, or tablet.',
+        icon: Icons.qr_code_2_rounded,
+        iconColor: Colors.orangeAccent,
+      );
+      return;
     }
 
+    setState(() {
+      _isScanning = false;
+      _isAuthorizing = true;
+    });
+
+    final sessionId = rawSid.trim();
     final ip = uri?.queryParameters['ip'];
     final portStr = uri?.queryParameters['port'];
     final port = portStr != null ? int.tryParse(portStr) : null;
@@ -330,31 +377,36 @@ class _QrSignInScreenState extends State<QrSignInScreen>
         : (AppPreferences.getSavedAuthPassword(activeAccount.email) ?? '');
 
     final String? coreSessionToken = await _extractLocalCoreSessionToken(activeAccount.email);
+    final String? coreBackupB64 = await widget.controller.exportBackupBase64();
     final String effectiveToken = (coreSessionToken != null && coreSessionToken.isNotEmpty)
         ? coreSessionToken
         : (activeAccount.reasonDetail.isNotEmpty ? activeAccount.reasonDetail : 'auth_qr_remote');
 
-    // Deliver encrypted credentials & session token across LAN and global live relay stream
-    await QrAuthSyncService.authorizeRemoteSession(
-      sessionId: sessionId,
-      account: activeAccount,
-      ip: ip,
-      port: port,
-      password: password,
-      token: effectiveToken,
-      secretKey: secretKey,
-    );
+    // Show smooth 1-2s loading animation while delivering E2EE authorization
+    await Future.wait([
+      QrAuthSyncService.authorizeRemoteSession(
+        sessionId: sessionId,
+        account: activeAccount,
+        ip: ip,
+        port: port,
+        password: password,
+        token: effectiveToken,
+        secretKey: secretKey,
+        backupB64: coreBackupB64,
+      ),
+      Future.delayed(const Duration(milliseconds: 1450)),
+    ]);
 
     if (mounted) {
       setState(() => _isAuthorizing = false);
       TopDockToast.show(
         context,
-        title: 'Device Authorized! 🚀',
-        message: 'Logged in as ${activeAccount.email} on target device',
+        title: 'Device Authorized!',
+        message: 'Signed in as ${activeAccount.email} on the scanned device',
         icon: Icons.check_circle_rounded,
         iconColor: const Color(0xFF00E676),
       );
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(true);
     }
   }
 
@@ -772,7 +824,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
             onPressed: _startScanView,
             icon: const Icon(Icons.crop_free_rounded, size: 22),
             label: Text(
-              hasAccount ? 'Scan QR Code on Desktop' : 'Scan QR Code',
+              hasAccount ? 'Scan QR Code (Desktop / Phone / Tab)' : 'Scan QR Code',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
             ),
             style: ElevatedButton.styleFrom(
@@ -877,6 +929,7 @@ class _QrSignInScreenState extends State<QrSignInScreen>
             MobileScanner(
               controller: _scannerController!,
               onDetect: (BarcodeCapture capture) {
+                if (_isAuthorizing) return;
                 final List<Barcode> barcodes = capture.barcodes;
                 for (final barcode in barcodes) {
                   final code = barcode.rawValue;

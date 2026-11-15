@@ -7,7 +7,9 @@ $distDir = Join-Path $PSScriptRoot "..\dist"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 New-Item -ItemType Directory -Force $distDir | Out-Null
 
-$zipName = "TeroVPN-Chrome-Extension-v1.2.0.zip"
+$manifest = Get-Content (Join-Path $extDir "manifest.json") | ConvertFrom-Json
+$ver = $manifest.version
+$zipName = "TeroVPN-Chrome-Extension-v$ver.zip"
 $outZip = Join-Path $outDir $zipName
 $distZip = Join-Path $distDir $zipName
 

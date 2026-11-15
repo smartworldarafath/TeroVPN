@@ -1,3 +1,4 @@
+import 'dart:io' show Platform, Process;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -280,6 +281,31 @@ class AndroidCore {
   /// Opens [url] in the app that handles it (such as a tg:// link).
   static Future<bool> openUrl(String url) async =>
       await _channel.invokeMethod<bool>('openUrl', {'url': url}) ?? false;
+
+  /// Opens the user's Mail app (Gmail / default email client) on Android,
+  /// or launches Gmail webmail on desktop platforms.
+  static Future<bool> openMailApp() async {
+    if (!identical(0, 0.0) && Platform.isAndroid) {
+      try {
+        return await _channel.invokeMethod<bool>('openMailApp') ?? false;
+      } catch (_) {
+        return false;
+      }
+    }
+    try {
+      if (Platform.isWindows) {
+        await Process.start('cmd', ['/c', 'start', '', 'https://mail.google.com']);
+        return true;
+      } else if (Platform.isMacOS) {
+        await Process.start('open', ['https://mail.google.com']);
+        return true;
+      } else if (Platform.isLinux) {
+        await Process.start('xdg-open', ['https://mail.google.com']);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
 
 
 

@@ -473,7 +473,7 @@ function initAccountsListeners() {
   });
 
   $('btn-download-desktop')?.addEventListener('click', () => {
-    chrome.tabs.create({ url: 'https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.5' });
+    chrome.tabs.create({ url: 'https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.2.9' });
   });
 
   $('btn-retry-core-signin')?.addEventListener('click', async () => {

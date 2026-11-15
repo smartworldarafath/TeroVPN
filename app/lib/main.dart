@@ -254,7 +254,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
       'accounts': {'running': 1, 'configured': 2},
 
       'switch_threshold_percent': 10.0,
-      'version': '1.2.5',
+      'version': '1.2.9',
       'can_exit': true,
 
       'system_proxy': 'off',

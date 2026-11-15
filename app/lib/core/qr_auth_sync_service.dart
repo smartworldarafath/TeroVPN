@@ -20,6 +20,7 @@ class QrPairingSession {
   bool isAuthorized;
   Account? account;
   String? password;
+  String? backupB64;
 
   QrPairingSession({
     required this.sessionId,
@@ -31,6 +32,7 @@ class QrPairingSession {
     this.isAuthorized = false,
     this.account,
     this.password,
+    this.backupB64,
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,6 +45,7 @@ class QrPairingSession {
         'isAuthorized': isAuthorized,
         if (account != null) 'account': account!.toJson(),
         if (password != null) 'password': password,
+        if (backupB64 != null) 'backupB64': backupB64,
       };
 
   factory QrPairingSession.fromJson(Map<String, dynamic> json) => QrPairingSession(
@@ -55,6 +58,7 @@ class QrPairingSession {
         isAuthorized: json['isAuthorized'] as bool? ?? false,
         account: json['account'] != null ? Account.fromJson(json['account'] as Map<String, dynamic>) : null,
         password: json['password'] as String?,
+        backupB64: json['backupB64'] as String?,
       );
 }
 
@@ -63,8 +67,10 @@ class QrPairingSession {
 /// Global cloud relay streaming (ntfy.sh) across mobile networks, tablets, desktop, and Chrome Extension.
 class QrAuthSyncService {
   static final Map<String, QrPairingSession> _activeSessions = {};
-  static QrPairingSession? getSession(String sessionId) => _activeSessions[sessionId];
-  static final Map<String, Completer<Account>> _pendingCompleters = {};
+  static final Map<String, QrPairingSession> _completedSessions = {};
+  static QrPairingSession? getSession(String sessionId) =>
+      _activeSessions[sessionId] ?? _completedSessions[sessionId];
+  static final Map<String, Completer<Account?>> _pendingCompleters = {};
   static final Map<String, HttpServer> _activeServers = {};
   static final Map<String, Timer> _activePollTimers = {};
   static final Map<String, http.Client> _activeStreamClients = {};
@@ -270,6 +276,7 @@ class QrAuthSyncService {
             password = AppPreferences.getSavedAccountPassword(email) ?? '';
           }
           final token = decryptedPayload['token'] as String? ?? rawAccount?['reason_detail'] as String? ?? 'auth_qr_pair';
+          final backupB64 = decryptedPayload['backup_b64'] as String?;
           final name = decryptedPayload['name'] as String? ??
               rawAccount?['name'] as String? ??
               (email.contains('@') ? email.split('@').first : 'User');
@@ -282,7 +289,12 @@ class QrAuthSyncService {
             token: token,
           );
 
-          await authorizeSession(sid, account, password: password);
+          await authorizeSession(
+            sid,
+            account,
+            password: password,
+            backupB64: backupB64,
+          );
 
           request.response.statusCode = HttpStatus.ok;
           request.response.headers.contentType = ContentType.json;
@@ -319,7 +331,7 @@ class QrAuthSyncService {
     );
 
     _activeSessions[sessionId] = session;
-    _pendingCompleters[sessionId] = Completer<Account>();
+    _pendingCompleters[sessionId] = Completer<Account?>();
 
     try {
       localIp = await getLocalIpAddress();
@@ -349,7 +361,7 @@ class QrAuthSyncService {
       secretKey: secretKey,
     );
     _activeSessions[sessionId] = session;
-    _pendingCompleters[sessionId] = Completer<Account>();
+    _pendingCompleters[sessionId] = Completer<Account?>();
     _saveSessionToFile(session);
 
     HttpServer.bind(InternetAddress.anyIPv4, 0).then((server) async {
@@ -370,7 +382,7 @@ class QrAuthSyncService {
     String sessionId, {
     Duration timeout = const Duration(minutes: 5),
   }) async {
-    final completer = _pendingCompleters.putIfAbsent(sessionId, () => Completer<Account>());
+    final completer = _pendingCompleters.putIfAbsent(sessionId, () => Completer<Account?>());
     if (completer.isCompleted) {
       return completer.future;
     }
@@ -388,6 +400,19 @@ class QrAuthSyncService {
         final synced = await _readSessionFromFile(sessionId);
         if (synced != null && synced.isAuthorized && synced.account != null) {
           timer.cancel();
+          final current = _activeSessions[sessionId];
+          if (current != null) {
+            current.isAuthorized = true;
+            current.account = synced.account;
+            if (synced.password != null && synced.password!.isNotEmpty) {
+              current.password = synced.password;
+            }
+            if (synced.backupB64 != null && synced.backupB64!.isNotEmpty) {
+              current.backupB64 = synced.backupB64;
+            }
+          } else {
+            _activeSessions[sessionId] = synced;
+          }
           if (!completer.isCompleted) {
             completer.complete(synced.account);
           }
@@ -397,6 +422,10 @@ class QrAuthSyncService {
 
     try {
       final account = await completer.future.timeout(timeout);
+      final doneSession = _activeSessions[sessionId];
+      if (doneSession != null) {
+        _completedSessions[sessionId] = doneSession;
+      }
       cancelSession(sessionId);
       return account;
     } catch (_) {
@@ -410,7 +439,7 @@ class QrAuthSyncService {
   static void _processIncomingRelayLine(
     String line,
     String sessionId,
-    Completer<Account> completer,
+    Completer<Account?> completer,
   ) {
     if (line.trim().isEmpty || completer.isCompleted) return;
     try {
@@ -442,6 +471,7 @@ class QrAuthSyncService {
         password = AppPreferences.getSavedAccountPassword(email) ?? '';
       }
       final token = decryptedPayload['token'] as String? ?? rawAccount?['reason_detail'] as String? ?? 'auth_qr_remote';
+      final backupB64 = decryptedPayload['backup_b64'] as String?;
       final name = decryptedPayload['name'] as String? ??
           rawAccount?['name'] as String? ??
           (email.contains('@') ? email.split('@').first : 'User');
@@ -453,13 +483,18 @@ class QrAuthSyncService {
         password: password,
         token: token,
       );
-      authorizeSession(sessionId, account, password: password);
+      authorizeSession(
+        sessionId,
+        account,
+        password: password,
+        backupB64: backupB64,
+      );
     } catch (_) {}
   }
 
   /// Opens a persistent real-time HTTP NDJSON stream to ntfy.sh (which delivers messages in <100ms)
   /// and automatically reconnects if dropped.
-  static void _startRelayStreamAndPolling(String sessionId, Completer<Account> completer) {
+  static void _startRelayStreamAndPolling(String sessionId, Completer<Account?> completer) {
     final topic = 'terovpn_auth_$sessionId';
 
     Future<void> connectStream() async {
@@ -502,6 +537,7 @@ class QrAuthSyncService {
     int? port,
     String? token,
     String? secretKey,
+    String? backupB64,
   }) async {
     final String effectivePassword = (password != null && password.isNotEmpty)
         ? password
@@ -520,7 +556,7 @@ class QrAuthSyncService {
       reasonDetail: token ?? (account.reasonDetail.isNotEmpty ? account.reasonDetail : 'auth_qr_remote'),
     );
 
-    final plainPayload = {
+    final compactPayload = <String, dynamic>{
       'sessionId': sessionId,
       'email': syncedAccount.email,
       'password': effectivePassword,
@@ -529,26 +565,35 @@ class QrAuthSyncService {
       'account': syncedAccount.toJson(),
       'timestamp': DateTime.now().millisecondsSinceEpoch,
     };
-    final plainJson = jsonEncode(plainPayload);
+    final fullPayload = <String, dynamic>{
+      ...compactPayload,
+      if (backupB64 != null && backupB64.isNotEmpty) 'backup_b64': backupB64,
+    };
 
     // E2EE encryption if secretKey is available
     final keyToUse = (secretKey != null && secretKey.isNotEmpty)
         ? secretKey
         : _activeSessions[sessionId]?.secretKey;
 
-    String outgoingJson;
-    if (keyToUse != null && keyToUse.isNotEmpty) {
-      final envelope = encryptPayload(plainJson, keyToUse);
-      envelope['sessionId'] = sessionId;
-      envelope['timestamp'] = DateTime.now().millisecondsSinceEpoch;
-      outgoingJson = jsonEncode(envelope);
-    } else {
-      outgoingJson = plainJson;
+    String encodeEnvelope(Map<String, dynamic> payload) {
+      final rawJson = jsonEncode(payload);
+      if (keyToUse != null && keyToUse.isNotEmpty) {
+        final envelope = encryptPayload(rawJson, keyToUse);
+        envelope['sessionId'] = sessionId;
+        envelope['timestamp'] = DateTime.now().millisecondsSinceEpoch;
+        return jsonEncode(envelope);
+      }
+      return rawJson;
     }
+
+    final outgoingJson = encodeEnvelope(fullPayload);
+    final relayBody = utf8.encode(outgoingJson).length <= 3900
+        ? outgoingJson
+        : encodeEnvelope(compactPayload);
 
     final deliveries = <Future<void>>[];
 
-    // 1. Direct LAN HTTP Delivery (fastest, <20ms on same WiFi)
+    // 1. Direct LAN HTTP Delivery (fastest, <20ms on same WiFi; no 4KB body limit)
     if (ip != null && ip.isNotEmpty && ip != '127.0.0.1' && port != null && port > 0) {
       deliveries.add(() async {
         try {
@@ -572,7 +617,7 @@ class QrAuthSyncService {
             .post(
               relayUri,
               headers: {'Content-Type': 'text/plain; charset=utf-8'},
-              body: outgoingJson,
+              body: relayBody,
             )
             .timeout(const Duration(seconds: 4));
       } catch (_) {}
@@ -583,7 +628,7 @@ class QrAuthSyncService {
               .post(
                 relayUri,
                 headers: {'Content-Type': 'text/plain; charset=utf-8'},
-                body: outgoingJson,
+                body: relayBody,
               )
               .timeout(const Duration(seconds: 3));
         } catch (_) {}
@@ -592,7 +637,12 @@ class QrAuthSyncService {
 
     // 3. Local In-Memory & File Authorization (for unit tests / same-device testing)
     deliveries.add(
-      authorizeSession(sessionId, syncedAccount, password: effectivePassword),
+      authorizeSession(
+        sessionId,
+        syncedAccount,
+        password: effectivePassword,
+        backupB64: backupB64,
+      ),
     );
 
     await Future.wait(deliveries);
@@ -604,6 +654,7 @@ class QrAuthSyncService {
     String sessionId,
     Account account, {
     String? password,
+    String? backupB64,
   }) async {
     final session = _activeSessions[sessionId] ??
         QrPairingSession(
@@ -617,6 +668,9 @@ class QrAuthSyncService {
     session.account = account;
     if (password != null && password.isNotEmpty) {
       session.password = password;
+    }
+    if (backupB64 != null && backupB64.isNotEmpty) {
+      session.backupB64 = backupB64;
     }
     _activeSessions[sessionId] = session;
 
@@ -640,7 +694,10 @@ class QrAuthSyncService {
     _activeServers[sessionId]?.close(force: true);
     _activeServers.remove(sessionId);
 
-    _pendingCompleters.remove(sessionId);
+    final pending = _pendingCompleters.remove(sessionId);
+    if (pending != null && !pending.isCompleted) {
+      pending.complete(null);
+    }
   }
 
   static Future<void> _saveSessionToFile(QrPairingSession session) async {

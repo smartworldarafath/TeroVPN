@@ -2,7 +2,7 @@
  * TeroVPN Chrome Extension - Background Service Worker
  * Full integration with TeroVPN Core API, Standalone Mozilla FxA Auth,
  * Real-Time E2EE QR Stream Sync, WebRTC Shield & Chrome Proxy API.
- * Version: 1.2.5
+ * Version: 1.2.9
  */
 
 import { CoreClient, fetchMozillaServerList } from './core-client.js';

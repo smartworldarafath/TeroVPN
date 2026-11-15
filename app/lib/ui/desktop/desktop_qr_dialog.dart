@@ -59,28 +59,22 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
     final account = await QrAuthSyncService.waitForAuthorization(_session.sessionId);
     if (account != null && mounted) {
       final session = QrAuthSyncService.getSession(_session.sessionId);
-      await _executeLoginAnimation(account, password: session?.password);
+      await _executeLoginAnimation(
+        account,
+        password: session?.password,
+        backupB64: session?.backupB64,
+      );
     }
   }
 
-  Future<void> _executeLoginAnimation(Account account, {String? password}) async {
+  Future<void> _executeLoginAnimation(
+    Account account, {
+    String? password,
+    String? backupB64,
+  }) async {
     setState(() {
       _isLoading = true;
       _loadingStep = 'Connecting to Mobile Session...';
-    });
-
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
-    setState(() {
-      _loadingStep = 'Transferring Fastly MASQUE Session Tokens...';
-    });
-
-    await Future.delayed(const Duration(milliseconds: 400));
-    if (!mounted) return;
-
-    setState(() {
-      _loadingStep = 'Authenticating Desktop Environment...';
     });
 
     final email = account.email.trim();
@@ -103,62 +97,48 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       reasonDetail: token,
     );
 
-    // 1. Immediately persist active account in AppPreferences
-    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (effectivePassword.isNotEmpty) {
       await AppPreferences.setSavedAuthPassword(email, effectivePassword);
     }
 
-    // 2. Synthesize into controller accounts immediately
-    widget.controller.setAccounts(AccountList.fromJson({
-      'accounts': [readyAccount.toJson()],
-      'switch_threshold_percent': 10.0,
-    }));
+    Future<bool> activateRealDesktopAccount() async {
+      bool accountActivated = false;
 
-    // 3. Attempt real core activation or direct browser session token exchange
-    bool accountActivated = false;
-    try {
-      final existingAccounts = widget.controller.accounts?.accounts ?? [];
-      for (final a in existingAccounts) {
-        if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
-          await widget.controller.activate(existingAccounts.firstWhere((x) => x.id == a.id));
-          await widget.controller.refresh(accountsToo: true);
-          accountActivated = true;
-          break;
-        }
+      // 1. Prefer complete encrypted core backup bundle (works even from Official WebView login!)
+      if (backupB64 != null && backupB64.isNotEmpty) {
+        try {
+          accountActivated = await widget.controller.importBackupBase64(
+            backupB64,
+            preferredEmail: email,
+          );
+        } catch (_) {}
       }
-    } catch (_) {}
 
-    if (!accountActivated && isHexSessionToken) {
-      try {
-        final state = await widget.controller.startBrowserSignIn(email, token);
-        if (state.step == SignInStep.done) {
-          accountActivated = true;
-        } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 12; i++) {
-            await Future.delayed(const Duration(milliseconds: 300));
-            final pollState = await widget.controller.signInState(state.id);
-            if (pollState.step == SignInStep.done) {
+      // 2. Check existing native desktop core accounts
+      if (!accountActivated) {
+        try {
+          await widget.controller.refresh(accountsToo: true);
+          final existingAccounts = widget.controller.accounts?.accounts ?? [];
+          for (final a in existingAccounts) {
+            if (a.email.toLowerCase() == email.toLowerCase() && !a.id.startsWith('sync_')) {
+              await widget.controller.activate(a);
+              await widget.controller.refresh(accountsToo: true);
               accountActivated = true;
-              break;
-            } else if (pollState.step != SignInStep.working) {
-              await widget.controller.cancelSignIn(state.id).catchError((_) {});
               break;
             }
           }
-        }
-      } catch (_) {}
-    }
+        } catch (_) {}
+      }
 
-    if (!accountActivated && effectivePassword.isNotEmpty) {
-      try {
-        final state = await widget.controller.startSignIn(email, effectivePassword);
-        if (state.step == SignInStep.done) {
-          accountActivated = true;
-        } else if (state.step == SignInStep.working) {
-          for (var i = 0; i < 10; i++) {
-            await Future.delayed(const Duration(milliseconds: 300));
-            try {
+      // 3. Exchange valid 64-hex session token directly via core browser sign-in
+      if (!accountActivated && isHexSessionToken) {
+        try {
+          final state = await widget.controller.startBrowserSignIn(email, token);
+          if (state.step == SignInStep.done) {
+            accountActivated = true;
+          } else if (state.step == SignInStep.working) {
+            for (var i = 0; i < 12; i++) {
+              await Future.delayed(const Duration(milliseconds: 300));
               final pollState = await widget.controller.signInState(state.id);
               if (pollState.step == SignInStep.done) {
                 accountActivated = true;
@@ -167,21 +147,66 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
                 await widget.controller.cancelSignIn(state.id).catchError((_) {});
                 break;
               }
-            } catch (_) {}
+            }
           }
-        } else if (state.needsAnswer) {
-          await widget.controller.cancelSignIn(state.id).catchError((_) {});
-        }
-      } catch (_) {}
+        } catch (_) {}
+      }
+
+      // 4. Fallback to credential sign-in
+      if (!accountActivated && effectivePassword.isNotEmpty) {
+        try {
+          final state = await widget.controller.startSignIn(email, effectivePassword);
+          if (state.step == SignInStep.done) {
+            accountActivated = true;
+          } else if (state.step == SignInStep.working) {
+            for (var i = 0; i < 10; i++) {
+              await Future.delayed(const Duration(milliseconds: 300));
+              try {
+                final pollState = await widget.controller.signInState(state.id);
+                if (pollState.step == SignInStep.done) {
+                  accountActivated = true;
+                  break;
+                } else if (pollState.step != SignInStep.working) {
+                  await widget.controller.cancelSignIn(state.id).catchError((_) {});
+                  break;
+                }
+              } catch (_) {}
+            }
+          } else if (state.needsAnswer) {
+            await widget.controller.cancelSignIn(state.id).catchError((_) {});
+          }
+        } catch (_) {}
+      }
+
+      if (accountActivated) {
+        try {
+          await widget.controller.refresh(accountsToo: true);
+        } catch (_) {}
+      }
+
+      return accountActivated;
     }
 
-    // 4. Ensure controller accounts stays populated
-    try {
-      if (accountActivated) {
-        await widget.controller.refresh(accountsToo: true);
-      }
-    } catch (_) {}
+    final activationFuture = activateRealDesktopAccount();
 
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    setState(() {
+      _loadingStep = 'Transferring Fastly MASQUE Session Tokens...';
+    });
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+    setState(() {
+      _loadingStep = 'Authenticating Desktop Environment...';
+    });
+
+    await Future.wait([
+      activationFuture,
+      Future.delayed(const Duration(milliseconds: 450)),
+    ]);
+
+    await AppPreferences.setSavedActiveAccount(readyAccount.toJson());
     if (!widget.controller.hasAccount) {
       widget.controller.setAccounts(AccountList.fromJson({
         'accounts': [readyAccount.toJson()],
@@ -189,14 +214,13 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
       }));
     }
 
-    await Future.delayed(const Duration(milliseconds: 400));
     if (!mounted) return;
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(true);
 
     TopDockToast.show(
       context,
-      title: 'Desktop Signed In! 🚀',
+      title: 'Desktop Signed In!',
       message: 'Successfully paired and logged in as ${account.email}',
       icon: Icons.check_circle_rounded,
       iconColor: const Color(0xFF00E676),
@@ -287,19 +311,24 @@ class _DesktopQrSignInDialogState extends State<DesktopQrSignInDialog> with Sing
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.qr_code_2_rounded, color: Color(0xFF6B42FF), size: 24),
-                const SizedBox(width: 10),
-                Text(
-                  'Sign In via QR Code',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: textPrimary,
+            Expanded(
+              child: Row(
+                children: [
+                  const Icon(Icons.qr_code_2_rounded, color: Color(0xFF6B42FF), size: 24),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'Sign In via QR Code',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             IconButton(
               icon: Icon(Icons.close_rounded, color: textSecondary),

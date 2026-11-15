@@ -93,10 +93,10 @@ void main() {
     expect(AppPreferences.selectedDockStyle, 'default');
   });
 
-  test('AppUpdateService version bump to 1.1.9', () {
-    expect(AppUpdateService.currentVersion, '1.2.5');
-    expect(AppUpdateService.isNewerVersion('v1.2.6', '1.2.5'), true);
-    expect(AppUpdateService.isNewerVersion('v1.2.5', '1.2.5'), false);
-    expect(AppUpdateService.isNewerVersion('v1.1.9', '1.2.5'), false);
+  test('AppUpdateService version bump to 1.2.9', () {
+    expect(AppUpdateService.currentVersion, '1.2.9');
+    expect(AppUpdateService.isNewerVersion('v1.3.0', '1.2.9'), true);
+    expect(AppUpdateService.isNewerVersion('v1.2.9', '1.2.9'), false);
+    expect(AppUpdateService.isNewerVersion('v1.2.5', '1.2.9'), false);
   });
 }
