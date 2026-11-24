@@ -19,11 +19,11 @@ void main() {
     await AppPermissionsService.instance.init();
   });
 
-group('v1.1.9 Android Permissions & Version Tests', () {test('Version is bumped to 1.1.9 across AppUpdateService', () {
-      expect(AppUpdateService.currentVersion, '1.2.9');
-      expect(AppUpdateService.isNewerVersion('v1.3.0', '1.2.9'), true);
-      expect(AppUpdateService.isNewerVersion('v1.2.9', '1.2.9'), false);
-      expect(AppUpdateService.isNewerVersion('1.2.5', '1.2.9'), false);
+group('v1.1.9 Android Permissions & Version Tests', () {test('Version is bumped to 1.3.0 across AppUpdateService', () {
+      expect(AppUpdateService.currentVersion, '1.3.0');
+      expect(AppUpdateService.isNewerVersion('v1.3.1', '1.3.0'), true);
+      expect(AppUpdateService.isNewerVersion('v1.3.0', '1.3.0'), false);
+      expect(AppUpdateService.isNewerVersion('1.2.9', '1.3.0'), false);
     });
 
     test('AppPreferences stores and retrieves permissionsOnboardingDone', () async {

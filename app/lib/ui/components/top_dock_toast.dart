@@ -55,6 +55,13 @@ class TopDockToast {
 
     _currentEntry = entry;
     overlay.insert(entry);
+    // Safety net: ensure toast entry can never linger permanently if reverse fails
+    _dismissTimer = Timer(duration + const Duration(milliseconds: 1600), () {
+      if (_currentEntry == entry) {
+        entry.remove();
+        _currentEntry = null;
+      }
+    });
   }
 
   static ToastAnimationMode _resolveMode(BuildContext context) {
@@ -289,112 +296,122 @@ class _TopDockToastWidgetState extends State<_TopDockToastWidget>
         }
 
         final showContent = progress > 0.45;
+        final safeBlur = showContent && currentWidth >= 48 && currentHeight >= 24;
 
-        return Align(
-          alignment: Alignment.topLeft,
-          child: Transform.translate(
-            offset: currentOffset,
-            child: SizedBox(
-              width: currentWidth,
-              height: currentHeight,
-              child: Opacity(
-                opacity: opacity.clamp(0.0, 1.0),
-                child: Material(
-              color: Colors.transparent,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(borderRadius),
-                child: BackdropFilter(
-                  filter: ui.ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: toastIsDark
-                          ? const Color(0xFF140F27).withValues(alpha: 0.94)
-                          : Colors.white.withValues(alpha: 0.96),
-                      borderRadius: BorderRadius.circular(borderRadius),
-                      border: Border.all(
-                        color: toastIsDark
-                            ? const Color(0xFF6B42FF).withValues(alpha: 0.40)
-                            : Colors.white.withValues(alpha: 0.95),
-                        width: 1.2,
+        final toastBox = Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: toastIsDark
+                ? const Color(0xFF140F27).withValues(alpha: 0.94)
+                : Colors.white.withValues(alpha: 0.96),
+            borderRadius: BorderRadius.circular(borderRadius),
+            border: Border.all(
+              color: toastIsDark
+                  ? const Color(0xFF6B42FF).withValues(alpha: 0.40)
+                  : Colors.white.withValues(alpha: 0.95),
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: toastIsDark
+                    ? const Color(0xFF6B42FF).withValues(alpha: 0.45)
+                    : Colors.black.withValues(alpha: 0.22),
+                blurRadius: 22,
+                spreadRadius: 2,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: showContent
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: defaultIconColor.withValues(alpha: 0.16),
+                        shape: BoxShape.circle,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: toastIsDark
-                              ? const Color(0xFF6B42FF).withValues(alpha: 0.45)
-                              : Colors.black.withValues(alpha: 0.22),
-                          blurRadius: 22,
-                          spreadRadius: 2,
-                          offset: const Offset(0, 5),
+                      child: Center(
+                        child: Icon(
+                          widget.icon,
+                          color: defaultIconColor,
+                          size: 18,
                         ),
-                      ],
+                      ),
                     ),
-                    child: showContent
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: defaultIconColor.withValues(alpha: 0.16),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    widget.icon,
-                                    color: defaultIconColor,
-                                    size: 18,
-                                  ),
-                                ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (widget.title != null) ...[
+                            Text(
+                              widget.title!,
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: textPrimary,
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (widget.title != null) ...[
-                                      Text(
-                                        widget.title!,
-                                        style: TextStyle(
-                                          fontSize: 12.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 1),
-                                    ],
-                                    Text(
-                                      widget.message,
-                                      style: TextStyle(
-                                        fontSize: widget.title != null ? 11.5 : 13.0,
-                                        fontWeight: widget.title != null
-                                            ? FontWeight.w500
-                                            : FontWeight.w600,
-                                        color: widget.title != null
-                                            ? textSecondary
-                                            : textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          )
-                        : const SizedBox.shrink(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 1),
+                          ],
+                          Text(
+                            widget.message,
+                            style: TextStyle(
+                              fontSize: widget.title != null ? 11.5 : 13.0,
+                              fontWeight: widget.title != null
+                                  ? FontWeight.w500
+                                  : FontWeight.w600,
+                              color: widget.title != null
+                                  ? textSecondary
+                                  : textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                )
+              : const SizedBox.shrink(),
+        );
+
+        return IgnorePointer(
+          ignoring: _isExiting,
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Transform.translate(
+              offset: currentOffset,
+              child: SizedBox(
+                width: currentWidth.clamp(1.0, screenWidth),
+                height: currentHeight.clamp(1.0, screenHeight),
+                child: Opacity(
+                  opacity: opacity.clamp(0.0, 1.0),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: RepaintBoundary(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        child: safeBlur
+                            ? BackdropFilter(
+                                filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                child: toastBox,
+                              )
+                            : toastBox,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-    );
+        );
       },
     );
   }

@@ -53,7 +53,7 @@ console.log('--- 1. Manifest V3 & File Integrity ---');
 test('manifest.json exists and has valid Manifest V3 fields', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(EXT_DIR, 'manifest.json'), 'utf8'));
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.version, '1.2.5');
+  assert.equal(manifest.version, '1.3.0');
   assert.ok(manifest.permissions.includes('proxy'));
   assert.ok(manifest.permissions.includes('storage'));
   assert.ok(manifest.permissions.includes('privacy'));

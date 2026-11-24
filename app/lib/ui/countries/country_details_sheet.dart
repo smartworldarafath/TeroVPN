@@ -500,26 +500,32 @@ class _CountryDetailsSheetState extends State<CountryDetailsSheet> {
                 await AppPreferences.setSelectedLocation(widget.country.code);
                 await AppPreferences.setLastConnection(widget.country.code);
                 await AppPreferences.addRecentLocation(widget.country.code);
-                await widget.controller.setLocation(widget.country.code.toLowerCase());
-                if (widget.controller.hasAccount) {
-                  if (widget.controller.isConnected) {
-                    widget.controller.setOn(false);
-                    Future.delayed(const Duration(milliseconds: 200), () {
-                      widget.controller.setOn(true);
-                    });
+                try {
+                  if (widget.controller.hasAccount) {
+                    await widget.controller.connectToLocation(widget.country.code.toLowerCase());
                   } else {
-                    widget.controller.setOn(true);
+                    await widget.controller.setLocation(widget.country.code.toLowerCase());
                   }
-                }
-                widget.onServerSelected(name);
-                if (mounted) {
-                  Navigator.of(context).pop();
-                  TopDockToast.show(
-                    context,
-                    title: 'Connecting to ${widget.country.name} ($name)',
-                    message: '$ping ms · Load: $load%',
-                    icon: Icons.dns_rounded,
-                  );
+                  widget.onServerSelected(name);
+                  if (mounted) {
+                    Navigator.of(context).pop();
+                    TopDockToast.show(
+                      context,
+                      title: 'Connecting to ${widget.country.name} ($name)',
+                      message: '$ping ms · Load: $load%',
+                      icon: Icons.dns_rounded,
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    TopDockToast.show(
+                      context,
+                      title: 'Connection Error',
+                      message: e.toString().replaceFirst('Exception: ', ''),
+                      icon: Icons.error_outline_rounded,
+                      iconColor: const Color(0xFFFF4D4F),
+                    );
+                  }
                 }
               },
               borderRadius: BorderRadius.circular(12),

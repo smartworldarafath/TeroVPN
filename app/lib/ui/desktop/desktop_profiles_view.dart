@@ -96,9 +96,7 @@ class _DesktopProfilesViewState extends State<DesktopProfilesView> {
         if (mounted) SignInDialog.show(context, widget.controller);
         return;
       }
-      if (!widget.controller.isVpnOn) {
-        await widget.controller.setOn(true);
-      }
+      await widget.controller.connectToLocation(targetCountry.toLowerCase());
     }
 
     if (mounted) {

@@ -97,18 +97,12 @@ class _ProfilesScreenState extends State<ProfilesScreen> {
     await AppPreferences.setSelectedLocation(targetCountry);
     await AppPreferences.setLastConnection(targetCountry);
     await AppPreferences.addRecentLocation(targetCountry);
-    await widget.controller.setLocation(targetCountry.toLowerCase());
-    widget.onProfileSelected(targetCountry);
-
     if (autoConnect || widget.controller.isVpnOn) {
-      if (widget.controller.isVpnOn) {
-        await widget.controller.setOn(false);
-        await Future<void>.delayed(const Duration(milliseconds: 200));
-        await widget.controller.setOn(true);
-      } else {
-        await widget.controller.setOn(true);
-      }
+      await widget.controller.connectToLocation(targetCountry.toLowerCase());
+    } else {
+      await widget.controller.setLocation(targetCountry.toLowerCase());
     }
+    widget.onProfileSelected(targetCountry);
 
     if (mounted) {
       TopDockToast.show(

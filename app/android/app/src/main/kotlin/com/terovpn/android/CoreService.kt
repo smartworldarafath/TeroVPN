@@ -24,6 +24,7 @@ import java.io.File
 import java.util.Locale
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The Go core (core/mobile, built into libs/core.jar by gomobile) runs in
@@ -55,49 +56,72 @@ class CoreService : VpnService() {
     @Volatile
     private var destroyed = false
 
+    /** Generation captured when this service instance was started. */
+    private var startedGen = 0
+
     /**
      * Keeps the notification on the country the traffic leaves from, and
      * the routing region's apps among the bypassed ones (checkSuggested).
+     * All Go/JNI and Tun2Socks queries run on [worker] so the Android main
+     * UI thread is never blocked (eliminating ANRs and frozen frames).
      */
     private val watchCountry = object : Runnable {
         override fun run() {
-            if (destroyed) return
-            if (!on) return
-            if (!mobile.Mobile.running()) {
-                Log.e(TAG, "the core stopped; turning the VPN off")
-                turnOff(this@CoreService)
-                return
+            if (destroyed || !on) return
+            val gen = serviceGen.get()
+            worker.execute {
+                if (destroyed || !on || serviceGen.get() != gen) return@execute
+                val isRunning = try { mobile.Mobile.running() } catch (_: Throwable) { false }
+                if (!isRunning) {
+                    Log.e(TAG, "the core stopped; turning the VPN off")
+                    turnOff(this@CoreService)
+                    return@execute
+                }
+                val coreOn = try { mobile.Mobile.isOn() } catch (_: Throwable) { false }
+                if (!coreOn) {
+                    Log.w(TAG, "the connect was given up; turning the VPN off")
+                    turnOff(this@CoreService)
+                    return@execute
+                }
+                val useVpn = usesVpn(this@CoreService)
+                if (useVpn && Tun2Socks.ended()) {
+                    Log.e(TAG, "the VPN's tunnel ended; turning the VPN off")
+                    turnOff(this@CoreService)
+                    return@execute
+                }
+                val pending = try { mobile.Mobile.connectPending() } catch (_: Throwable) { true }
+                val code = when {
+                    pending -> ""
+                    offline -> NO_NETWORK
+                    else -> try { mobile.Mobile.exitCountry() } catch (_: Throwable) { "" }
+                }
+                val proxy = if (useVpn) "" else try { mobile.Mobile.proxyAddress() } catch (_: Throwable) { "" }
+                val wantSpeed = showSpeed(this@CoreService)
+                val speed = if (wantSpeed && !offline) {
+                    try { speedText(mobile.Mobile.speed()) } catch (_: Throwable) { "" }
+                } else ""
+                val excludeMode = useVpn && appMode(this@CoreService) == MODE_EXCLUDE
+
+                main.post {
+                    if (destroyed || !on || serviceGen.get() != gen) return@post
+                    connected = on && code.length == 2
+                    ConnectWidget.updateAll(this@CoreService)
+                    if (code != shownCountry || proxy != shownProxy || speed != shownSpeed) {
+                        shownCountry = code
+                        shownProxy = proxy
+                        shownSpeed = speed
+                        try {
+                            getSystemService(NotificationManager::class.java)
+                                .notify(NOTIFICATION_ID, notification(code))
+                        } catch (_: Throwable) {}
+                    }
+                    if (excludeMode) {
+                        checkSuggested()
+                    }
+                    main.removeCallbacks(this)
+                    main.postDelayed(this, if (wantSpeed) SPEED_POLL_MS else COUNTRY_POLL_MS)
+                }
             }
-            if (!mobile.Mobile.isOn()) {
-                Log.w(TAG, "the connect was given up; turning the VPN off")
-                turnOff(this@CoreService)
-                return
-            }
-            if (usesVpn(this@CoreService) && Tun2Socks.ended()) {
-                Log.e(TAG, "the VPN's tunnel ended; turning the VPN off")
-                turnOff(this@CoreService)
-                return
-            }
-            val code = when {
-                mobile.Mobile.connectPending() -> ""
-                offline -> NO_NETWORK
-                mobile.Mobile.running() -> mobile.Mobile.exitCountry()
-                else -> ""
-            }
-            connected = on && code.length == 2
-            ConnectWidget.updateAll(this@CoreService)
-            val proxy = if (usesVpn(this@CoreService) || !mobile.Mobile.running()) "" else mobile.Mobile.proxyAddress()
-            val speed = if (showSpeed(this@CoreService) && !offline && mobile.Mobile.running()) speedText(mobile.Mobile.speed()) else ""
-            if (code != shownCountry || proxy != shownProxy || speed != shownSpeed) {
-                shownCountry = code
-                shownProxy = proxy
-                shownSpeed = speed
-                getSystemService(NotificationManager::class.java).notify(NOTIFICATION_ID, notification(code))
-            }
-            if (on && usesVpn(this@CoreService) && appMode(this@CoreService) == MODE_EXCLUDE) {
-                checkSuggested()
-            }
-            main.postDelayed(this, if (showSpeed(this@CoreService)) SPEED_POLL_MS else COUNTRY_POLL_MS)
         }
     }
 
@@ -187,11 +211,13 @@ class CoreService : VpnService() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
-            turnOff(this)
+            turnOffAsync(this)
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_RECONNECT) {
-            if (on) {
+            val gen = serviceGen.get()
+            worker.execute {
+                if (destroyed || !on || serviceGen.get() != gen) return@execute
                 if (usesVpn(this)) {
                     if (!startTunnel()) turnOff(this)
                 } else {
@@ -201,41 +227,50 @@ class CoreService : VpnService() {
             return START_STICKY
         }
         startInForeground()
-        startCore(this, on = true)
-        if (!mobile.Mobile.isOn()) {
-            if (intent == null) {
-                mobile.Mobile.setOn(true)
-            } else {
-                turnOff(this)
-                return START_NOT_STICKY
-            }
-        }
-        if (usesVpn(this) && !startTunnel()) {
-            turnOff(this)
-            return START_NOT_STICKY
-        }
+        val gen = serviceGen.get()
+        startedGen = gen
         on = true
         offline = reportedDown
-        QuickTile.refresh(this)
-        ConnectWidget.updateAll(this)
-        main.removeCallbacks(watchCountry)
-        main.post(watchCountry)
-        watchNetwork()
+        worker.execute {
+            if (destroyed || !on || serviceGen.get() != gen) return@execute
+            startCore(this, on = true)
+            if (!mobile.Mobile.isOn()) {
+                mobile.Mobile.setOn(true)
+                mobile.Mobile.connect()
+            }
+            if (usesVpn(this) && !startTunnel()) {
+                turnOff(this)
+                return@execute
+            }
+            main.post {
+                if (destroyed || !on || serviceGen.get() != gen) return@post
+                QuickTile.refresh(this)
+                ConnectWidget.updateAll(this)
+                main.removeCallbacks(watchCountry)
+                main.post(watchCountry)
+                watchNetwork()
+            }
+        }
         return START_STICKY
     }
 
     override fun onRevoke() {
-        turnOff(this)
+        turnOffAsync(this)
     }
 
     override fun onDestroy() {
         destroyed = true
         main.removeCallbacks(watchCountry)
-        getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        try {
+            getSystemService(NotificationManager::class.java).cancel(NOTIFICATION_ID)
+        } catch (_: Throwable) {}
         stopWatchingNetwork()
-        stopTunnel()
-        on = false
-        connected = false
+        val staleDestroy = on && serviceGen.get() != startedGen
+        if (!staleDestroy) {
+            on = false
+            connected = false
+            worker.execute { stopTunnel() }
+        }
         QuickTile.refresh(this)
         ConnectWidget.updateAll(this)
         super.onDestroy()
@@ -268,7 +303,9 @@ class CoreService : VpnService() {
             true
         } catch (e: Throwable) {
             Log.e(TAG, "the VPN did not start", e)
-            Toast.makeText(this, e.message ?: e.toString(), Toast.LENGTH_LONG).show()
+            main.post {
+                Toast.makeText(this, e.message ?: e.toString(), Toast.LENGTH_LONG).show()
+            }
             false
         }
     }
@@ -500,21 +537,65 @@ class CoreService : VpnService() {
         var connected = false
             private set
 
+        private val serviceGen = AtomicInteger(0)
+
+        fun runOnCoreExecutor(task: () -> Unit) {
+            worker.execute(task)
+        }
+
         fun dataDir(context: Context): File = File(context.filesDir, "core")
 
         fun turnOn(context: Context) {
-            val intent = Intent(context, CoreService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
-                context.startService(intent)
-            }
-            startCore(context, on = true)
-            mobile.Mobile.connect()
+            val appCtx = context.applicationContext
+            serviceGen.incrementAndGet()
             on = true
             connected = false
-            QuickTile.refresh(context)
-            ConnectWidget.updateAll(context)
+            val intent = Intent(appCtx, CoreService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                appCtx.startForegroundService(intent)
+            } else {
+                appCtx.startService(intent)
+            }
+            startCore(appCtx, on = true)
+            mobile.Mobile.setOn(true)
+            mobile.Mobile.connect()
+            QuickTile.refresh(appCtx)
+            ConnectWidget.updateAll(appCtx)
+        }
+
+        fun turnOnAsync(context: Context, onComplete: (Exception?) -> Unit) {
+            val appCtx = context.applicationContext
+            val gen = serviceGen.incrementAndGet()
+            on = true
+            connected = false
+            val intent = Intent(appCtx, CoreService::class.java)
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    appCtx.startForegroundService(intent)
+                } else {
+                    appCtx.startService(intent)
+                }
+            } catch (e: Exception) {
+                on = false
+                onComplete(e)
+                return
+            }
+            worker.execute {
+                try {
+                    if (serviceGen.get() != gen) {
+                        onComplete(null)
+                        return@execute
+                    }
+                    startCore(appCtx, on = true)
+                    mobile.Mobile.setOn(true)
+                    mobile.Mobile.connect()
+                    QuickTile.refresh(appCtx)
+                    ConnectWidget.updateAll(appCtx)
+                    onComplete(null)
+                } catch (e: Exception) {
+                    onComplete(e)
+                }
+            }
         }
 
         private fun stopTunnel() {
@@ -523,15 +604,39 @@ class CoreService : VpnService() {
         }
 
         fun turnOff(context: Context) {
+            val appCtx = context.applicationContext
+            serviceGen.incrementAndGet()
+            on = false
+            connected = false
             stopTunnel()
             if (mobile.Mobile.running()) {
                 mobile.Mobile.setOn(false)
             }
+            appCtx.stopService(Intent(appCtx, CoreService::class.java))
+            QuickTile.refresh(appCtx)
+            ConnectWidget.updateAll(appCtx)
+        }
+
+        fun turnOffAsync(context: Context, onComplete: (() -> Unit)? = null) {
+            val appCtx = context.applicationContext
+            val gen = serviceGen.incrementAndGet()
             on = false
             connected = false
-            context.stopService(Intent(context, CoreService::class.java))
-            QuickTile.refresh(context)
-            ConnectWidget.updateAll(context)
+            worker.execute {
+                try {
+                    if (serviceGen.get() == gen) {
+                        stopTunnel()
+                        if (mobile.Mobile.running()) {
+                            mobile.Mobile.setOn(false)
+                        }
+                    }
+                } finally {
+                    appCtx.stopService(Intent(appCtx, CoreService::class.java))
+                    QuickTile.refresh(appCtx)
+                    ConnectWidget.updateAll(appCtx)
+                    onComplete?.invoke()
+                }
+            }
         }
 
         @Synchronized

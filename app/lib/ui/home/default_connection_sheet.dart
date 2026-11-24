@@ -98,17 +98,10 @@ class _DefaultConnectionSheetState extends State<DefaultConnectionSheet> {
     if (type == 'fastest') {
       final fastest = CountryManager.instance.getFastestCountry();
       await AppPreferences.setSelectedLocation(fastest.code);
-      await widget.controller.setLocation(fastest.code.toLowerCase());
       if (widget.controller.hasAccount) {
-        if (widget.controller.isConnected) {
-          widget.controller.setOn(false);
-          Future.delayed(const Duration(milliseconds: 250), () {
-            widget.controller.setLocation(fastest.code.toLowerCase());
-            widget.controller.setOn(true);
-          });
-        } else {
-          widget.controller.setOn(true);
-        }
+        await widget.controller.connectToLocation(fastest.code.toLowerCase());
+      } else {
+        await widget.controller.setLocation(fastest.code.toLowerCase());
       }
       widget.onSelected('fastest');
       if (mounted) {
@@ -123,9 +116,10 @@ class _DefaultConnectionSheetState extends State<DefaultConnectionSheet> {
     } else if (type == 'last') {
       final last = AppPreferences.lastConnection;
       await AppPreferences.setSelectedLocation(last);
-      await widget.controller.setLocation(last.toLowerCase());
-      if (widget.controller.hasAccount && !widget.controller.isConnected) {
-        widget.controller.setOn(true);
+      if (widget.controller.hasAccount) {
+        await widget.controller.connectToLocation(last.toLowerCase());
+      } else {
+        await widget.controller.setLocation(last.toLowerCase());
       }
       widget.onSelected(last);
       if (mounted) {
@@ -138,9 +132,10 @@ class _DefaultConnectionSheetState extends State<DefaultConnectionSheet> {
       }
     } else {
       await AppPreferences.setSelectedLocation(type);
-      await widget.controller.setLocation(type.toLowerCase());
-      if (widget.controller.hasAccount && !widget.controller.isConnected) {
-        widget.controller.setOn(true);
+      if (widget.controller.hasAccount) {
+        await widget.controller.connectToLocation(type.toLowerCase());
+      } else {
+        await widget.controller.setLocation(type.toLowerCase());
       }
       widget.onSelected(type);
       if (mounted) {

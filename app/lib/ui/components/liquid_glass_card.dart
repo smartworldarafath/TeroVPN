@@ -16,6 +16,7 @@ class LiquidGlassCard extends StatelessWidget {
   final List<BoxShadow>? customShadow;
   final VoidCallback? onTap;
   final Clip clipBehavior;
+  final bool enableBlur;
 
   const LiquidGlassCard({
     super.key,
@@ -29,6 +30,7 @@ class LiquidGlassCard extends StatelessWidget {
     this.customShadow,
     this.onTap,
     this.clipBehavior = Clip.antiAlias,
+    this.enableBlur = true,
   });
 
   @override
@@ -166,6 +168,8 @@ class LiquidGlassCard extends StatelessWidget {
       );
     }
 
+    final effectiveSigma = enableBlur ? blur.clamp(0.0, 14.0) : 0.0;
+
     return Container(
       margin: margin,
       decoration: BoxDecoration(
@@ -175,10 +179,17 @@ class LiquidGlassCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: rrectRadius,
         clipBehavior: clipBehavior,
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: cardContent,
-        ),
+        child: effectiveSigma > 0.0
+            ? RepaintBoundary(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(
+                    sigmaX: effectiveSigma,
+                    sigmaY: effectiveSigma,
+                  ),
+                  child: cardContent,
+                ),
+              )
+            : cardContent,
       ),
     );
   }

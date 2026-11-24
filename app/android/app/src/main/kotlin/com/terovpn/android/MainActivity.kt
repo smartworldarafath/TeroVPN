@@ -41,19 +41,23 @@ class MainActivity : FlutterActivity() {
     private var pendingNotif: Result? = null
     /** Waits for nearby devices permission answer. */
     private var pendingNearby: Result? = null
+    private var cutoutAndEdgeConfigured = false
+    private var appliedRefreshModeId: Int = -1
 
     override fun onCreate(savedInstanceState: Bundle?) {
         holdPhoneUpright(resources.configuration)
-        setupCutoutAndEdgeToEdge()
+        setupCutoutAndEdgeToEdge(force = true)
         super.onCreate(savedInstanceState)
-        setupCutoutAndEdgeToEdge()
+        setupCutoutAndEdgeToEdge(force = true)
     }
 
     /**
      * Fixes screen cropping at camera cutout, removes status bar contrast scrim,
      * and forces true edge-to-edge drawing with GPU hardware acceleration.
      */
-    private fun setupCutoutAndEdgeToEdge() {
+    private fun setupCutoutAndEdgeToEdge(force: Boolean = false) {
+        if (cutoutAndEdgeConfigured && !force) return
+        cutoutAndEdgeConfigured = true
         try {
             window.setFlags(
                 android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED,
@@ -65,9 +69,13 @@ class MainActivity : FlutterActivity() {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 val params = window.attributes
-                params.layoutInDisplayCutoutMode =
+                if (params.layoutInDisplayCutoutMode !=
                     android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                window.attributes = params
+                ) {
+                    params.layoutInDisplayCutoutMode =
+                        android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                    window.attributes = params
+                }
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 window.isStatusBarContrastEnforced = false
@@ -83,22 +91,22 @@ class MainActivity : FlutterActivity() {
     override fun onConfigurationChanged(newConfig: Configuration) {
         super.onConfigurationChanged(newConfig)
         holdPhoneUpright(newConfig)
+        setupCutoutAndEdgeToEdge(force = true)
     }
 
     override fun onResume() {
         super.onResume()
-        setupCutoutAndEdgeToEdge()
+        setupCutoutAndEdgeToEdge(force = false)
     }
 
     override fun onPostResume() {
         super.onPostResume()
-        setupCutoutAndEdgeToEdge()
         enableHighRefreshRate()
     }
 
     /**
      * Enables 120Hz / highest available display refresh rate on supported Android devices.
-     * Safely executes post-resume with zero risk of crashing on emulators or legacy devices.
+     * Only writes window attributes when the mode actually changes so SurfaceView is never churned.
      */
     private fun enableHighRefreshRate() {
         try {
@@ -117,10 +125,13 @@ class MainActivity : FlutterActivity() {
                             bestMode = mode
                         }
                     }
-                    if (bestMode.refreshRate > 60f) {
+                    if (bestMode.refreshRate > 60f && appliedRefreshModeId != bestMode.modeId) {
                         val params = window.attributes
-                        params.preferredDisplayModeId = bestMode.modeId
-                        window.attributes = params
+                        if (params.preferredDisplayModeId != bestMode.modeId) {
+                            params.preferredDisplayModeId = bestMode.modeId
+                            window.attributes = params
+                        }
+                        appliedRefreshModeId = bestMode.modeId
                     }
                 }
             }
@@ -151,15 +162,17 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "dataDir" -> result.success(CoreService.dataDir(this).absolutePath)
                 "startCore" -> {
-                    CoreService.startCore(this, on = false)
-                    result.success(null)
+                    CoreService.runOnCoreExecutor {
+                        CoreService.startCore(this, on = false)
+                        main.post { result.success(null) }
+                    }
                 }
                 "setOn" -> {
                     if (call.argument<Boolean>("on") != true) {
-                        CoreService.turnOff(this)
-                        result.success(null)
+                        CoreService.turnOffAsync(this) {
+                            main.post { result.success(null) }
+                        }
                     } else {
-                        askForNotifications()
                         // The first time, Android asks the user to allow the
                         // VPN; proxy mode needs no VPN.
                         val consent = if (CoreService.usesVpn(this)) VpnService.prepare(this) else null
@@ -172,7 +185,12 @@ class MainActivity : FlutterActivity() {
                         }
                     }
                 }
-                "isRunning" -> result.success(mobile.Mobile.running())
+                "isRunning" -> {
+                    CoreService.runOnCoreExecutor {
+                        val running = try { mobile.Mobile.running() } catch (_: Throwable) { false }
+                        main.post { result.success(running) }
+                    }
+                }
                 "isOn" -> result.success(CoreService.on)
                 "isConnected" -> result.success(CoreService.connected)
                 "installApk" -> {
@@ -542,11 +560,14 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun turnOn(result: Result) {
-        try {
-            CoreService.turnOn(this)
-            result.success(null)
-        } catch (e: Exception) {
-            result.error("start_failed", e.message, null)
+        CoreService.turnOnAsync(this) { err ->
+            main.post {
+                if (err == null) {
+                    result.success(null)
+                } else {
+                    result.error("start_failed", err.message, null)
+                }
+            }
         }
     }
 

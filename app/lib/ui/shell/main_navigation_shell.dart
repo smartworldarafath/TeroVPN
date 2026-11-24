@@ -69,6 +69,30 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   int _previousIndex = 0;
 
+  bool? _lastSystemUiIsDark;
+
+  void _syncSystemUiStyle(bool isDark) {
+    if (kIsWeb || _lastSystemUiIsDark == isDark) return;
+    _lastSystemUiIsDark = isDark;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: Colors.transparent,
+            systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+            systemNavigationBarDividerColor: Colors.transparent,
+            systemStatusBarContrastEnforced: false,
+            systemNavigationBarContrastEnforced: false,
+          ),
+        );
+      } catch (_) {}
+    });
+  }
+
 
 
   void _onTabSelected(int index) {
@@ -221,28 +245,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
 
 
-        // Dynamic System Status Bar & Navigation Bar brightness (native only)
-
-        if (!kIsWeb) {
-
-          try {
-
-            SystemChrome.setSystemUIOverlayStyle(
-              SystemUiOverlayStyle(
-                statusBarColor: Colors.transparent,
-                statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-                statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-                systemNavigationBarColor: Colors.transparent,
-                systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-                systemNavigationBarDividerColor: Colors.transparent,
-                systemStatusBarContrastEnforced: false,
-                systemNavigationBarContrastEnforced: false,
-              ),
-            );
-
-          } catch (_) {}
-
-        }
+        // Dynamic System Status Bar & Navigation Bar brightness (only when theme brightness changes)
+        _syncSystemUiStyle(isDark);
 
 
 

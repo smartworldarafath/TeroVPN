@@ -463,10 +463,9 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                       return;
                                     }
                                     final fastest = CountryManager.instance.getRealtimeFastestCountry();
-                                    await widget.controller.setLocation(fastest.code.toLowerCase());
                                     await AppPreferences.setSelectedLocation(fastest.code);
                                     try {
-                                      await widget.controller.setOn(true);
+                                      await widget.controller.connectToLocation(fastest.code.toLowerCase());
                                     } catch (_) {}
                                   }
                                 },
@@ -808,7 +807,6 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                     isConnected: isThisConnected,
                                     isConnecting: isThisConnecting,
                                     onTap: () async {
-                                      await widget.controller.setLocation(item.code.toLowerCase());
                                       await AppPreferences.setSelectedLocation(item.code);
                                       if (!isVpnOn) {
                                         if (!identical(0, 0.0) && Platform.isWindows && !AppPermissionsService.instance.areCorePermissionsGranted) {
@@ -825,10 +823,10 @@ class _DesktopHomeViewState extends State<DesktopHomeView> {
                                           }
                                           return;
                                         }
-                                        try {
-                                          await widget.controller.setOn(true);
-                                        } catch (_) {}
                                       }
+                                      try {
+                                        await widget.controller.connectToLocation(item.code.toLowerCase());
+                                      } catch (_) {}
                                     },
                                   ),
                                 ],

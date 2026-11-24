@@ -1,5 +1,5 @@
 import 'dart:io' show Platform;
-import 'dart:ui' show AppExitResponse;
+import 'dart:ui' show AppExitResponse, PlatformDispatcher;
 
 import 'package:flutter/foundation.dart';
 
@@ -41,6 +41,31 @@ import 'ui/permissions/permissions_setup_screen.dart';
 
 void main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Prevent unhandled framework or async errors from blanking/freezing the UI tree
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.presentError(details);
+  };
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    debugPrint('TeroVPN guarded async error: $error');
+    return true;
+  };
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: const Color(0xFF0C0916),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Recovering view...\n${details.exceptionAsString()}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ),
+      ),
+    );
+  };
+
   await AppPreferences.init();
   await AppPermissionsService.instance.init();
   ThemeManager.instance.init();
@@ -254,7 +279,7 @@ await CoreLocator.ensureDefaultConfig(dataDir);
       'accounts': {'running': 1, 'configured': 2},
 
       'switch_threshold_percent': 10.0,
-      'version': '1.2.9',
+      'version': '1.3.0',
       'can_exit': true,
 
       'system_proxy': 'off',

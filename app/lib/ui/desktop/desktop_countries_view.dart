@@ -84,17 +84,15 @@ class _DesktopCountriesViewState extends State<DesktopCountriesView> with Single
   }
 
   Future<void> _connectTo(String code) async {
-    await widget.controller.setLocation(code.toLowerCase());
     await AppPreferences.setSelectedLocation(code);
-    widget.onCountrySelected(code);
-
-    if (!widget.controller.isVpnOn) {
-      if (!widget.controller.hasAccount) {
-        if (mounted) SignInDialog.show(context, widget.controller);
-        return;
-      }
-      widget.controller.setOn(true);
+    if (!widget.controller.hasAccount) {
+      await widget.controller.setLocation(code.toLowerCase());
+      widget.onCountrySelected(code);
+      if (mounted) SignInDialog.show(context, widget.controller);
+      return;
     }
+    await widget.controller.connectToLocation(code.toLowerCase());
+    widget.onCountrySelected(code);
   }
 
   @override

@@ -38,11 +38,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _missingVpn = false;
   bool _missingNotif = false;
   Timer? _periodicCheckTimer;
+  String? _lastShownConnectError;
+
+  void _onControllerChanged() {
+    final err = widget.controller.lastConnectError;
+    if (err != null && err.isNotEmpty && err != _lastShownConnectError && mounted) {
+      _lastShownConnectError = err;
+      TopDockToast.show(
+        context,
+        title: 'Connection Notice',
+        message: err,
+        icon: Icons.wifi_tethering_error_rounded,
+        iconColor: const Color(0xFFF59E0B),
+      );
+    } else if (err == null) {
+      _lastShownConnectError = null;
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    widget.controller.addListener(_onControllerChanged);
     _checkPermissions();
 
     // Immediately trigger background real-time internet loading speed probe
@@ -57,6 +75,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    widget.controller.removeListener(_onControllerChanged);
     WidgetsBinding.instance.removeObserver(this);
     _periodicCheckTimer?.cancel();
     super.dispose();
@@ -157,8 +176,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         await AppPreferences.setSelectedLocation(fastest.code);
         await AppPreferences.setLastConnection(fastest.code);
         await AppPreferences.addRecentLocation(fastest.code);
-        await widget.controller.setLocation(fastest.code.toLowerCase());
-        await widget.controller.setOn(true);
+        await widget.controller.connectToLocation(fastest.code.toLowerCase());
         if (mounted) {
           setState(() {});
           TopDockToast.show(
@@ -175,8 +193,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         await AppPreferences.setSelectedLocation(resolved.code);
         await AppPreferences.setLastConnection(resolved.code);
         await AppPreferences.addRecentLocation(resolved.code);
-        await widget.controller.setLocation(resolved.code.toLowerCase());
-        await widget.controller.setOn(true);
+        await widget.controller.connectToLocation(resolved.code.toLowerCase());
         if (mounted) {
           setState(() {});
         }
@@ -524,9 +541,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 await AppPreferences.addRecentLocation(
                                   item.code,
                                 );
-                                await widget.controller.setLocation(
-                                  item.code.toLowerCase(),
-                                );
                                 if (!mounted) return;
                                 if (!widget.controller.hasAccount) {
                                   if (builderContext.mounted) {
@@ -537,24 +551,47 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   }
                                   return;
                                 }
-                                if (isVpnOn || isConnected) {
-                                  await widget.controller.setOn(false);
-                                  await Future<void>.delayed(
-                                    const Duration(milliseconds: 200),
+                                if (!kIsWeb && Platform.isAndroid) {
+                                  final granted = await AndroidCore.ensureMandatoryVpnPermission();
+                                  await _checkPermissions();
+                                  if (!granted) {
+                                    if (builderContext.mounted) {
+                                      TopDockToast.show(
+                                        builderContext,
+                                        title: 'Permission Required',
+                                        message: 'Please allow VPN configuration to connect.',
+                                        icon: Icons.warning_amber_rounded,
+                                        iconColor: const Color(0xFFEF4444),
+                                      );
+                                    }
+                                    return;
+                                  }
+                                }
+                                try {
+                                  await widget.controller.connectToLocation(
+                                    item.code.toLowerCase(),
                                   );
-                                  await _handleConnectToggle(
-                                    isVpnOn: false,
-                                    isConnected: false,
-                                    isConnecting: false,
-                                    countryCode: item.code,
-                                  );
-                                } else {
-                                  await _handleConnectToggle(
-                                    isVpnOn: isVpnOn,
-                                    isConnected: isConnected,
-                                    isConnecting: isConnecting,
-                                    countryCode: item.code,
-                                  );
+                                  if (mounted) {
+                                    setState(() {});
+                                  }
+                                  if (builderContext.mounted) {
+                                    TopDockToast.show(
+                                      builderContext,
+                                      title: 'Connecting to ${item.name}',
+                                      message: '${item.latencyMs} ms · Load: ${item.load}%',
+                                      icon: Icons.location_on_rounded,
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (builderContext.mounted) {
+                                    TopDockToast.show(
+                                      builderContext,
+                                      title: 'Connection Error',
+                                      message: e.toString().replaceFirst('Exception: ', ''),
+                                      icon: Icons.error_outline_rounded,
+                                      iconColor: const Color(0xFFEF4444),
+                                    );
+                                  }
                                 }
                               },
                             ),

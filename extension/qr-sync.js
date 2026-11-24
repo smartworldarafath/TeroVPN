@@ -2,7 +2,7 @@
  * TeroVPN Chrome Extension - E2EE Cross-Device QR Authorization Sync
  * Exact Web Crypto API (AES-256-CBC + HMAC-SHA256) compatible with TeroVPN Mobile & Desktop.
  * Supports real-time NDJSON HTTP streaming + WebSocket push over ntfy.sh.
- * Version: 1.2.9
+ * Version: 1.3.0
  */
 
 const receivedSessionPayloads = new Map();

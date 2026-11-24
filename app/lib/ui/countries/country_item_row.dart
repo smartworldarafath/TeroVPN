@@ -37,6 +37,7 @@ class CountryItemRow extends StatelessWidget {
       // Standalone Fastest Country card matching photo_2 & photo_11
       return LiquidGlassCard(
         radius: 20,
+        enableBlur: false,
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         customBorder: isSelected
@@ -152,6 +153,7 @@ class CountryItemRow extends StatelessWidget {
 
     return LiquidGlassCard(
       radius: 18,
+      enableBlur: false,
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       padding: EdgeInsets.zero,
       customBorder: isSelected

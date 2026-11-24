@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../theme/proton_colors.dart';
 import '../../theme/theme_manager.dart';
@@ -62,41 +61,38 @@ class FilterChipButton extends StatelessWidget {
           ),
           child: ClipRRect(
             borderRadius: chipRadius,
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-              child: Container(
-                height: 42,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isSelected ? const Color(0xFF6B42FF) : unselectedBg,
-                  borderRadius: chipRadius,
-                  border: Border.all(
-                    color: isSelected ? const Color(0xFF6B42FF) : unselectedBorder,
-                    width: 1.1,
-                  ),
+            child: Container(
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected ? const Color(0xFF6B42FF) : unselectedBg,
+                borderRadius: chipRadius,
+                border: Border.all(
+                  color: isSelected ? const Color(0xFF6B42FF) : unselectedBorder,
+                  width: 1.1,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (icon != null) ...[
-                      Icon(
-                        icon,
-                        size: 16,
-                        color: isSelected ? Colors.white : unselectedIconColor,
-                      ),
-                      const SizedBox(width: 8),
-                    ],
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: isSelected ? Colors.white : unselectedTextColor,
-                      ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: 16,
+                      color: isSelected ? Colors.white : unselectedIconColor,
                     ),
+                    const SizedBox(width: 8),
                   ],
-                ),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      color: isSelected ? Colors.white : unselectedTextColor,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'core_api.dart';
 import 'remote_flags.dart';
@@ -73,6 +74,28 @@ class CoreController extends ChangeNotifier {
   CoreStatus? status;
   AccountList? accounts;
   bool _localVpnOn = false;
+  List<Location> _coreLocations = const [];
+  DateTime? _locationsFetchedAt;
+
+  /// Human-readable error from the most recent failed or stalled connect attempt.
+  String? lastConnectError;
+
+  DateTime? _connectingSince;
+  bool _stallRetried = false;
+  bool _stallProtocolFallbackTried = false;
+  int _connectGeneration = 0;
+
+  @visibleForTesting
+  void debugSetConnectingSince(DateTime? time) {
+    _connectingSince = time;
+  }
+
+  void clearConnectError() {
+    if (lastConnectError != null) {
+      lastConnectError = null;
+      if (!_disposed) notifyListeners();
+    }
+  }
 
   /// Whether the VPN tunnel is running or requested on.
   bool get isVpnOn {
@@ -85,10 +108,20 @@ class CoreController extends ChangeNotifier {
   bool get isConnected => status?.state.phase == Phase.running;
 
   /// Whether the VPN is actively establishing a connection.
-  bool get isConnecting =>
-      status?.state.phase == Phase.starting ||
-      status?.state.phase == Phase.waiting ||
-      switchingProxy;
+  bool get isConnecting {
+    if (switchingProxy) return true;
+    final state = status?.state;
+    if (state == null) return false;
+    if (state.phase == Phase.starting) return true;
+    if (state.phase == Phase.waiting) {
+      if (state.code == StateCode.noAccounts ||
+          state.code == StateCode.noUsableAccount) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
 
   /// Whether at least one user account exists.
   bool get hasAccount => (accounts?.accounts.isNotEmpty == true);
@@ -165,6 +198,7 @@ class CoreController extends ChangeNotifier {
       final readAccounts = accountsToo || accounts == null || _tick % 3 == 0;
       _tick++;
       status = next;
+      await _monitorConnectionProgress(api, next);
       if (!kIsWeb && turnOn == null) {
         if (next.state.phase == Phase.running && !DesktopSystemProxyService.instance.isEnabled) {
           unawaited(DesktopSystemProxyService.instance.enableProxy(port: 10810));
@@ -329,6 +363,16 @@ class CoreController extends ChangeNotifier {
     }
     _localVpnOn = on;
     switchingProxy = true;
+    if (on) {
+      lastConnectError = null;
+      _connectingSince ??= DateTime.now();
+      _stallRetried = false;
+      _stallProtocolFallbackTried = false;
+    } else {
+      _connectingSince = null;
+      _stallRetried = false;
+      _stallProtocolFallbackTried = false;
+    }
     notifyListeners();
     if (kIsWeb) {
       await Future<void>.delayed(const Duration(milliseconds: 600));
@@ -370,7 +414,7 @@ class CoreController extends ChangeNotifier {
           await DesktopSystemProxyService.instance.disableProxy();
         }
       }
-      await (turnOn ?? api.setPower)(on);
+      await (turnOn ?? api.setPower)(on).timeout(const Duration(seconds: 12));
       for (var i = 0; i < 20; i++) {
         final next = await api.status();
         status = next;
@@ -384,15 +428,28 @@ class CoreController extends ChangeNotifier {
           await DesktopSystemProxyService.instance.disableProxy();
         }
       }
-      if (on && status?.state.phase == Phase.off) {
+      if (on &&
+          status?.state.phase == Phase.off &&
+          (status?.connectFailure.isNotEmpty == true)) {
         _localVpnOn = false;
+        _connectingSince = null;
+        lastConnectError = _describeFailure(status!.connectFailure);
         notifyListeners();
       }
     } catch (e) {
       if (turnOn != null) {
         _localVpnOn = false;
+        _connectingSince = null;
+        if (e is! VpnNotAllowed) {
+          lastConnectError = e.toString().replaceFirst('Exception: ', '');
+        }
         notifyListeners();
         rethrow;
+      }
+      if (!on) {
+        _localVpnOn = false;
+        _connectingSince = null;
+        notifyListeners();
       }
     } finally {
       switchingProxy = false;
@@ -595,6 +652,234 @@ class CoreController extends ChangeNotifier {
       if (!_disposed) notifyListeners();
       rethrow;
     }
+  }
+
+  /// Atomically switches to [countryCode] and connects (or cleanly restarts
+  /// onto [countryCode] without racing `setOn(false)`/`setOn(true)`).
+  /// Falls back to `'fastest'` if the Go core rejects an unsupported country.
+  Future<String?> connectToLocation(String countryCode) async {
+    final gen = ++_connectGeneration;
+    final clean = countryCode.trim().toLowerCase();
+    var target = clean.isEmpty ? 'fastest' : clean;
+    lastConnectError = null;
+    _connectingSince = DateTime.now();
+    _stallRetried = false;
+    _stallProtocolFallbackTried = false;
+
+    await AppPreferences.setSelectedLocation(
+      target == 'fastest' ? 'fastest' : target.toUpperCase(),
+    );
+    if (target != 'fastest' && target != 'auto') {
+      unawaited(AppPreferences.addRecentLocation(target.toUpperCase()));
+    }
+
+    if (kIsWeb) {
+      await setLocation(target);
+      if (!isConnected) {
+        await setOn(true);
+      }
+      return target;
+    }
+
+    if (_api == null) {
+      await refresh(accountsToo: true);
+    }
+    if (gen != _connectGeneration || _disposed) return null;
+
+    final api = _require();
+
+    // Refresh supported core locations occasionally so we know valid exit codes
+    if (_coreLocations.isEmpty ||
+        _locationsFetchedAt == null ||
+        DateTime.now().difference(_locationsFetchedAt!) >
+            const Duration(minutes: 10)) {
+      try {
+        final list = await api.locations();
+        if (list.locations.isNotEmpty) {
+          _coreLocations = list.locations;
+          _locationsFetchedAt = DateTime.now();
+        }
+      } catch (_) {}
+    }
+
+    if (_coreLocations.isNotEmpty &&
+        target != 'fastest' &&
+        target != 'auto') {
+      final supported = _coreLocations.any(
+        (l) => l.code.toLowerCase() == target,
+      );
+      if (!supported) {
+        target = 'fastest';
+        await AppPreferences.setSelectedLocation('fastest');
+      }
+    }
+
+    if (gen != _connectGeneration || _disposed) return null;
+
+    try {
+      await api.setLocation(target);
+    } on CoreApiException {
+      if (target != 'fastest') {
+        target = 'fastest';
+        await AppPreferences.setSelectedLocation('fastest');
+        await api.setLocation(target);
+      } else {
+        rethrow;
+      }
+    }
+
+    if (gen != _connectGeneration || _disposed) return null;
+
+    final currentPhase = status?.state.phase;
+    bool nativeServiceActive = true;
+    if (!kIsWeb && turnOn != null && !_isTestEnvironment()) {
+      nativeServiceActive = await AndroidCore.isOn();
+    }
+
+    if (currentPhase == Phase.running && nativeServiceActive) {
+      // Proxy already running: setLocation restarted it onto target cleanly.
+      // Also trigger a quick retry/refresh so status converges immediately.
+      try {
+        await api.retry();
+      } catch (_) {}
+      unawaited(refresh());
+    } else if ((currentPhase == Phase.starting ||
+            currentPhase == Phase.waiting) &&
+        nativeServiceActive) {
+      // Currently connecting/waiting: drop backoff so core connects to the new
+      // country immediately without getting stuck.
+      _localVpnOn = true;
+      try {
+        await api.retry();
+      } catch (_) {}
+      unawaited(refresh());
+    } else {
+      await setOn(true);
+    }
+
+    return target;
+  }
+
+  static bool _isTestEnvironment() {
+    try {
+      return WidgetsBinding.instance.runtimeType.toString().contains('Test');
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _monitorConnectionProgress(CoreApi api, CoreStatus next) async {
+    final phase = next.state.phase;
+
+    if (phase == Phase.running) {
+      _connectingSince = null;
+      _stallRetried = false;
+      _stallProtocolFallbackTried = false;
+      lastConnectError = null;
+      return;
+    }
+
+    if (phase == Phase.off) {
+      _connectingSince = null;
+      _stallRetried = false;
+      _stallProtocolFallbackTried = false;
+      if (next.connectFailure.isNotEmpty) {
+        _localVpnOn = false;
+        lastConnectError = _describeFailure(next.connectFailure);
+      }
+      return;
+    }
+
+    if (phase == Phase.error) {
+      _connectingSince = null;
+      _localVpnOn = false;
+      lastConnectError = next.state.message.isNotEmpty
+          ? next.state.message
+          : 'Connection error. Please try another server.';
+      return;
+    }
+
+    // Phase.starting or Phase.waiting
+    if (next.state.code == StateCode.noAccounts ||
+        next.state.code == StateCode.noUsableAccount ||
+        next.proxy?.wakeErrorCode == Failure.signIn) {
+      _connectingSince = null;
+      _localVpnOn = false;
+      lastConnectError =
+          'Account session requires sign-in before connecting.';
+      try {
+        await (turnOn ?? api.setPower)(false);
+      } catch (_) {}
+      return;
+    }
+
+    if (next.noNetwork || next.state.code == StateCode.waitingForNetwork) {
+      lastConnectError = 'Waiting for active internet connection...';
+      return;
+    }
+
+    _connectingSince ??= DateTime.now();
+    final elapsed = DateTime.now().difference(_connectingSince!);
+
+    if (next.proxy?.wakeErrorCode == Failure.locationRefused &&
+        !_stallRetried) {
+      _stallRetried = true;
+      try {
+        await api.setLocation('fastest');
+        await api.retry();
+      } catch (_) {}
+      return;
+    }
+
+    if (elapsed.inSeconds >= 8 && !_stallRetried) {
+      _stallRetried = true;
+      try {
+        await api.retry();
+      } catch (_) {}
+    }
+
+    if (elapsed.inSeconds >= 16 && !_stallProtocolFallbackTried) {
+      _stallProtocolFallbackTried = true;
+      try {
+        final cfg = await api.settings();
+        final proxy = cfg['proxy'];
+        if (proxy is Map<String, Object?> && proxy['transport'] != 'h2') {
+          proxy['transport'] = 'h2';
+          await api.saveSettings(cfg);
+          await api.retry();
+        }
+      } catch (_) {}
+    }
+
+    if (elapsed.inSeconds >= 32) {
+      _connectingSince = null;
+      _localVpnOn = false;
+      lastConnectError = next.proxy?.wakeError.isNotEmpty == true
+          ? next.proxy!.wakeError
+          : 'Connection timed out. Please try Fastest country or another server.';
+      try {
+        await (turnOn ?? api.setPower)(false);
+        status = await api.status();
+      } catch (_) {}
+    }
+  }
+
+  static String _describeFailure(String code) {
+    return switch (code) {
+      Failure.noNetwork => 'No internet connection detected.',
+      Failure.locationRefused =>
+        'Selected country refused the connection. Try Fastest country.',
+      Failure.signIn ||
+      Failure.noAccount =>
+        'Please sign in again to connect.',
+      Failure.quota => 'Account data quota exhausted.',
+      Failure.notEntitled => 'Active Mozilla VPN subscription required.',
+      Failure.unreachable ||
+      Failure.refused ||
+      Failure.server =>
+        'VPN server unreachable on this network. Try another country.',
+      _ => 'Could not connect to VPN ($code). Please try again.',
+    };
   }
 
   /// Chooses the location (a country code, `fastest`, or empty for the

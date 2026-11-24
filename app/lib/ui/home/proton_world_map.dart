@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../../theme/theme_manager.dart';
 import '../components/country_flag.dart';
@@ -556,13 +557,14 @@ class ProtonWorldMap extends StatefulWidget {
 }
 
 class _ProtonWorldMapState extends State<ProtonWorldMap>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _pulseController;
   bool _maskIp = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2400),
@@ -570,7 +572,23 @@ class _ProtonWorldMapState extends State<ProtonWorldMap>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat();
+      }
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      if (_pulseController.isAnimating) {
+        _pulseController.stop(canceled: false);
+      }
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulseController.dispose();
     super.dispose();
   }
@@ -677,22 +695,24 @@ class _ProtonWorldMapState extends State<ProtonWorldMap>
                     duration: const Duration(milliseconds: 950),
                     curve: Curves.easeInOutCubic,
                     builder: (context, zoom, _) {
-                      return AnimatedBuilder(
-                        animation: _pulseController,
-                        builder: (context, _) {
-                          return CustomPaint(
-                            painter: _ProtonFocusedMapPainter(
-                              cameraLng: cameraLngLat.dx,
-                              cameraLat: cameraLngLat.dy,
-                              zoom: zoom,
-                              pulseProgress: _pulseController.value,
-                              activeCountry: activeFocus,
-                              originCountry: origin,
-                              isConnected: widget.isConnected,
-                              isConnecting: widget.isConnecting,
-                            ),
-                          );
-                        },
+                      return RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: _pulseController,
+                          builder: (context, _) {
+                            return CustomPaint(
+                              painter: _ProtonFocusedMapPainter(
+                                cameraLng: cameraLngLat.dx,
+                                cameraLat: cameraLngLat.dy,
+                                zoom: zoom,
+                                pulseProgress: _pulseController.value,
+                                activeCountry: activeFocus,
+                                originCountry: origin,
+                                isConnected: widget.isConnected,
+                                isConnecting: widget.isConnecting,
+                              ),
+                            );
+                          },
+                        ),
                       );
                     },
                   );
@@ -869,6 +889,28 @@ class _ProtonFocusedMapPainter extends CustomPainter {
   final bool isConnected;
   final bool isConnecting;
 
+  static final Map<String, TextPainter> _labelCache = {};
+
+  static TextPainter _cachedLabel(String label, bool isActivePoly) {
+    final key = '${isActivePoly ? '1' : '0'}_$label';
+    return _labelCache.putIfAbsent(key, () {
+      return TextPainter(
+        text: TextSpan(
+          text: label,
+          style: TextStyle(
+            color: isActivePoly
+                ? Colors.white.withValues(alpha: 0.90)
+                : const Color(0xFF7B7599).withValues(alpha: 0.68),
+            fontSize: isActivePoly ? 11.5 : 9.5,
+            fontWeight: isActivePoly ? FontWeight.w800 : FontWeight.w700,
+            letterSpacing: 1.4,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    });
+  }
+
   _ProtonFocusedMapPainter({
     required this.cameraLng,
     required this.cameraLat,
@@ -971,21 +1013,7 @@ class _ProtonFocusedMapPainter extends CustomPainter {
       final isActivePoly =
           poly.code.toUpperCase() == activeCountry.code.toUpperCase();
 
-      final textSpan = TextSpan(
-        text: poly.label,
-        style: TextStyle(
-          color: isActivePoly
-              ? Colors.white.withValues(alpha: 0.90)
-              : const Color(0xFF7B7599).withValues(alpha: 0.68),
-          fontSize: isActivePoly ? 11.5 : 9.5,
-          fontWeight: isActivePoly ? FontWeight.w800 : FontWeight.w700,
-          letterSpacing: 1.4,
-        ),
-      );
-      final tp = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _cachedLabel(poly.label, isActivePoly);
       tp.paint(
         canvas,
         Offset(pos.dx - tp.width / 2, pos.dy + (isActivePoly ? 14 : -tp.height / 2)),
@@ -998,18 +1026,7 @@ class _ProtonFocusedMapPainter extends CustomPainter {
     );
     final beaconPos = _project(activeCountry.lng, activeCountry.lat, size);
     if (!hasPoly) {
-      final tp = TextPainter(
-        text: TextSpan(
-          text: activeCountry.name.toUpperCase(),
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.90),
-            fontSize: 11.5,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.4,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = _cachedLabel(activeCountry.name.toUpperCase(), true);
       tp.paint(canvas, Offset(beaconPos.dx - tp.width / 2, beaconPos.dy + 16));
     }
 
@@ -1018,13 +1035,21 @@ class _ProtonFocusedMapPainter extends CustomPainter {
         ? const Color(0xFF1FE5BD)
         : (isConnecting ? const Color(0xFFFFB800) : const Color(0xFFFF4D63));
 
-    // Soft outer glow
+    // Soft outer glow via GPU radial shader (avoids expensive MaskFilter.blur on 120Hz repaints)
     canvas.drawCircle(
       beaconPos,
-      36.0,
+      38.0,
       Paint()
-        ..color = beaconColor.withValues(alpha: 0.14)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18.0),
+        ..shader = ui.Gradient.radial(
+          beaconPos,
+          38.0,
+          [
+            beaconColor.withValues(alpha: 0.28),
+            beaconColor.withValues(alpha: 0.08),
+            Colors.transparent,
+          ],
+          const [0.0, 0.55, 1.0],
+        ),
     );
 
     // Expanding concentric radar rings

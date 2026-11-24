@@ -6,8 +6,8 @@ import '../../core/core_controller.dart';
 import '../../core/app_preferences.dart';
 import '../../core/android_core.dart';
 import '../components/liquid_glass_card.dart';
-import '../components/liquid_glass_atmosphere.dart';
 import '../components/filter_chip_button.dart';
+import '../components/signin_dialog.dart';
 import '../components/top_dock_toast.dart';
 import 'country_manager.dart';
 import 'country_item_row.dart';
@@ -139,12 +139,9 @@ class _CountriesScreenState extends State<CountriesScreen>
             AppPreferences.selectedLocation.toUpperCase();
         final fastestCountry = CountryManager.instance.getFastestCountry();
 
-        return LiquidGlassAtmosphere(
-          isConnected: widget.controller.isConnected,
-          isConnecting: widget.controller.isConnecting,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Column(
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 SafeArea(
@@ -340,26 +337,34 @@ class _CountriesScreenState extends State<CountriesScreen>
                                 await AppPreferences.setDefaultConnectionType('fastest');
                                 await AppPreferences.setSelectedLocation(fastest.code);
                                 await AppPreferences.addRecentLocation(fastest.code);
-                                await widget.controller.setLocation(fastest.code.toLowerCase());
-                                if (widget.controller.hasAccount) {
-                                  if (widget.controller.isConnected) {
-                                    widget.controller.setOn(false);
-                                    Future.delayed(const Duration(milliseconds: 200), () {
-                                      widget.controller.setOn(true);
-                                    });
-                                  } else {
-                                    widget.controller.setOn(true);
+                                if (!widget.controller.hasAccount) {
+                                  if (context.mounted) {
+                                    SignInDialog.show(context, widget.controller);
                                   }
+                                  return;
                                 }
-                                widget.onCountrySelected(fastest.code);
-                                if (context.mounted) {
-                                  TopDockToast.show(
-                                    context,
-                                    title: 'Connected to Fastest Country',
-                                    message: '${fastest.name} · ${fastest.realtimeSpeedMbps.toStringAsFixed(0)} Mbps (${fastest.pingMs} ms)',
-                                    icon: Icons.bolt_rounded,
-                                    iconColor: const Color(0xFF00E676),
-                                  );
+                                try {
+                                  await widget.controller.connectToLocation(fastest.code.toLowerCase());
+                                  widget.onCountrySelected(fastest.code);
+                                  if (context.mounted) {
+                                    TopDockToast.show(
+                                      context,
+                                      title: 'Connecting to Fastest Country',
+                                      message: '${fastest.name} · ${fastest.realtimeSpeedMbps.toStringAsFixed(0)} Mbps (${fastest.pingMs} ms)',
+                                      icon: Icons.bolt_rounded,
+                                      iconColor: const Color(0xFF00E676),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    TopDockToast.show(
+                                      context,
+                                      title: 'Connection Error',
+                                      message: e.toString().replaceFirst('Exception: ', ''),
+                                      icon: Icons.error_outline_rounded,
+                                      iconColor: const Color(0xFFFF4D4F),
+                                    );
+                                  }
                                 }
                               },
                             );
@@ -401,25 +406,33 @@ class _CountriesScreenState extends State<CountriesScreen>
                               await AppPreferences.setSelectedLocation(country.code);
                               await AppPreferences.setLastConnection(country.code);
                               await AppPreferences.addRecentLocation(country.code);
-                              await widget.controller.setLocation(country.code.toLowerCase());
-                              if (widget.controller.hasAccount) {
-                                if (widget.controller.isConnected) {
-                                  widget.controller.setOn(false);
-                                  Future.delayed(const Duration(milliseconds: 200), () {
-                                    widget.controller.setOn(true);
-                                  });
-                                } else {
-                                  widget.controller.setOn(true);
+                              if (!widget.controller.hasAccount) {
+                                if (context.mounted) {
+                                  SignInDialog.show(context, widget.controller);
                                 }
+                                return;
                               }
-                              widget.onCountrySelected(country.code);
-                              if (context.mounted) {
-                                TopDockToast.show(
-                                  context,
-                                  title: 'Connecting to ${country.name}',
-                                  message: '${country.pingMs} ms · Load: ${country.load}%',
-                                  icon: Icons.location_on_rounded,
-                                );
+                              try {
+                                await widget.controller.connectToLocation(country.code.toLowerCase());
+                                widget.onCountrySelected(country.code);
+                                if (context.mounted) {
+                                  TopDockToast.show(
+                                    context,
+                                    title: 'Connecting to ${country.name}',
+                                    message: '${country.pingMs} ms · Load: ${country.load}%',
+                                    icon: Icons.location_on_rounded,
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  TopDockToast.show(
+                                    context,
+                                    title: 'Connection Error',
+                                    message: e.toString().replaceFirst('Exception: ', ''),
+                                    icon: Icons.error_outline_rounded,
+                                    iconColor: const Color(0xFFFF4D4F),
+                                  );
+                                }
                               }
                             },
                             onExpand: () {
@@ -440,8 +453,7 @@ class _CountriesScreenState extends State<CountriesScreen>
                 ),
               ],
             ),
-          ),
-        );
+          );
       },
     );
   }

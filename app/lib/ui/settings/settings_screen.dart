@@ -745,7 +745,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                             title: 'About TeroVPN',
 
-                            subtitle: 'Version 1.2.9 · Legal, Support & Acknowledgements',
+                            subtitle: 'Version 1.3.0 · Legal, Support & Acknowledgements',
 
                             trailing: Icon(Icons.chevron_right_rounded, color: textSecondary),
 
