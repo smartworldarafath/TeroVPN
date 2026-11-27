@@ -11,12 +11,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><img src="https://img.shields.io/github/v/release/smartworldarafath/TeroVPN?color=6B42FF&label=Release&style=for-the-badge" alt="Latest Release"></a>
-  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.3.0"><img src="https://img.shields.io/badge/Chrome%20Extension-v1.3.0%20(MV3)-4285F4?style=for-the-badge&logo=googlechrome&logoColor=white" alt="Chrome Extension"></a>
-  <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android%20%7C%20Chrome-6B42FF?style=for-the-badge" alt="Platforms">
-  <img src="https://img.shields.io/badge/Transport-MASQUE%20HTTP%2F3%20QUIC%20RFC9298-2CFFCC?style=for-the-badge&logo=wireguard&logoColor=black" alt="WireGuard MASQUE">
-  <img src="https://img.shields.io/badge/Network-Fastly%20Global%20Anycast-FF9900?style=for-the-badge&logo=fastly&logoColor=white" alt="Fastly Edge">
-  <img src="https://img.shields.io/badge/License-GPL--3.0-blue?style=for-the-badge" alt="GPL-3.0 License">
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-release-dark.svg" /><img src="docs/badges/badge-release-light.svg" alt="Latest Release" /></picture></a>
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.3.0"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-extension-dark.svg" /><img src="docs/badges/badge-extension-light.svg" alt="Chrome Extension" /></picture></a>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-platforms-dark.svg" /><img src="docs/badges/badge-platforms-light.svg" alt="Platforms" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-transport-dark.svg" /><img src="docs/badges/badge-transport-light.svg" alt="WireGuard MASQUE" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-network-dark.svg" /><img src="docs/badges/badge-network-light.svg" alt="Fastly Edge" /></picture>
+  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-license-dark.svg" /><img src="docs/badges/badge-license-light.svg" alt="GPL-3.0 License" /></picture></a>
 </p>
 
 ---
