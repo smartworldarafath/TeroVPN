@@ -11,12 +11,12 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-release-dark.svg" /><img src="docs/badges/badge-release-light.svg" alt="Latest Release" /></picture></a>
-  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.3.0"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-extension-dark.svg" /><img src="docs/badges/badge-extension-light.svg" alt="Chrome Extension" /></picture></a>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-platforms-dark.svg" /><img src="docs/badges/badge-platforms-light.svg" alt="Platforms" /></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-transport-dark.svg" /><img src="docs/badges/badge-transport-light.svg" alt="WireGuard MASQUE" /></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-network-dark.svg" /><img src="docs/badges/badge-network-light.svg" alt="Fastly Edge" /></picture>
-  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-license-dark.svg" /><img src="docs/badges/badge-license-light.svg" alt="GPL-3.0 License" /></picture></a>
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/latest"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-release-dark.png" /><img src="docs/badges/badge-release-light.png" height="44" alt="Latest Release" /></picture></a>
+  <a href="https://github.com/smartworldarafath/TeroVPN/releases/tag/v1.3.0"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-extension-dark.png" /><img src="docs/badges/badge-extension-light.png" height="44" alt="Chrome Extension" /></picture></a>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-platforms-dark.png" /><img src="docs/badges/badge-platforms-light.png" height="44" alt="Platforms" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-transport-dark.png" /><img src="docs/badges/badge-transport-light.png" height="44" alt="WireGuard MASQUE" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-network-dark.png" /><img src="docs/badges/badge-network-light.png" height="44" alt="Fastly Edge" /></picture>
+  <a href="LICENSE"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/badges/badge-license-dark.png" /><img src="docs/badges/badge-license-light.png" height="44" alt="GPL-3.0 License" /></picture></a>
 </p>
 
 ---
